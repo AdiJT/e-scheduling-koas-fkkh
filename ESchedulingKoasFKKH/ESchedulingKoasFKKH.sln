@@ -6,8 +6,13 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "eschedulingkoasfkkh.client", "eschedulingkoasfkkh.client\eschedulingkoasfkkh.client.esproj", "{116E8DE0-9818-A4FF-CB44-5197EB1A751F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ESchedulingKoasFKKH.Server", "ESchedulingKoasFKKH.Server\ESchedulingKoasFKKH.Server.csproj", "{D6F3D3F9-5DC6-4A67-8A98-466255743499}"
+	ProjectSection(ProjectDependencies) = postProject
+		{62FD7776-AAF8-4C18-BFA4-90736BDF5461} = {62FD7776-AAF8-4C18-BFA4-90736BDF5461}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ESchedulingKoasFKKH.Domain", "ESchedulingKoasFKKH.Domain\ESchedulingKoasFKKH.Domain.csproj", "{62FD7776-AAF8-4C18-BFA4-90736BDF5461}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ESchedulingKoasFKKH.Infrastructure", "ESchedulingKoasFKKH.Infrastructure\ESchedulingKoasFKKH.Infrastructure.csproj", "{4995E739-1249-4934-A105-F7F0FC25FA35}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +34,10 @@ Global
 		{62FD7776-AAF8-4C18-BFA4-90736BDF5461}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62FD7776-AAF8-4C18-BFA4-90736BDF5461}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62FD7776-AAF8-4C18-BFA4-90736BDF5461}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4995E739-1249-4934-A105-F7F0FC25FA35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4995E739-1249-4934-A105-F7F0FC25FA35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4995E739-1249-4934-A105-F7F0FC25FA35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4995E739-1249-4934-A105-F7F0FC25FA35}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
