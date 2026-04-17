@@ -7,6 +7,8 @@ public class Stase : Entity<int>
     public required string Nama { get; set; }
     public required int Waktu { get; set; }
     public required JenisStase Jenis { get; set; }
+
+    public List<Jadwal> DaftarJadwal { get; set; }
 }
 
 public enum JenisStase
