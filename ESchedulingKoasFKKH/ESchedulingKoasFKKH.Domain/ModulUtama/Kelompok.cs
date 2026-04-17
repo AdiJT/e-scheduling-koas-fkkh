@@ -6,9 +6,9 @@ public class Kelompok : Entity<int>
 {
     public required string Nama { get; set; }
 
-    public Pembimbing Pembimbing { get; set; }
+    public Pembimbing? Pembimbing { get; set; }
     public List<Mahasiswa> DaftarMahasiswa { get; set; } = [];
-    public List<Stase> DaftarStase { get; set; } = [];
+    public List<Jadwal> DaftarJadwal { get; set; } = [];
 }
 
 public interface IKelompokRepository
