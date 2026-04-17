@@ -46,8 +46,8 @@ internal class PembimbingRepository : IPembimbingRepository
         .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarJadwal)
         .ToListAsync();
 
-    public async Task<bool> IsExist(string nip) => await _appDbContext.Pembimbing
-        .AnyAsync(x => x.NIP.ToLower() == nip.ToLower());
+    public async Task<bool> IsExist(string nip, int? id = null) => await _appDbContext.Pembimbing
+        .AnyAsync(x => x.Id != id && x.NIP.ToLower() == nip.ToLower());
 
     public void Update(Pembimbing pembimbing) => _appDbContext.Pembimbing.Update(pembimbing);
 }

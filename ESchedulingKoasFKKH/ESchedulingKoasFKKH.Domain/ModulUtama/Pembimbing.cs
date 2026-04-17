@@ -15,7 +15,7 @@ public interface IPembimbingRepository
     Task<Pembimbing?> Get(int id);
     Task<Pembimbing?> Get(string nip);
     Task<List<Pembimbing>> GetAll();
-    Task<bool> IsExist(string nip);
+    Task<bool> IsExist(string nip, int? id = null);
 
     void Add(Pembimbing pembimbing);
     void Update(Pembimbing pembimbing);

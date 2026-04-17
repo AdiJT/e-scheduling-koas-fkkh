@@ -46,8 +46,8 @@ internal class MahasiswaRepository : IMahasiswaRepository
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
         .ToListAsync();
 
-    public async Task<bool> IsExist(string nim) => await _appDbContext.Mahasiswa
-        .AnyAsync(x => x.NIM.ToLower() == nim.ToLower());
+    public async Task<bool> IsExist(string nim, int? id = null) => await _appDbContext.Mahasiswa
+        .AnyAsync(x => x.Id != id && x.NIM.ToLower() == nim.ToLower());
 
     public void Update(Mahasiswa mahasiswa) => _appDbContext.Mahasiswa.Update(mahasiswa);
 }

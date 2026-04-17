@@ -34,8 +34,8 @@ internal class StaseRepository : IStaseRepository
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok)
         .ToListAsync();
 
-    public async Task<bool> IsExist(string nama) => await _appDbContext.Stase
-        .AnyAsync(x => x.Nama == nama);
+    public async Task<bool> IsExist(string nama, int? id = null) => await _appDbContext.Stase
+        .AnyAsync(x => x.Id != id && x.Nama == nama);
 
     public void Update(Stase stase) => _appDbContext.Stase.Update(stase);
 }

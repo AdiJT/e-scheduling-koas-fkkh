@@ -1,6 +1,36 @@
-@ESchedulingKoasFKKH.Server_HostAddress = http://localhost:5025
+@ESchedulingKoasFKKH.Server_HostAddress = https://localhost:7216
 
-GET {{ESchedulingKoasFKKH.Server_HostAddress}}/weatherforecast/
+GET {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa
 Accept: application/json
+
+###
+
+POST {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa
+Content-Type: application/json
+
+{
+  "nim" : "3",
+  "nama" : "1"
+}
+
+###
+
+@id=3
+GET {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa/{{id}}
+
+###
+
+PUT {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa/{{id}}
+Content-Type: application/json
+
+{
+  "id" : {{id}},
+  "nim" : "4",
+  "nama" : "2"
+}
+
+###
+
+DELETE {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa/1
 
 ###

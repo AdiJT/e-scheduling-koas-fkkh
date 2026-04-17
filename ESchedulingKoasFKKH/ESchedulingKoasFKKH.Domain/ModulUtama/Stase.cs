@@ -20,7 +20,7 @@ public interface IStaseRepository
 {
     Task<Stase?> Get(int id);
     Task<List<Stase>> GetAll();
-    Task<bool> IsExist(string nama);
+    Task<bool> IsExist(string nama, int? id = null);
 
     void Add(Stase stase);
     void Update(Stase stase);

@@ -40,8 +40,8 @@ internal class KelompokRepository : IKelompokRepository
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .ToListAsync();
 
-    public async Task<bool> IsExist(string nama) => await _appDbContext.Kelompok
-        .AnyAsync(x => x.Nama.ToLower() == nama.ToLower());
+    public async Task<bool> IsExist(string nama, int? id = null) => await _appDbContext.Kelompok
+        .AnyAsync(x => x.Id != id && x.Nama.ToLower() == nama.ToLower());
 
     public void Update(Kelompok kelompok) => _appDbContext.Kelompok.Update(kelompok);
 }

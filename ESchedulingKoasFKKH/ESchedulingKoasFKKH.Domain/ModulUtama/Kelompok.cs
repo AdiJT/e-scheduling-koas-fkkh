@@ -15,7 +15,7 @@ public interface IKelompokRepository
 {
     Task<Kelompok?> Get(int id);
     Task<List<Kelompok>> GetAll();
-    Task<bool> IsExist(string nama);
+    Task<bool> IsExist(string nama, int? id = null);
 
     void Add(Kelompok kelompok);
     void Update(Kelompok kelompok);
