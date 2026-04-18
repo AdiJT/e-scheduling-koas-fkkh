@@ -46,8 +46,7 @@ public class UserController : ControllerBase
         var claims = new Claim[]
         {
             new(JwtRegisteredClaimNames.Sub, user.Name),
-            new(JwtRegisteredClaimNames.Name, user.Name), 
-            new(ClaimTypes.Role, user.Role), 
+            new(ClaimTypes.Role, user.Role),
         };
 
         var signingCredentials = new SigningCredentials(
@@ -62,6 +61,7 @@ public class UserController : ControllerBase
             CultureInfos.DateTimeNow.AddHours(3),
             signingCredentials);
 
-        return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+        var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
+        return Ok(new { token = tokenStr });
     }
 }

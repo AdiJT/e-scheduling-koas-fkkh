@@ -30,7 +30,7 @@ builder.Services.AddOpenApiDocument(o =>
     o.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
 });
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o => o.IncludeErrorDetails = true);
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 

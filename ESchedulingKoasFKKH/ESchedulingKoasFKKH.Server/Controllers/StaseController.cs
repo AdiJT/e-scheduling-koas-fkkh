@@ -3,13 +3,14 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
 using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
 [Route("stase")]
+[Authorize]
 public class StaseController : ControllerBase
 {
     private readonly IStaseRepository _staseRepository;

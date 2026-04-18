@@ -9,6 +9,7 @@ namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
 [Route("mahasiswa")]
+[Authorize]
 public class MahasiswaController : ControllerBase
 {
     private readonly IMahasiswaRepository _mahasiswaRepository;
