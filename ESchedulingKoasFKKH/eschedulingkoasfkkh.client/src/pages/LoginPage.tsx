@@ -38,7 +38,7 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     try {
-      login(username, password);
+      await login(username, password);
       if (rememberMe) {
         localStorage.setItem('rememberedUser', username);
       } else {

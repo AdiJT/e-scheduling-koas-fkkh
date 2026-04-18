@@ -3,7 +3,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 interface AuthContextType {
   isAuthenticated: boolean;
   user: { username: string } | null;
-  login: (username: string, password: string) => void;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -23,13 +23,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (username: string, password: string) => {
-    // Simulasi login - dalam praktik nyata, hubungkan ke API backend
-    if (username && password) {
-      setIsAuthenticated(true);
-      setUser({ username });
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('username', username);
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName: username, password })
+      });
+
+      if (!response.ok) {
+        throw new Error('Login gagal. Periksa username dan password Anda.');
+      }
+
+      const data = await response.json();
+      const token = data.token;
+      
+      if (token) {
+        setIsAuthenticated(true);
+        setUser({ username });
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('username', username);
+        localStorage.setItem('token', token);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
     }
   };
 
@@ -38,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('username');
+    localStorage.removeItem('token');
   };
 
   return (

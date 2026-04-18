@@ -30,6 +30,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return response.json();
 }
 
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    const token = localStorage.getItem('token');
+    const headers = new Headers(options.headers || {});
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    return fetch(url, {
+        ...options,
+        headers
+    });
+}
+
 // ============================================================
 // MAHASISWA API
 // ============================================================
@@ -53,17 +66,17 @@ export interface UpdateMahasiswa {
 
 export const mahasiswaApi = {
     getAll: async (): Promise<Mahasiswa[]> => {
-        const res = await fetch(`${BASE_URL}/mahasiswa`);
+        const res = await apiFetch(`${BASE_URL}/mahasiswa`);
         return handleResponse<Mahasiswa[]>(res);
     },
 
     get: async (id: number): Promise<Mahasiswa> => {
-        const res = await fetch(`${BASE_URL}/mahasiswa/${id}`);
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}`);
         return handleResponse<Mahasiswa>(res);
     },
 
     create: async (data: CreateMahasiswa): Promise<Mahasiswa> => {
-        const res = await fetch(`${BASE_URL}/mahasiswa`, {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -72,7 +85,7 @@ export const mahasiswaApi = {
     },
 
     update: async (id: number, data: UpdateMahasiswa): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/mahasiswa/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -81,7 +94,7 @@ export const mahasiswaApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/mahasiswa/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}`, {
             method: 'DELETE',
         });
         return handleResponse<void>(res);
@@ -111,17 +124,17 @@ export interface UpdatePembimbing {
 
 export const pembimbingApi = {
     getAll: async (): Promise<Pembimbing[]> => {
-        const res = await fetch(`${BASE_URL}/pembimbing`);
+        const res = await apiFetch(`${BASE_URL}/pembimbing`);
         return handleResponse<Pembimbing[]>(res);
     },
 
     get: async (id: number): Promise<Pembimbing> => {
-        const res = await fetch(`${BASE_URL}/pembimbing/${id}`);
+        const res = await apiFetch(`${BASE_URL}/pembimbing/${id}`);
         return handleResponse<Pembimbing>(res);
     },
 
     create: async (data: CreatePembimbing): Promise<Pembimbing> => {
-        const res = await fetch(`${BASE_URL}/pembimbing`, {
+        const res = await apiFetch(`${BASE_URL}/pembimbing`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -130,7 +143,7 @@ export const pembimbingApi = {
     },
 
     update: async (id: number, data: UpdatePembimbing): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/pembimbing/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -139,7 +152,7 @@ export const pembimbingApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/pembimbing/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/${id}`, {
             method: 'DELETE',
         });
         return handleResponse<void>(res);
@@ -178,17 +191,17 @@ export interface UpdateStase {
 
 export const staseApi = {
     getAll: async (): Promise<Stase[]> => {
-        const res = await fetch(`${BASE_URL}/stase`);
+        const res = await apiFetch(`${BASE_URL}/stase`);
         return handleResponse<Stase[]>(res);
     },
 
     get: async (id: number): Promise<Stase> => {
-        const res = await fetch(`${BASE_URL}/stase/${id}`);
+        const res = await apiFetch(`${BASE_URL}/stase/${id}`);
         return handleResponse<Stase>(res);
     },
 
     create: async (data: CreateStase): Promise<Stase> => {
-        const res = await fetch(`${BASE_URL}/stase`, {
+        const res = await apiFetch(`${BASE_URL}/stase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -197,7 +210,7 @@ export const staseApi = {
     },
 
     update: async (id: number, data: UpdateStase): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/stase/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/stase/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -206,7 +219,7 @@ export const staseApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/stase/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/stase/${id}`, {
             method: 'DELETE',
         });
         return handleResponse<void>(res);
@@ -235,17 +248,17 @@ export interface UpdateKelompok {
 
 export const kelompokApi = {
     getAll: async (): Promise<Kelompok[]> => {
-        const res = await fetch(`${BASE_URL}/kelompok`);
+        const res = await apiFetch(`${BASE_URL}/kelompok`);
         return handleResponse<Kelompok[]>(res);
     },
 
     get: async (id: number): Promise<Kelompok> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${id}`);
+        const res = await apiFetch(`${BASE_URL}/kelompok/${id}`);
         return handleResponse<Kelompok>(res);
     },
 
     create: async (data: CreateKelompok): Promise<Kelompok> => {
-        const res = await fetch(`${BASE_URL}/kelompok`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -254,7 +267,7 @@ export const kelompokApi = {
     },
 
     update: async (id: number, data: UpdateKelompok): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -263,14 +276,14 @@ export const kelompokApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${id}`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${id}`, {
             method: 'DELETE',
         });
         return handleResponse<void>(res);
     },
 
     tambahAnggota: async (kelompokId: number, idMahasiswa: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/tambah-anggota`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${kelompokId}/tambah-anggota`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idMahasiswa }),
@@ -279,7 +292,7 @@ export const kelompokApi = {
     },
 
     hapusAnggota: async (kelompokId: number, idMahasiswa: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/hapus-anggota`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${kelompokId}/hapus-anggota`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idMahasiswa }),
@@ -288,7 +301,7 @@ export const kelompokApi = {
     },
 
     pilihPembimbing: async (kelompokId: number, idPembimbing: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/pilih-pembimbing`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${kelompokId}/pilih-pembimbing`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idPembimbing }),
@@ -297,7 +310,7 @@ export const kelompokApi = {
     },
 
     gantiPembimbing: async (kelompokId: number, idPembimbing: number): Promise<void> => {
-        const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/ganti-pembimbing`, {
+        const res = await apiFetch(`${BASE_URL}/kelompok/${kelompokId}/ganti-pembimbing`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idPembimbing }),
@@ -327,17 +340,17 @@ export interface CreateJadwal {
 
 export const jadwalApi = {
   getAll: async (): Promise<Jadwal[]> => {
-    const res = await fetch(`${BASE_URL}/Jadwal`);
+    const res = await apiFetch(`${BASE_URL}/Jadwal`);
     return handleResponse<Jadwal[]>(res);
   },
 
   get: async (id: number): Promise<Jadwal> => {
-    const res = await fetch(`${BASE_URL}/Jadwal/${id}`);
+    const res = await apiFetch(`${BASE_URL}/Jadwal/${id}`);
     return handleResponse<Jadwal>(res);
   },
 
   create: async (data: CreateJadwal): Promise<Jadwal> => {
-    const res = await fetch(`${BASE_URL}/Jadwal`, {
+    const res = await apiFetch(`${BASE_URL}/Jadwal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -346,7 +359,7 @@ export const jadwalApi = {
   },
 
   delete: async (id: number): Promise<void> => {
-    const res = await fetch(`${BASE_URL}/Jadwal/${id}`, {
+    const res = await apiFetch(`${BASE_URL}/Jadwal/${id}`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);
