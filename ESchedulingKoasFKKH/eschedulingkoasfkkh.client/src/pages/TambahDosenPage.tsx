@@ -1,24 +1,42 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from '../components/Layout';
+import { pembimbingApi } from '../services/api';
 
 export default function TambahDosenPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nip: '', nama: '', email: '', telepon: '', spesialisasi: '', pendidikan: '' });
+  const [form, setForm] = useState({ nip: '', nama: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    // Clear error on field change
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    setTimeout(() => navigate('/dosen'), 1500);
+    setErrors({});
+
+    try {
+      await pembimbingApi.create({ nip: form.nip, nama: form.nama });
+      setShowSuccess(true);
+      setTimeout(() => navigate('/dosen'), 1500);
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string>; message?: string };
+      if (apiErr?.status === 400 && apiErr?.errors) {
+        setErrors(apiErr.errors);
+      } else {
+        setErrors({ general: apiErr?.message || 'Gagal menyimpan data. Pastikan server backend berjalan.' });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -41,6 +59,15 @@ export default function TambahDosenPage() {
         </div>
       )}
 
+      {/* General Error */}
+      {errors.general && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-red-500 text-lg">⚠️</span>
+          <p className="text-sm text-red-700 flex-1">{errors.general}</p>
+          <button onClick={() => setErrors({})} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+        </div>
+      )}
+
       <div className="max-w-3xl animate-fade-in-up">
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-dosen">
           <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-green-50">
@@ -50,46 +77,29 @@ export default function TambahDosenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">NIP <span className="text-red-500">*</span></label>
-                <input name="nip" value={form.nip} onChange={handleChange} required placeholder="Contoh: 198501012010"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all" />
+                <input
+                  name="nip"
+                  value={form.nip}
+                  onChange={handleChange}
+                  required
+                  placeholder="Contoh: 198501012010"
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all
+                    ${errors.nip ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {errors.nip && <p className="text-xs text-red-500 mt-1">{errors.nip}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
-                <input name="nama" value={form.nama} onChange={handleChange} required placeholder="Nama lengkap + gelar"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email <span className="text-red-500">*</span></label>
-                <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="email@univ.ac.id"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">No. Telepon</label>
-                <input name="telepon" value={form.telepon} onChange={handleChange} placeholder="08xxxxxxxxxx"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Spesialisasi <span className="text-red-500">*</span></label>
-                <select name="spesialisasi" value={form.spesialisasi} onChange={handleChange} required
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all cursor-pointer">
-                  <option value="">Pilih spesialisasi</option>
-                  <option value="Bedah Veteriner">Bedah Veteriner</option>
-                  <option value="Penyakit Dalam">Penyakit Dalam</option>
-                  <option value="Reproduksi">Reproduksi</option>
-                  <option value="Parasitologi">Parasitologi</option>
-                  <option value="Patologi">Patologi</option>
-                  <option value="Radiologi">Radiologi</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Pendidikan Terakhir</label>
-                <select name="pendidikan" value={form.pendidikan} onChange={handleChange}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all cursor-pointer">
-                  <option value="">Pilih pendidikan</option>
-                  <option value="S2">S2 (Magister)</option>
-                  <option value="S3">S3 (Doktor)</option>
-                  <option value="Profesor">Profesor</option>
-                </select>
+                <input
+                  name="nama"
+                  value={form.nama}
+                  onChange={handleChange}
+                  required
+                  placeholder="Nama lengkap + gelar"
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all
+                    ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
               </div>
             </div>
           </div>
