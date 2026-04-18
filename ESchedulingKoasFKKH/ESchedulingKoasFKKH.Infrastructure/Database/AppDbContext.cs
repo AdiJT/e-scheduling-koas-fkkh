@@ -2,6 +2,7 @@
 using ESchedulingKoasFKKH.Domain.Abstracts;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Auth;
 
 namespace ESchedulingKoasFKKH.Infrastructure.Database;
 
@@ -40,4 +41,5 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<Stase> Stase { get; set; }
     public DbSet<Kelompok> Kelompok { get; set; }
     public DbSet<Jadwal> Jadwal { get; set; }
+    public DbSet<User> User { get; set; }
 }

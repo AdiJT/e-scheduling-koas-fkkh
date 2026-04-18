@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Infrastructure.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Infrastructure.Auth;
 
 namespace ESchedulingKoasFKKH.Infrastructure;
 
@@ -26,6 +28,7 @@ public static class DepedencyInjection
         services.AddScoped<IStaseRepository, StaseRepository>();
         services.AddScoped<IKelompokRepository, KelompokRepository>();
         services.AddScoped<IJadwalRepository, JadwalRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }
