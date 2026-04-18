@@ -51,7 +51,7 @@ public class StaseController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Create create)
+    public async Task<IActionResult> Create(CreateStase create)
     {
         if (await _staseRepository.IsExist(create.Nama))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{create.Nama}' sudah digunakan" });
@@ -82,7 +82,7 @@ public class StaseController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, Update update)
+    public async Task<IActionResult> Update(int id, UpdateStase update)
     {
         if (update.Id != id)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "id pada body tidak sesuai dengan id pada url" });

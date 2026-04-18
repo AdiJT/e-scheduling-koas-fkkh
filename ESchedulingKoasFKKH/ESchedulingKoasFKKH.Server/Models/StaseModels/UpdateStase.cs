@@ -3,8 +3,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ESchedulingKoasFKKH.Server.Models.StaseModels;
 
-public class Create
+public class UpdateStase
 {
+    [Required]
+    public int Id { get; set; }
+
     [Required]
     public string Nama { get; set; } = string.Empty;
 

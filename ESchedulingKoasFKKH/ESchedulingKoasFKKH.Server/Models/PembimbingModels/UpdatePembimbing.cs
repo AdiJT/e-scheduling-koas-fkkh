@@ -2,8 +2,11 @@
 
 namespace ESchedulingKoasFKKH.Server.Models.PembimbingModels;
 
-public class Create
+public class UpdatePembimbing
 {
+    [Required]
+    public int Id { get; set; }
+
     [Required]
     public string NIP { get; set; } = string.Empty;
 

@@ -57,7 +57,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Create create)
+    public async Task<IActionResult> Create(CreateKelompok create)
     {
         if (await _kelompokRepository.IsExist(create.Nama))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama kelompok '{create.Nama}' sudah digunakan" });
@@ -86,7 +86,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, Update update)
+    public async Task<IActionResult> Update(int id, UpdateKelompok update)
     {
         if (update.Id != id)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "id pada body tidak sesuai dengan id pada url" });

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ESchedulingKoasFKKH.Server.Models.KelompokModels;
 
-public class Update
+public class UpdateKelompok
 {
     [Required]
     public int Id { get; set; }

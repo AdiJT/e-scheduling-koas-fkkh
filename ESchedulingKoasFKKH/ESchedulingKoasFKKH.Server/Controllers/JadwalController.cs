@@ -62,7 +62,7 @@ public class JadwalController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Create create)
+    public async Task<IActionResult> Create(CreateJadwal create)
     {
         var kelompok = await _kelompokRepository.Get(create.IdKelompok);
         if (kelompok is null)
