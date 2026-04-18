@@ -18,11 +18,16 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="NSwag.AspNetCore" Version="14.7.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ESchedulingKoasFKKH.Domain\ESchedulingKoasFKKH.Domain.csproj" />
     <ProjectReference Include="..\ESchedulingKoasFKKH.Infrastructure\ESchedulingKoasFKKH.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>
