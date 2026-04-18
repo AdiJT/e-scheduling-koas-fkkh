@@ -2,7 +2,7 @@
 
 namespace ESchedulingKoasFKKH.Server.Models.JadwalModels;
 
-public class Create
+public class CreateJadwal
 {
     [Required]
     public DateOnly TanggalMulai { get; set; }
