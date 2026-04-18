@@ -1,5 +1,6 @@
 ﻿using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 using Microsoft.AspNetCore.Mvc;
 
@@ -39,7 +40,7 @@ public class MahasiswaController : ControllerBase
     public async Task<IActionResult> Create(Create create)
     {
         if (await _mahasiswaRepository.IsExist(create.NIM))
-            return BadRequest();
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"nim '{create.NIM}' sudah digunakan" });
 
         var mahasiswa = new Mahasiswa
         {
@@ -67,7 +68,7 @@ public class MahasiswaController : ControllerBase
         if (mahasiswa is null) return NotFound();
 
         if (await _mahasiswaRepository.IsExist(update.NIM, id))
-            return BadRequest();
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"nim '{update.NIM}' sudah digunakan" });
 
         mahasiswa.Nama = update.Nama;
         mahasiswa.NIM = update.NIM;

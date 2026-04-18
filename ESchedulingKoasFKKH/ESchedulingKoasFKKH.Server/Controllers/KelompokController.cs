@@ -126,7 +126,7 @@ public class KelompokController : ControllerBase
 
         var mahasiswa = await _mahasiswaRepository.Get(tambahAnggota.IdMahasiswa);
         if (mahasiswa is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa dengan id '{tambahAnggota.IdMahasiswa}' tidak ditemukan" });
+            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa dengan id '{tambahAnggota.IdMahasiswa}' tidak ditemukan" });
 
         if (mahasiswa.Kelompok is not null)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa '{mahasiswa.Nama}' sudah terdaftar di kelompok lain" });
@@ -147,7 +147,7 @@ public class KelompokController : ControllerBase
 
         var mahasiswa = await _mahasiswaRepository.Get(hapusAnggota.IdMahasiswa);
         if (mahasiswa is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa dengan id '{hapusAnggota.IdMahasiswa}' tidak ditemukan" });
+            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa dengan id '{hapusAnggota.IdMahasiswa}' tidak ditemukan" });
 
         if (mahasiswa.Kelompok is null || mahasiswa.Kelompok.Id != id)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"mahasiswa '{mahasiswa.Nama}' bukan anggota kelompok ini" });
@@ -171,7 +171,7 @@ public class KelompokController : ControllerBase
 
         var pembimbing = await _pembimbingRepository.Get(pilihPembimbing.IdPembimbing);
         if (pembimbing is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idPembimbing"] = $"pembimbing dengan id '{pilihPembimbing.IdPembimbing}' tidak ditemukan" });
+            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idPembimbing"] = $"pembimbing dengan id '{pilihPembimbing.IdPembimbing}' tidak ditemukan" });
 
         kelompok.Pembimbing = pembimbing;
 
@@ -192,7 +192,7 @@ public class KelompokController : ControllerBase
 
         var pembimbing = await _pembimbingRepository.Get(gantiPembimbing.IdPembimbing);
         if (pembimbing is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idPembimbing"] = $"pembimbing dengan id '{gantiPembimbing.IdPembimbing}' tidak ditemukan" });
+            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idPembimbing"] = $"pembimbing dengan id '{gantiPembimbing.IdPembimbing}' tidak ditemukan" });
 
         kelompok.Pembimbing = pembimbing;
 

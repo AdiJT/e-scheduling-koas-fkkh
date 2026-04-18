@@ -14,4 +14,15 @@ public static class HelpersFunctions
             errors
         });
     }
+
+    public static NotFoundObjectResult NotFound(Dictionary<string, string> errors)
+    {
+        return new NotFoundObjectResult(
+        new {
+            type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.5.5",
+            title = "One or more validation errors occurred.",
+            status = 400,
+            errors
+        });
+    }
 }

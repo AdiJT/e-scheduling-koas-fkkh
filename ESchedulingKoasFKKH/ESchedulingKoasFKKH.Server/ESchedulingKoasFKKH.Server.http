@@ -63,3 +63,7 @@ Content-Type: application/json
 DELETE {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing/2
 
 ###
+
+GET {{ESchedulingKoasFKKH.Server_HostAddress}}/Jadwal/1
+
+###

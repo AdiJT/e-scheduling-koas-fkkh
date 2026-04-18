@@ -5,7 +5,7 @@ namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 public class Jadwal : Entity<int>
 {
     public required DateOnly TanggalMulai { get; set; }
-    public required DateOnly TanggalSelesai { get; set; }
+    public DateOnly TanggalSelesai => TanggalMulai.AddDays(Stase.Waktu * 7);
 
     public Kelompok Kelompok { get; set; }
     public Stase Stase { get; set; }
