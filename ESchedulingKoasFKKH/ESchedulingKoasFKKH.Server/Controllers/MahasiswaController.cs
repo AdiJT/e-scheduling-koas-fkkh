@@ -37,7 +37,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Create create)
+    public async Task<IActionResult> Create(CreateMahasiswa create)
     {
         if (await _mahasiswaRepository.IsExist(create.NIM))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"nim '{create.NIM}' sudah digunakan" });
@@ -60,7 +60,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, Update update)
+    public async Task<IActionResult> Update(int id, UpdateMahasiswa update)
     {
         if (update.Id != id) return BadRequest();
 

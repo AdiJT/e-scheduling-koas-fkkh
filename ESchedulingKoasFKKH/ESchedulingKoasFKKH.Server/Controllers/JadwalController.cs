@@ -62,7 +62,7 @@ public class JadwalController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Create create)
+    public async Task<IActionResult> Create(CreateJadwal create)
     {
         var kelompok = await _kelompokRepository.Get(create.IdKelompok);
         if (kelompok is null)
@@ -76,6 +76,12 @@ public class JadwalController : ControllerBase
             return HelpersFunctions.NotFound(new Dictionary<string, string>
             {
                 ["idStase"] = $"stase dengan id '{create.IdStase}' tidak ditemukan"
+            });
+
+        if (kelompok.Pembimbing is null)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["idKelompok"] = $"kelompok '{kelompok.Nama}' belum memiliki pembimbing"
             });
 
         if (kelompok.DaftarJadwal.Any(x => x.Stase == stase))

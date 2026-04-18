@@ -2,8 +2,11 @@
 
 namespace ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 
-public class Create
+public class UpdateMahasiswa
 {
+    [Required]
+    public int Id { get; set; }
+
     [Required]
     public string NIM { get; set; } = string.Empty;
 
