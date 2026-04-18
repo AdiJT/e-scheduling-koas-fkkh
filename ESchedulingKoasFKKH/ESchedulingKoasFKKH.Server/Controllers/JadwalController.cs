@@ -107,7 +107,8 @@ public class JadwalController : ControllerBase
         if (tabrakanKelompok is not null)
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
-                ["tanggalMulai"] = $"Jadwal bertabrakan. Kelompok '{kelompok.Nama}' memiliki jadwal pada tanggal {tabrakanKelompok.TanggalMulai:M/d/yyyy} - {tabrakanKelompok.TanggalSelesai(_hariLiburService):M/d/yyyy}"
+                ["tanggalMulai"] = $"Jadwal bertabrakan. Kelompok '{kelompok.Nama}' memiliki jadwal pada tanggal " +
+                $"{tabrakanKelompok.TanggalMulai:M/d/yyyy} - {tabrakanKelompok.TanggalSelesai(_hariLiburService):M/d/yyyy}"
             });
 
         if (stase.Jenis == JenisStase.Terpisah)
@@ -116,7 +117,8 @@ public class JadwalController : ControllerBase
             if (tabrakanStase is not null)
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
-                    ["tanggalMulai"] = $"Jadwal bertabrakan. Stase '{stase.Nama}' dijadwalkan untuk kelompok lain pada tanggal {tabrakanStase.TanggalMulai:M/d/yyyy} - {tabrakanStase.TanggalSelesai(_hariLiburService):M/d/yyyy}"
+                    ["tanggalMulai"] = $"Jadwal bertabrakan. Stase '{stase.Nama}' dijadwalkan untuk kelompok lain pada tanggal " +
+                    $"{tabrakanStase.TanggalMulai:M/d/yyyy} - {tabrakanStase.TanggalSelesai(_hariLiburService):M/d/yyyy}"
                 });
         }
 
