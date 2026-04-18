@@ -1,4 +1,3 @@
-using ESchedulingKoasFKKH.Domain.ModulUtama;
 using System.ComponentModel.DataAnnotations;
 
 namespace ESchedulingKoasFKKH.Server.Models.StaseModels;
@@ -12,5 +11,5 @@ public class CreateStase
     public int Waktu { get; set; }
 
     [Required]
-    public JenisStase Jenis { get; set; }
+    public string Jenis { get; set; } = string.Empty;
 }

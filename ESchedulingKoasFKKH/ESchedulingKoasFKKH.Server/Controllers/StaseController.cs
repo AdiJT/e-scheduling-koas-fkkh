@@ -2,7 +2,9 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
+using Humanizer;
 using Microsoft.AspNetCore.Mvc;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
@@ -32,7 +34,7 @@ public class StaseController : ControllerBase
             stase.Id,
             stase.Nama,
             stase.Waktu,
-            stase.Jenis,
+            jenis = stase.Jenis.Humanize(),
             daftarJadwal = stase.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
         });
     }
@@ -45,7 +47,7 @@ public class StaseController : ControllerBase
             x.Id,
             x.Nama,
             x.Waktu,
-            x.Jenis,
+            jenis = x.Jenis.Humanize(),
             daftarJadwal = x.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
         }));
     }
@@ -56,11 +58,20 @@ public class StaseController : ControllerBase
         if (await _staseRepository.IsExist(create.Nama))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{create.Nama}' sudah digunakan" });
 
+        if (!Enum.TryParse<JenisStase>(create.Jenis, out var jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"jenis '{create.Jenis}' tidak valid. " +
+                    $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
+                }
+            );
+
         var stase = new Stase
         {
             Nama = create.Nama,
             Waktu = create.Waktu,
-            Jenis = create.Jenis,
+            Jenis = jenis,
         };
 
         _staseRepository.Add(stase);
@@ -76,7 +87,7 @@ public class StaseController : ControllerBase
                 stase.Id,
                 stase.Nama,
                 stase.Waktu,
-                stase.Jenis,
+                jenis = stase.Jenis.Humanize(),
                 daftarJadwal = stase.DaftarJadwal?.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
             });
     }
@@ -93,9 +104,17 @@ public class StaseController : ControllerBase
         if (await _staseRepository.IsExist(update.Nama, id))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{update.Nama}' sudah digunakan" });
 
+        if (!Enum.TryParse<JenisStase>(update.Jenis, out var jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string> { 
+                    ["jenis"] = $"jenis '{update.Jenis}' tidak valid. " +
+                    $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}" 
+                }
+            );
+
         stase.Nama = update.Nama;
         stase.Waktu = update.Waktu;
-        stase.Jenis = update.Jenis;
+        stase.Jenis = jenis;
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);

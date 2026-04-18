@@ -118,7 +118,7 @@ public class KelompokController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{id:int}/tambah-anggota")]
+    [HttpPut("{id:int}/tambah-anggota")]
     public async Task<IActionResult> TambahAnggota(int id, TambahAnggota tambahAnggota)
     {
         var kelompok = await _kelompokRepository.Get(id);

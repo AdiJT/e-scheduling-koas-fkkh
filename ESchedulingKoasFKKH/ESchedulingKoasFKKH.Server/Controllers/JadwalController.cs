@@ -78,6 +78,12 @@ public class JadwalController : ControllerBase
                 ["idStase"] = $"stase dengan id '{create.IdStase}' tidak ditemukan"
             });
 
+        if (kelompok.Pembimbing is null)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["idKelompok"] = $"kelompok '{kelompok.Nama}' belum memiliki pembimbing"
+            });
+
         if (kelompok.DaftarJadwal.Any(x => x.Stase == stase))
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
