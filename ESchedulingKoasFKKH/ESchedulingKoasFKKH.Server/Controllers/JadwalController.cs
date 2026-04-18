@@ -98,25 +98,21 @@ public class JadwalController : ControllerBase
                 ["idStase"] = $"Kelompok '{kelompok.Nama}' sudah memiliki jadwal untuk stase '{stase.Nama}'"
             });
 
-        if (stase.Nama.Contains("Kompre", StringComparison.OrdinalIgnoreCase) || stase.Nama.Contains("Komper", StringComparison.OrdinalIgnoreCase))
+        if (stase.Nama.Contains("Ujian", StringComparison.OrdinalIgnoreCase) || stase.Nama.Contains("Komprehensif", StringComparison.OrdinalIgnoreCase))
         {
             var jadwalSeminar = kelompok.DaftarJadwal.FirstOrDefault(x => x.Stase.Nama.Contains("Seminar", StringComparison.OrdinalIgnoreCase));
             
             if (jadwalSeminar is null)
-            {
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
                     ["idStase"] = $"Kelompok '{kelompok.Nama}' harus dijadwalkan untuk stase 'Seminar' terlebih dahulu."
                 });
-            }
 
             if (jadwalSeminar.TanggalSelesai(_hariLiburService) > create.TanggalMulai)
-            {
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
                     ["tanggalMulai"] = $"Jadwal ujian tidak boleh sebelum stase 'Seminar' selesai pada tanggal {jadwalSeminar.TanggalSelesai(_hariLiburService):M/d/yyyy}."
                 });
-            }
         }
 
         if (_hariLiburService.HariLibur(create.TanggalMulai))
