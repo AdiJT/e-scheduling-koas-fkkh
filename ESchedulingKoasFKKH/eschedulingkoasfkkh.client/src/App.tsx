@@ -1,4 +1,3 @@
-/*import { useState, useEffect } from 'react';*/
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -9,9 +8,13 @@ import DosenPage from './pages/DosenPage';
 import StasePage from './pages/StasePage';
 import KelompokPage from './pages/KelompokPage';
 import JadwalPage from './pages/JadwalPage';
+import TambahMahasiswaPage from './pages/TambahMahasiswaPage';
+import TambahDosenPage from './pages/TambahDosenPage';
+import TambahStasePage from './pages/TambahStasePage';
+import TambahKelompokPage from './pages/TambahKelompokPage';
+import TambahJadwalPage from './pages/TambahJadwalPage';
 
 function App() {
-
     return (
         <BrowserRouter>
             <AuthProvider>
@@ -19,7 +22,7 @@ function App() {
                     {/* Public */}
                     <Route path="/login" element={<LoginPage />} />
 
-                    {/* Protected */}
+                    {/* Protected - Main Pages */}
                     <Route path="/dashboard" element={
                         <ProtectedRoute><DashboardPage /></ProtectedRoute>
                     } />
@@ -37,6 +40,23 @@ function App() {
                     } />
                     <Route path="/jadwal" element={
                         <ProtectedRoute><JadwalPage /></ProtectedRoute>
+                    } />
+
+                    {/* Protected - Form Pages */}
+                    <Route path="/mahasiswa/tambah" element={
+                        <ProtectedRoute><TambahMahasiswaPage /></ProtectedRoute>
+                    } />
+                    <Route path="/dosen/tambah" element={
+                        <ProtectedRoute><TambahDosenPage /></ProtectedRoute>
+                    } />
+                    <Route path="/stase/tambah" element={
+                        <ProtectedRoute><TambahStasePage /></ProtectedRoute>
+                    } />
+                    <Route path="/kelompok/tambah" element={
+                        <ProtectedRoute><TambahKelompokPage /></ProtectedRoute>
+                    } />
+                    <Route path="/jadwal/tambah" element={
+                        <ProtectedRoute><TambahJadwalPage /></ProtectedRoute>
                     } />
 
                     {/* Default */}
