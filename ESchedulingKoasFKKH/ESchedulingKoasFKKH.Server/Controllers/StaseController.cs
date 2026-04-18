@@ -1,5 +1,6 @@
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
 using Microsoft.AspNetCore.Mvc;
 
@@ -53,7 +54,7 @@ public class StaseController : ControllerBase
     public async Task<IActionResult> Create(Create create)
     {
         if (await _staseRepository.IsExist(create.Nama))
-            return BadRequest();
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{create.Nama}' sudah digunakan" });
 
         var stase = new Stase
         {
@@ -83,13 +84,14 @@ public class StaseController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, Update update)
     {
-        if (update.Id != id) return BadRequest();
+        if (update.Id != id)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "id pada body tidak sesuai dengan id pada url" });
 
         var stase = await _staseRepository.Get(id);
         if (stase is null) return NotFound();
 
         if (await _staseRepository.IsExist(update.Nama, id))
-            return BadRequest();
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{update.Nama}' sudah digunakan" });
 
         stase.Nama = update.Nama;
         stase.Waktu = update.Waktu;
