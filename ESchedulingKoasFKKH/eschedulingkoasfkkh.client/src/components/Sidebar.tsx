@@ -1,0 +1,121 @@
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+}
+
+const navItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
+  { id: 'mahasiswa', label: 'Mahasiswa', icon: '👨‍🎓', path: '/mahasiswa' },
+  { id: 'dosen', label: 'Dosen', icon: '👨‍🏫', path: '/dosen' },
+  { id: 'stase', label: 'Stase', icon: '🏥', path: '/stase' },
+  { id: 'kelompok', label: 'Kelompok', icon: '👥', path: '/kelompok' },
+  { id: 'jadwal', label: 'Jadwal', icon: '📅', path: '/jadwal' },
+];
+
+export default function Sidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
+
+  return (
+    <aside
+      className={`fixed top-0 left-0 h-screen z-40 transition-all duration-300 ease-in-out flex flex-col
+        ${collapsed ? 'w-20' : 'w-64'}
+        bg-primary-900 text-white shadow-dark`}
+    >
+      {/* Logo Section */}
+      <div className="p-5 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-lg font-bold shadow-glow-blue flex-shrink-0">
+            ES
+          </div>
+          {!collapsed && (
+            <div className="animate-fade-in overflow-hidden">
+              <h1 className="text-lg font-bold tracking-tight">E-Scheduling</h1>
+              <p className="text-xs text-blue-300/70">KOAS FKKH</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Toggle Button */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-primary-800 border-2 border-primary-600 text-white/60 hover:text-white hover:bg-primary-700 flex items-center justify-center text-xs transition-all shadow-lg"
+        title={collapsed ? 'Expand' : 'Collapse'}
+      >
+        {collapsed ? '→' : '←'}
+      </button>
+
+      {/* Navigation */}
+      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        {!collapsed && (
+          <p className="text-xs font-semibold text-blue-300/50 uppercase tracking-wider px-3 mb-3">
+            Menu Utama
+          </p>
+        )}
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            id={`nav-${item.id}`}
+            onClick={() => navigate(item.path)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+              ${isActive(item.path)
+                ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/10 text-white shadow-glow-blue/20 border border-blue-400/20'
+                : 'text-blue-100/60 hover:text-white hover:bg-white/5'
+              }`}
+            title={collapsed ? item.label : undefined}
+          >
+            <span className={`text-xl flex-shrink-0 transition-transform duration-200 ${isActive(item.path) ? 'scale-110' : 'group-hover:scale-110'}`}>
+              {item.icon}
+            </span>
+            {!collapsed && (
+              <span className="animate-fade-in truncate">{item.label}</span>
+            )}
+            {!collapsed && isActive(item.path) && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse-slow" />
+            )}
+          </button>
+        ))}
+      </nav>
+
+      {/* User Section */}
+      <div className="p-3 border-t border-white/10">
+        <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center' : ''}`}>
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-sm font-bold shadow-md flex-shrink-0">
+            {user?.username?.charAt(0).toUpperCase() || 'A'}
+          </div>
+          {!collapsed && (
+            <div className="animate-fade-in flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.username || 'Admin'}</p>
+              <p className="text-xs text-blue-300/50">Administrator</p>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          id="btn-logout"
+          className={`mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-300/70 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 ${collapsed ? 'justify-center' : ''}`}
+          title="Logout"
+        >
+          <span className="text-lg">🚪</span>
+          {!collapsed && <span className="animate-fade-in">Logout</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}
