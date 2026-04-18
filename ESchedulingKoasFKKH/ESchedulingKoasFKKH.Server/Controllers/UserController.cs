@@ -62,6 +62,6 @@ public class UserController : ControllerBase
             signingCredentials);
 
         var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
-        return Ok(new { token = tokenStr });
+        return Ok(new { user.Id, user.Role, token = tokenStr });
     }
 }
