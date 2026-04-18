@@ -1,5 +1,6 @@
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
 using Humanizer;
@@ -15,13 +16,16 @@ public class StaseController : ControllerBase
 {
     private readonly IStaseRepository _staseRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHariLiburService _hariLiburService;
 
     public StaseController(
         IStaseRepository staseRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IHariLiburService hariLiburService)
     {
         _staseRepository = staseRepository;
         _unitOfWork = unitOfWork;
+        _hariLiburService = hariLiburService;
     }
 
     [HttpGet("{id:int}")]
@@ -36,7 +40,14 @@ public class StaseController : ControllerBase
             stase.Nama,
             stase.Waktu,
             jenis = stase.Jenis.Humanize(),
-            daftarJadwal = stase.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
+            daftarJadwal = stase.DaftarJadwal.Select(j => new 
+            { 
+                j.Id, 
+                j.TanggalMulai, 
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService), 
+                idKelompok = j.Kelompok?.Id, 
+                namaKelompok = j.Kelompok?.Nama 
+            })
         });
     }
 
@@ -49,7 +60,14 @@ public class StaseController : ControllerBase
             x.Nama,
             x.Waktu,
             jenis = x.Jenis.Humanize(),
-            daftarJadwal = x.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
+            daftarJadwal = x.DaftarJadwal.Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                idKelompok = j.Kelompok?.Id,
+                namaKelompok = j.Kelompok?.Nama
+            })
         }));
     }
 
@@ -89,7 +107,14 @@ public class StaseController : ControllerBase
                 stase.Nama,
                 stase.Waktu,
                 jenis = stase.Jenis.Humanize(),
-                daftarJadwal = stase.DaftarJadwal?.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idKelompok = j.Kelompok?.Id, namaKelompok = j.Kelompok?.Nama })
+                daftarJadwal = stase.DaftarJadwal.Select(j => new
+                {
+                    j.Id,
+                    j.TanggalMulai,
+                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    idKelompok = j.Kelompok?.Id,
+                    namaKelompok = j.Kelompok?.Nama
+                })
             });
     }
 

@@ -7,6 +7,8 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Infrastructure.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Infrastructure.Auth;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
+using ESchedulingKoasFKKH.Infrastructure.Services.HariLibur;
 
 namespace ESchedulingKoasFKKH.Infrastructure;
 
@@ -29,6 +31,8 @@ public static class DepedencyInjection
         services.AddScoped<IKelompokRepository, KelompokRepository>();
         services.AddScoped<IJadwalRepository, JadwalRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+
+        services.AddScoped<IHariLiburService, HariLiburService>();
 
         return services;
     }
