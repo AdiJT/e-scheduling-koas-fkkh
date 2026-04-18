@@ -1,24 +1,42 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from '../components/Layout';
+import { mahasiswaApi } from '../services/api';
 
 export default function TambahMahasiswaPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nim: '', nama: '', email: '', telepon: '', angkatan: '', alamat: '', jenisKelamin: '' });
+  const [form, setForm] = useState({ nim: '', nama: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    // Clear error on field change
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    setTimeout(() => navigate('/mahasiswa'), 1500);
+    setErrors({});
+
+    try {
+      await mahasiswaApi.create({ nim: form.nim, nama: form.nama });
+      setShowSuccess(true);
+      setTimeout(() => navigate('/mahasiswa'), 1500);
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string>; message?: string };
+      if (apiErr?.status === 400 && apiErr?.errors) {
+        setErrors(apiErr.errors);
+      } else {
+        setErrors({ general: apiErr?.message || 'Gagal menyimpan data. Pastikan server backend berjalan.' });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -41,6 +59,15 @@ export default function TambahMahasiswaPage() {
         </div>
       )}
 
+      {/* General Error */}
+      {errors.general && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-red-500 text-lg">⚠️</span>
+          <p className="text-sm text-red-700 flex-1">{errors.general}</p>
+          <button onClick={() => setErrors({})} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+        </div>
+      )}
+
       <div className="max-w-3xl animate-fade-in-up">
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-mahasiswa">
           <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
@@ -50,45 +77,30 @@ export default function TambahMahasiswaPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">NIM <span className="text-red-500">*</span></label>
-                <input name="nim" value={form.nim} onChange={handleChange} required placeholder="Contoh: 2023001"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                <input
+                  name="nim"
+                  value={form.nim}
+                  onChange={handleChange}
+                  required
+                  placeholder="Contoh: 2201001"
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all
+                    ${errors.nim ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {errors.nim && <p className="text-xs text-red-500 mt-1">{errors.nim}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
-                <input name="nama" value={form.nama} onChange={handleChange} required placeholder="Nama lengkap mahasiswa"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                <input
+                  name="nama"
+                  value={form.nama}
+                  onChange={handleChange}
+                  required
+                  placeholder="Nama lengkap mahasiswa"
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all
+                    ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
-                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="email@example.com"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">No. Telepon</label>
-                <input name="telepon" value={form.telepon} onChange={handleChange} placeholder="08xxxxxxxxxx"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Angkatan <span className="text-red-500">*</span></label>
-                <select name="angkatan" value={form.angkatan} onChange={handleChange} required
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer">
-                  <option value="">Pilih angkatan</option>
-                  <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Jenis Kelamin <span className="text-red-500">*</span></label>
-                <select name="jenisKelamin" value={form.jenisKelamin} onChange={handleChange} required
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer">
-                  <option value="">Pilih jenis kelamin</option>
-                  <option value="L">Laki-laki</option><option value="P">Perempuan</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Alamat</label>
-              <textarea name="alamat" value={form.alamat} onChange={handleChange} rows={3} placeholder="Alamat lengkap mahasiswa"
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none" />
             </div>
           </div>
           <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">

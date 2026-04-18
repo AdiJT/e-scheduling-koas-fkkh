@@ -12,6 +12,7 @@ import TambahMahasiswaPage from './pages/TambahMahasiswaPage';
 import TambahDosenPage from './pages/TambahDosenPage';
 import TambahStasePage from './pages/TambahStasePage';
 import TambahKelompokPage from './pages/TambahKelompokPage';
+import DetailKelompokPage from './pages/DetailKelompokPage';
 import TambahJadwalPage from './pages/TambahJadwalPage';
 
 function App() {
@@ -54,6 +55,9 @@ function App() {
                     } />
                     <Route path="/kelompok/tambah" element={
                         <ProtectedRoute><TambahKelompokPage /></ProtectedRoute>
+                    } />
+                    <Route path="/kelompok/:id" element={
+                        <ProtectedRoute><DetailKelompokPage /></ProtectedRoute>
                     } />
                     <Route path="/jadwal/tambah" element={
                         <ProtectedRoute><TambahJadwalPage /></ProtectedRoute>

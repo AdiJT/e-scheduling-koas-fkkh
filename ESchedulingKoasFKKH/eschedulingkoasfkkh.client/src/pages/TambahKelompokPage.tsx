@@ -1,24 +1,34 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from '../components/Layout';
+import { kelompokApi } from '../services/api';
 
 export default function TambahKelompokPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nama: '', stase: '', periode: '', anggota: '' });
+  const [nama, setNama] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    setTimeout(() => navigate('/kelompok'), 1500);
+    setErrors({});
+
+    try {
+      await kelompokApi.create({ nama });
+      setShowSuccess(true);
+      setTimeout(() => navigate('/kelompok'), 1500);
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string>; message?: string };
+      if (apiErr?.status === 400 && apiErr?.errors) {
+        setErrors(apiErr.errors);
+      } else {
+        setErrors({ general: apiErr?.message || 'Gagal menyimpan data. Pastikan server backend berjalan.' });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,7 +47,17 @@ export default function TambahKelompokPage() {
             <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"><span className="text-4xl">✅</span></div>
             <h3 className="text-xl font-bold text-primary-900 mb-2">Berhasil!</h3>
             <p className="text-slate-500">Kelompok berhasil dibuat</p>
+            <p className="text-xs text-slate-400 mt-2">Anda dapat menambahkan anggota dan pembimbing di halaman detail kelompok</p>
           </div>
+        </div>
+      )}
+
+      {/* General Error */}
+      {errors.general && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-red-500 text-lg">⚠️</span>
+          <p className="text-sm text-red-700 flex-1">{errors.general}</p>
+          <button onClick={() => setErrors({})} className="text-red-400 hover:text-red-600 text-lg">✕</button>
         </div>
       )}
 
@@ -47,34 +67,18 @@ export default function TambahKelompokPage() {
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" /> Data Kelompok</h2>
           </div>
           <div className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Kelompok <span className="text-red-500">*</span></label>
-                <input name="nama" value={form.nama} onChange={handleChange} required placeholder="Contoh: Kelompok 6"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Stase <span className="text-red-500">*</span></label>
-                <select name="stase" value={form.stase} onChange={handleChange} required
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all cursor-pointer">
-                  <option value="">Pilih stase</option>
-                  <option value="Bedah Veteriner">Bedah Veteriner</option>
-                  <option value="Penyakit Dalam">Penyakit Dalam</option>
-                  <option value="Reproduksi">Reproduksi</option>
-                  <option value="Patologi">Patologi</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Periode <span className="text-red-500">*</span></label>
-                <input name="periode" value={form.periode} onChange={handleChange} required placeholder="Contoh: April 2026"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Anggota (NIM, pisahkan dengan koma)</label>
-                <textarea name="anggota" value={form.anggota} onChange={handleChange} rows={4} placeholder="Contoh: 2023001, 2023002, 2023003"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all resize-none" />
-                <p className="text-xs text-slate-400 mt-1.5">💡 Masukkan NIM mahasiswa, dipisahkan dengan koma</p>
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Kelompok <span className="text-red-500">*</span></label>
+              <input
+                value={nama}
+                onChange={(e) => { setNama(e.target.value); if (errors.nama) setErrors({}); }}
+                required
+                placeholder="Contoh: Kelompok 6"
+                className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all
+                  ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+              />
+              {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
+              <p className="text-xs text-slate-400 mt-2">💡 Setelah kelompok dibuat, Anda dapat menambahkan anggota dan pembimbing di halaman detail kelompok</p>
             </div>
           </div>
           <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
