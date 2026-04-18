@@ -220,9 +220,17 @@ export interface Kelompok {
   id: number;
   nama: string;
   idPembimbing: number | null;
-  namaPembimbing: string | null;
   daftarMahasiswa: { id: number; nim: string; nama: string }[];
-  daftarJadwal: { id: number; tanggalMulai: string }[];
+  daftarJadwal: { id: number; tanggalMulai: string; tanggalSelesai: string; idStase: number | null; namaStase: string | null }[];
+}
+
+export interface CreateKelompok {
+  nama: string;
+}
+
+export interface UpdateKelompok {
+  id: number;
+  nama: string;
 }
 
 export const kelompokApi = {
@@ -234,6 +242,67 @@ export const kelompokApi = {
   get: async (id: number): Promise<Kelompok> => {
     const res = await fetch(`${BASE_URL}/kelompok/${id}`);
     return handleResponse<Kelompok>(res);
+  },
+
+  create: async (data: CreateKelompok): Promise<Kelompok> => {
+    const res = await fetch(`${BASE_URL}/kelompok`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Kelompok>(res);
+  },
+
+  update: async (id: number, data: UpdateKelompok): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<void>(res);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+
+  tambahAnggota: async (kelompokId: number, idMahasiswa: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/tambah-anggota`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idMahasiswa }),
+    });
+    return handleResponse<void>(res);
+  },
+
+  hapusAnggota: async (kelompokId: number, idMahasiswa: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/hapus-anggota`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idMahasiswa }),
+    });
+    return handleResponse<void>(res);
+  },
+
+  pilihPembimbing: async (kelompokId: number, idPembimbing: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/pilih-pembimbing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idPembimbing }),
+    });
+    return handleResponse<void>(res);
+  },
+
+  gantiPembimbing: async (kelompokId: number, idPembimbing: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/kelompok/${kelompokId}/ganti-pembimbing`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idPembimbing }),
+    });
+    return handleResponse<void>(res);
   },
 };
 

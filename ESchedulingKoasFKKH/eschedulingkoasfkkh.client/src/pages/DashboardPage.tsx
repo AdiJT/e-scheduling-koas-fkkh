@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
+import { mahasiswaApi, pembimbingApi, staseApi, kelompokApi, jadwalApi, type Jadwal } from '../services/api';
 
 interface MenuItem {
   id: string;
@@ -12,81 +14,53 @@ interface MenuItem {
   shadowColor: string;
 }
 
-interface StatCard {
-  label: string;
-  value: string;
-  icon: string;
-  change: string;
-  changeType: 'up' | 'down' | 'neutral';
-  gradient: string;
-}
-
 const menuItems: MenuItem[] = [
-  {
-    id: 'mahasiswa',
-    label: 'Kelola Mahasiswa',
-    icon: '👨‍🎓',
-    path: '/mahasiswa',
-    description: 'Kelola data mahasiswa KOAS',
-    gradient: 'from-blue-500 to-blue-600',
-    shadowColor: 'shadow-glow-blue',
-  },
-  {
-    id: 'dosen',
-    label: 'Kelola Dosen',
-    icon: '👨‍🏫',
-    path: '/dosen',
-    description: 'Kelola data dosen pembimbing',
-    gradient: 'from-emerald-500 to-green-600',
-    shadowColor: 'shadow-glow-green',
-  },
-  {
-    id: 'stase',
-    label: 'Kelola Stase',
-    icon: '🏥',
-    path: '/stase',
-    description: 'Kelola rotasi klinik',
-    gradient: 'from-purple-500 to-purple-600',
-    shadowColor: 'shadow-glow-purple',
-  },
-  {
-    id: 'kelompok',
-    label: 'Kelola Kelompok',
-    icon: '👥',
-    path: '/kelompok',
-    description: 'Kelola kelompok mahasiswa',
-    gradient: 'from-orange-500 to-orange-600',
-    shadowColor: 'shadow-glow-orange',
-  },
-  {
-    id: 'jadwal',
-    label: 'Kelola Jadwal',
-    icon: '📅',
-    path: '/jadwal',
-    description: 'Generate & kelola jadwal',
-    gradient: 'from-rose-500 to-red-600',
-    shadowColor: 'shadow-glow-red',
-  },
+  { id: 'mahasiswa', label: 'Kelola Mahasiswa', icon: '👨‍🎓', path: '/mahasiswa', description: 'Kelola data mahasiswa KOAS', gradient: 'from-blue-500 to-blue-600', shadowColor: 'shadow-glow-blue' },
+  { id: 'dosen', label: 'Kelola Dosen', icon: '👨‍🏫', path: '/dosen', description: 'Kelola data dosen pembimbing', gradient: 'from-emerald-500 to-green-600', shadowColor: 'shadow-glow-green' },
+  { id: 'stase', label: 'Kelola Stase', icon: '🏥', path: '/stase', description: 'Kelola rotasi klinik', gradient: 'from-purple-500 to-purple-600', shadowColor: 'shadow-glow-purple' },
+  { id: 'kelompok', label: 'Kelola Kelompok', icon: '👥', path: '/kelompok', description: 'Kelola kelompok mahasiswa', gradient: 'from-orange-500 to-orange-600', shadowColor: 'shadow-glow-orange' },
+  { id: 'jadwal', label: 'Kelola Jadwal', icon: '📅', path: '/jadwal', description: 'Generate & kelola jadwal', gradient: 'from-rose-500 to-red-600', shadowColor: 'shadow-glow-red' },
 ];
 
-const statCards: StatCard[] = [
-  { label: 'Total Mahasiswa', value: '156', icon: '👨‍🎓', change: '+12 bulan ini', changeType: 'up', gradient: 'from-blue-500 to-blue-600' },
-  { label: 'Total Dosen', value: '24', icon: '👨‍🏫', change: '+2 bulan ini', changeType: 'up', gradient: 'from-emerald-500 to-green-600' },
-  { label: 'Total Stase', value: '8', icon: '🏥', change: 'Stabil', changeType: 'neutral', gradient: 'from-purple-500 to-purple-600' },
-  { label: 'Kelompok', value: '12', icon: '👥', change: '+3 bulan ini', changeType: 'up', gradient: 'from-orange-500 to-orange-600' },
-];
-
-const recentActivities = [
-  { action: 'Jadwal Stase Bedah diperbarui', time: '2 menit lalu', icon: '📅', color: 'bg-blue-100 text-blue-600' },
-  { action: 'Mahasiswa baru ditambahkan: Ahmad Fauzi', time: '15 menit lalu', icon: '👨‍🎓', color: 'bg-green-100 text-green-600' },
-  { action: 'Kelompok 5 telah dibentuk', time: '1 jam lalu', icon: '👥', color: 'bg-orange-100 text-orange-600' },
-  { action: 'Dosen Dr. Siti ditugaskan ke Stase Penyakit Dalam', time: '3 jam lalu', icon: '👨‍🏫', color: 'bg-purple-100 text-purple-600' },
-  { action: 'Jadwal mingguan berhasil di-generate', time: '5 jam lalu', icon: '⚡', color: 'bg-cyan-100 text-cyan-600' },
-];
+interface Stats {
+  mahasiswa: number;
+  dosen: number;
+  stase: number;
+  kelompok: number;
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
+  const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [mhs, pemb, stase, kel, jadwal] = await Promise.all([
+        mahasiswaApi.getAll(),
+        pembimbingApi.getAll(),
+        staseApi.getAll(),
+        kelompokApi.getAll(),
+        jadwalApi.getAll(),
+      ]);
+      setStats({
+        mahasiswa: mhs.length,
+        dosen: pemb.length,
+        stase: stase.length,
+        kelompok: kel.length,
+      });
+      setJadwalList(jadwal);
+    } catch {
+      // Silently fail — stats will show 0
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -95,6 +69,19 @@ export default function DashboardPage() {
     if (hour < 18) return 'Selamat Sore';
     return 'Selamat Malam';
   };
+
+  const statCards = [
+    { label: 'Total Mahasiswa', value: stats.mahasiswa, icon: '👨‍🎓', gradient: 'from-blue-500 to-blue-600' },
+    { label: 'Total Dosen', value: stats.dosen, icon: '👨‍🏫', gradient: 'from-emerald-500 to-green-600' },
+    { label: 'Total Stase', value: stats.stase, icon: '🏥', gradient: 'from-purple-500 to-purple-600' },
+    { label: 'Kelompok', value: stats.kelompok, icon: '👥', gradient: 'from-orange-500 to-orange-600' },
+  ];
+
+  // Upcoming jadwal: sort by date, take next 3
+  const upcomingJadwal = [...jadwalList]
+    .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
+    .filter(j => new Date(j.tanggalMulai) >= new Date(new Date().toDateString()))
+    .slice(0, 3);
 
   return (
     <Layout>
@@ -128,15 +115,10 @@ export default function DashboardPage() {
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform duration-300`}>
                 {stat.icon}
               </div>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                stat.changeType === 'up' ? 'bg-green-100 text-green-700' :
-                stat.changeType === 'down' ? 'bg-red-100 text-red-700' :
-                'bg-slate-100 text-slate-600'
-              }`}>
-                {stat.change}
-              </span>
             </div>
-            <p className="text-3xl font-bold text-primary-900 mb-1">{stat.value}</p>
+            <p className="text-3xl font-bold text-primary-900 mb-1">
+              {loading ? <span className="inline-block w-10 h-8 bg-slate-200 rounded animate-pulse" /> : stat.value}
+            </p>
             <p className="text-sm text-slate-500">{stat.label}</p>
           </div>
         ))}
@@ -159,17 +141,13 @@ export default function DashboardPage() {
                 transition-all duration-300 text-left animate-fade-in-up overflow-hidden`}
               style={{ animationDelay: `${(index + 4) * 80}ms` }}
             >
-              {/* Hover gradient overlay */}
               <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl`} />
-              
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center text-2xl mb-4 shadow-md group-hover:scale-110 group-hover:${item.shadowColor} transition-all duration-300`}>
                 {item.icon}
               </div>
               <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">{item.label}</h3>
               <p className="text-xs text-slate-400">{item.description}</p>
-              <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">
-                →
-              </span>
+              <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
             </button>
           ))}
         </div>
@@ -177,29 +155,35 @@ export default function DashboardPage() {
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
+        {/* Quick Stats Summary */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
               <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
-              Aktivitas Terbaru
+              Ringkasan Data
             </h2>
-            <button className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
-              Lihat Semua →
-            </button>
           </div>
-          <div className="divide-y divide-slate-50">
-            {recentActivities.map((activity, index) => (
-              <div key={index} className="px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors group">
-                <div className={`w-10 h-10 rounded-xl ${activity.color} flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                  {activity.icon}
+          <div className="p-5">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Mahasiswa Terdaftar', value: stats.mahasiswa, icon: '👨‍🎓', color: 'bg-blue-100 text-blue-600' },
+                { label: 'Dosen Pembimbing', value: stats.dosen, icon: '👨‍🏫', color: 'bg-green-100 text-green-600' },
+                { label: 'Stase Tersedia', value: stats.stase, icon: '🏥', color: 'bg-purple-100 text-purple-600' },
+                { label: 'Kelompok Aktif', value: stats.kelompok, icon: '👥', color: 'bg-orange-100 text-orange-600' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition-colors group">
+                  <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-bold text-primary-900">
+                      {loading ? <span className="inline-block w-8 h-5 bg-slate-200 rounded animate-pulse" /> : item.value}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">{item.label}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-700 font-medium truncate">{activity.action}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{activity.time}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -235,14 +219,25 @@ export default function DashboardPage() {
               Jadwal Mendatang
             </h3>
             <div className="space-y-3">
-              <div className="bg-white/10 rounded-xl p-3 border border-white/10">
-                <p className="text-sm font-medium">Stase Bedah - Kelompok 3</p>
-                <p className="text-xs text-blue-200/60 mt-1">Senin, 21 April 2026</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-3 border border-white/10">
-                <p className="text-sm font-medium">Stase Penyakit Dalam - Kelompok 1</p>
-                <p className="text-xs text-blue-200/60 mt-1">Selasa, 22 April 2026</p>
-              </div>
+              {loading ? (
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10 animate-pulse">
+                  <div className="h-4 bg-white/20 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-white/10 rounded w-1/2" />
+                </div>
+              ) : upcomingJadwal.length === 0 ? (
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10 text-center">
+                  <p className="text-sm text-blue-200/80">Tidak ada jadwal mendatang</p>
+                </div>
+              ) : (
+                upcomingJadwal.map(j => (
+                  <div key={j.id} className="bg-white/10 rounded-xl p-3 border border-white/10">
+                    <p className="text-sm font-medium">{j.namaStase || 'Stase'} - {j.namaKelompok || 'Kelompok'}</p>
+                    <p className="text-xs text-blue-200/60 mt-1">
+                      {new Date(j.tanggalMulai).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
             <button 
               onClick={() => navigate('/jadwal')} 
