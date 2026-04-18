@@ -2,11 +2,6 @@
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ESchedulingKoasFKKH.Infrastructure.ModulUtama;
 
@@ -15,6 +10,19 @@ internal class PembimbingConfiguration : IEntityTypeConfiguration<Pembimbing>
     public void Configure(EntityTypeBuilder<Pembimbing> builder)
     {
         builder.HasMany(x => x.DaftarKelompok).WithOne(y => y.Pembimbing).IsRequired(false);
+
+        builder.HasData(
+            new Pembimbing { Id = 1, NIP = "198501012010011001", Nama = "Drg. Adi Wijaya, Sp.KG" },
+            new Pembimbing { Id = 2, NIP = "198602022011012002", Nama = "Drg. Sinta Maharani, M.Kes" },
+            new Pembimbing { Id = 3, NIP = "197803032009011003", Nama = "Drg. Bambang Hermanto, Sp.BM" },
+            new Pembimbing { Id = 4, NIP = "198204042012012004", Nama = "Drg. Ratna Sari, Sp.Perio" },
+            new Pembimbing { Id = 5, NIP = "197905052010011005", Nama = "Drg. Hasan Basri, Sp.Ort" },
+            new Pembimbing { Id = 6, NIP = "198306062013012006", Nama = "Drg. Anita Kusuma, Sp.PM" },
+            new Pembimbing { Id = 7, NIP = "197607072008011007", Nama = "Drg. Taufik Hidayat, Sp.Pros" },
+            new Pembimbing { Id = 8, NIP = "198408082014012008", Nama = "Drg. Wulandari, M.Sc" },
+            new Pembimbing { Id = 9, NIP = "197709092007011009", Nama = "Drg. Surya Darma, Sp.RKG" },
+            new Pembimbing { Id = 10, NIP = "198510102015012010", Nama = "Drg. Lina Marlina, Sp.KGA" }
+        );
     }
 }
 

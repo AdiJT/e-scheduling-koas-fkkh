@@ -15,6 +15,28 @@ internal class MahasiswaConfiguration : IEntityTypeConfiguration<Mahasiswa>
     public void Configure(EntityTypeBuilder<Mahasiswa> builder)
     {
         builder.HasOne(x => x.Kelompok).WithMany(y => y.DaftarMahasiswa).IsRequired(false);
+        builder.HasData(
+            new Mahasiswa { Id = 1, NIM = "2201001", Nama = "Ahmad Fauzi" },
+            new Mahasiswa { Id = 2, NIM = "2201002", Nama = "Siti Nurhaliza" },
+            new Mahasiswa { Id = 3, NIM = "2201003", Nama = "Muhammad Rizky" },
+            new Mahasiswa { Id = 4, NIM = "2201004", Nama = "Dewi Anggraini" },
+            new Mahasiswa { Id = 5, NIM = "2201005", Nama = "Budi Santoso" },
+            new Mahasiswa { Id = 6, NIM = "2201006", Nama = "Putri Rahayu" },
+            new Mahasiswa { Id = 7, NIM = "2201007", Nama = "Andi Pratama" },
+            new Mahasiswa { Id = 8, NIM = "2201008", Nama = "Rina Wati" },
+            new Mahasiswa { Id = 9, NIM = "2201009", Nama = "Fajar Nugroho" },
+            new Mahasiswa { Id = 10, NIM = "2201010", Nama = "Lestari Dewi" },
+            new Mahasiswa { Id = 11, NIM = "2201011", Nama = "Hendra Gunawan" },
+            new Mahasiswa { Id = 12, NIM = "2201012", Nama = "Indah Permata" },
+            new Mahasiswa { Id = 13, NIM = "2201013", Nama = "Yoga Aditya" },
+            new Mahasiswa { Id = 14, NIM = "2201014", Nama = "Nadia Safitri" },
+            new Mahasiswa { Id = 15, NIM = "2201015", Nama = "Rizal Ramadhan" },
+            new Mahasiswa { Id = 16, NIM = "2201016", Nama = "Fitri Handayani" },
+            new Mahasiswa { Id = 17, NIM = "2201017", Nama = "Dimas Ardiansyah" },
+            new Mahasiswa { Id = 18, NIM = "2201018", Nama = "Sari Mulyani" },
+            new Mahasiswa { Id = 19, NIM = "2201019", Nama = "Agus Setiawan" },
+            new Mahasiswa { Id = 20, NIM = "2201020", Nama = "Maya Puspita" }
+        );
     }
 }
 
