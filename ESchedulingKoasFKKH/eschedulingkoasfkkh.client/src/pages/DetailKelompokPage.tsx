@@ -192,18 +192,18 @@ export default function DetailKelompokPage() {
           </button>
         </div>
         {kelompok.idPembimbing ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full min-w-max">
               <thead>
                 <tr className="bg-gradient-to-r from-emerald-600 to-green-700 text-white">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">NIP</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Dosen</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIP</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Dosen</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="hover:bg-green-50/30 transition-colors">
-                  <td className="px-5 py-3.5 text-sm font-mono text-slate-600">{pembimbingNip}</td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-4 md:px-5 py-3.5 text-sm font-mono text-slate-600 whitespace-nowrap">{pembimbingNip}</td>
+                  <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                         {pembimbingNama?.charAt(0)}
@@ -244,22 +244,22 @@ export default function DetailKelompokPage() {
             <p className="text-slate-500 text-sm">Belum ada anggota dalam kelompok ini</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full" id="table-anggota">
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full min-w-max" id="table-anggota">
               <thead>
                 <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">No</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">NIM</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Mahasiswa</th>
-                  <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
+                  <th className="px-4 md:px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {kelompok.daftarMahasiswa.map((mhs, index) => (
                   <tr key={mhs.id} className="hover:bg-blue-50/30 transition-colors duration-150 group">
-                    <td className="px-5 py-3.5 text-sm text-slate-500">{index + 1}</td>
-                    <td className="px-5 py-3.5 text-sm font-mono text-slate-600">{mhs.nim}</td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                    <td className="px-4 md:px-5 py-3.5 text-sm font-mono text-slate-600 whitespace-nowrap">{mhs.nim}</td>
+                    <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                           {mhs.nama.charAt(0)}
@@ -267,11 +267,11 @@ export default function DetailKelompokPage() {
                         <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-center">
+                    <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           onClick={() => { setRemoveMemberId(mhs.id); setShowRemoveMember(true); }}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
+                          className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
                           title="Keluarkan dari kelompok"
                         >
                           🗑️

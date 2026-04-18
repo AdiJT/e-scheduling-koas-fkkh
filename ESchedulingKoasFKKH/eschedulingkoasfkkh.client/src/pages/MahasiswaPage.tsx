@@ -200,24 +200,24 @@ export default function MahasiswaPage() {
                 Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> mahasiswa
               </p>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full" id="table-mahasiswa">
+            <div className="overflow-x-auto pb-4">
+              <table className="w-full min-w-max" id="table-mahasiswa">
                 <thead>
                   <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">No</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">NIM</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Nama Mahasiswa</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Kelompok</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Kelompok</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredData.map((mhs, index) => (
                     <tr key={mhs.id} className="hover:bg-blue-50/30 transition-colors duration-150 group">
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
 
                       {/* NIM */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         {editingId === mhs.id ? (
                           <div>
                             <input
@@ -237,7 +237,7 @@ export default function MahasiswaPage() {
                       </td>
 
                       {/* Nama */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         {editingId === mhs.id ? (
                           <input
                             value={editForm.nama}
@@ -256,20 +256,20 @@ export default function MahasiswaPage() {
                       </td>
 
                       {/* Kelompok */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         {mhs.idKelompok ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                          <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                             Kelompok {mhs.idKelompok}
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                          <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
                             Belum ada
                           </span>
                         )}
                       </td>
 
                       {/* Aksi */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
                           {editingId === mhs.id ? (
                             <>
@@ -296,7 +296,7 @@ export default function MahasiswaPage() {
                               <button
                                 onClick={() => startEdit(mhs)}
                                 className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm
-                                  opacity-0 group-hover:opacity-100"
+                                  opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                 title="Edit"
                               >
                                 ✏️
@@ -304,7 +304,7 @@ export default function MahasiswaPage() {
                               <button
                                 onClick={() => handleDelete(mhs.id)}
                                 className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm
-                                  opacity-0 group-hover:opacity-100"
+                                  opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                 title="Hapus"
                               >
                                 🗑️

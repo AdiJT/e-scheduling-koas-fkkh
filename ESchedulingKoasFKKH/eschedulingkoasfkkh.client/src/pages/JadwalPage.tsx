@@ -300,41 +300,43 @@ export default function JadwalPage() {
 
       {/* Content Area */}
       {viewMode === 'calendar' ? (
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 animate-fade-in-up h-[700px]">
-          <Calendar
-            localizer={localizer}
-            events={calendarEvents}
-            startAccessor="start"
-            endAccessor="end"
-            culture="id"
-            view={calendarView}
-            onView={setCalendarView}
-            date={calendarDate}
-            onNavigate={setCalendarDate}
-            eventPropGetter={eventStyleGetter}
-            messages={{
-              next: "Selanjutnya",
-              previous: "Sebelumnya",
-              today: "Hari Ini",
-              month: "Bulan",
-              week: "Minggu",
-              day: "Hari",
-              agenda: "Agenda",
-              date: "Tanggal",
-              time: "Waktu",
-              event: "Kegiatan",
-              noEventsInRange: "Tidak ada jadwal pada periode ini.",
-              showMore: total => `+${total} lebih`
-            }}
-            onSelectEvent={(event) => {
-              if (event.type === 'jadwal') {
-                handleDetail(event.jadwalId);
-              } else {
-                setSelectedHoliday({ title: event.title, start: event.start });
-                setShowHolidayModal(true);
-              }
-            }}
-          />
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 animate-fade-in-up h-[700px] overflow-x-auto pb-6">
+          <div className="min-w-[800px] h-full">
+            <Calendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              culture="id"
+              view={calendarView}
+              onView={setCalendarView}
+              date={calendarDate}
+              onNavigate={setCalendarDate}
+              eventPropGetter={eventStyleGetter}
+              messages={{
+                next: "Selanjutnya",
+                previous: "Sebelumnya",
+                today: "Hari Ini",
+                month: "Bulan",
+                week: "Minggu",
+                day: "Hari",
+                agenda: "Agenda",
+                date: "Tanggal",
+                time: "Waktu",
+                event: "Kegiatan",
+                noEventsInRange: "Tidak ada jadwal pada periode ini.",
+                showMore: total => `+${total} lebih`
+              }}
+              onSelectEvent={(event) => {
+                if (event.type === 'jadwal') {
+                  handleDetail(event.jadwalId);
+                } else {
+                  setSelectedHoliday({ title: event.title, start: event.start });
+                  setShowHolidayModal(true);
+                }
+              }}
+            />
+          </div>
         </div>
       ) : (
         /* Table View */
@@ -363,54 +365,54 @@ export default function JadwalPage() {
                   🖨️ Cetak PDF
                 </button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full" id="table-jadwal">
+              <div className="overflow-x-auto pb-4">
+                <table className="w-full min-w-max" id="table-jadwal">
                   <thead>
                     <tr className="bg-gradient-to-r from-rose-600 to-red-700 text-white">
-                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">No</th>
-                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Kelompok</th>
-                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Stase</th>
-                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Periode</th>
-                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black">Status</th>
-                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase print:hidden">Aksi</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">No</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Kelompok</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Stase</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Periode</th>
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black whitespace-nowrap">Status</th>
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:hidden whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredData.map((j, i) => (
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
-                        <td className="px-5 py-3.5 text-sm text-slate-500">{i + 1}</td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{i + 1}</td>
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <span className="text-sm font-medium text-primary-900">{j.namaKelompok}</span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
                             {j.namaStase}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="text-xs text-slate-600">
                             <span className="font-medium">{formatDateDisplay(j.tanggalMulai)}</span>
                             <span className="text-slate-400 mx-1.5">→</span>
                             <span className="font-medium">{formatDateDisplay(j.tanggalSelesai)}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-center">
+                        <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor(j.status)}`}>
                             {statusIcon(j.status)} {j.status}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 print:hidden">
+                        <td className="px-4 md:px-5 py-3.5 print:hidden whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleDetail(j.id)}
-                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100 print:opacity-100"
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                               title="Detail"
                             >
                               👁️
                             </button>
                             <button
                               onClick={() => handleDelete(j.id)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100 print:opacity-100"
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                               title="Hapus"
                             >
                               🗑️

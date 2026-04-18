@@ -236,36 +236,38 @@ export default function DashboardPage() {
               Kalender Jadwal
             </h2>
           </div>
-          <div className="p-5 flex-1 min-h-[500px]">
-            <Calendar
-              localizer={localizer}
-              events={calendarEvents}
-              startAccessor="start"
-              endAccessor="end"
-              culture="id"
-              view={calendarView}
-              onView={setCalendarView}
-              date={calendarDate}
-              onNavigate={setCalendarDate}
-              eventPropGetter={eventStyleGetter}
-              messages={{
-                next: "Selanjutnya",
-                previous: "Sebelumnya",
-                today: "Hari Ini",
-                month: "Bulan",
-                week: "Minggu",
-                day: "Hari",
-                agenda: "Agenda",
-                date: "Tanggal",
-                time: "Waktu",
-                event: "Kegiatan",
-                noEventsInRange: "Tidak ada jadwal pada periode ini.",
-                showMore: total => `+${total} lebih`
-              }}
-              onSelectEvent={() => {
-                navigate('/jadwal');
-              }}
-            />
+          <div className="p-5 flex-1 min-h-[500px] overflow-x-auto pb-6">
+            <div className="min-w-[800px] h-full">
+              <Calendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                culture="id"
+                view={calendarView}
+                onView={setCalendarView}
+                date={calendarDate}
+                onNavigate={setCalendarDate}
+                eventPropGetter={eventStyleGetter}
+                messages={{
+                  next: "Selanjutnya",
+                  previous: "Sebelumnya",
+                  today: "Hari Ini",
+                  month: "Bulan",
+                  week: "Minggu",
+                  day: "Hari",
+                  agenda: "Agenda",
+                  date: "Tanggal",
+                  time: "Waktu",
+                  event: "Kegiatan",
+                  noEventsInRange: "Tidak ada jadwal pada periode ini.",
+                  showMore: total => `+${total} lebih`
+                }}
+                onSelectEvent={() => {
+                  navigate('/jadwal');
+                }}
+              />
+            </div>
           </div>
         </div>
 

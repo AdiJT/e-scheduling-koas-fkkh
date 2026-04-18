@@ -240,23 +240,23 @@ export default function StasePage() {
                 Total waktu: <span className="font-bold text-purple-600">{filteredData.reduce((sum, s) => sum + s.waktu, 0)} minggu</span>
               </p>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full" id="table-stase">
+            <div className="overflow-x-auto pb-4">
+              <table className="w-full min-w-max" id="table-stase">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-800 to-purple-700 text-white">
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">No</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Nama Stase</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Waktu</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Jenis</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Jadwal</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Stase</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Waktu</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jenis</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredData.map((stase, index) => (
                     <tr key={stase.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{index + 1}</td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                             {stase.nama.charAt(0)}
@@ -264,31 +264,31 @@ export default function StasePage() {
                           <span className="text-sm font-medium text-primary-900">{stase.nama}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 whitespace-nowrap">
                           ⏱️ {stase.waktu} Minggu
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${getJenisColor(stase.jenis)}`}>
+                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
                           {getJenisIcon(stase.jenis)} {stase.jenis}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-center">
+                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                         <span className="text-xs text-slate-500">
                           {stase.daftarJadwal.length > 0 ? (
-                            <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+                            <span className="inline-block px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">
                               {stase.daftarJadwal.length} jadwal
                             </span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold">
+                            <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold whitespace-nowrap">
                               Belum ada
                             </span>
                           )}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                           <button
                             onClick={() => startEdit(stase)}
                             className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
