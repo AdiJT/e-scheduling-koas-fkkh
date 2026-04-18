@@ -1,3 +1,4 @@
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
@@ -72,6 +73,7 @@ public class StaseController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateStase create)
     {
         if (await _staseRepository.IsExist(create.Nama))
@@ -119,6 +121,7 @@ public class StaseController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Update(int id, UpdateStase update)
     {
         if (update.Id != id)
@@ -149,6 +152,7 @@ public class StaseController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var stase = await _staseRepository.Get(id);

@@ -1,3 +1,4 @@
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
@@ -77,6 +78,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateKelompok create)
     {
         if (await _kelompokRepository.IsExist(create.Nama))
@@ -113,6 +115,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Update(int id, UpdateKelompok update)
     {
         if (update.Id != id)
@@ -133,6 +136,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var kelompok = await _kelompokRepository.Get(id);
@@ -146,6 +150,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPut("{id:int}/tambah-anggota")]
+    [Authorize(Roles = UserRoles.Pengelola)]
     public async Task<IActionResult> TambahAnggota(int id, TambahAnggota tambahAnggota)
     {
         var kelompok = await _kelompokRepository.Get(id);
@@ -167,6 +172,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPost("{id:int}/hapus-anggota")]
+    [Authorize(Roles = UserRoles.Pengelola)]
     public async Task<IActionResult> HapusAnggota(int id, HapusAnggota hapusAnggota)
     {
         var kelompok = await _kelompokRepository.Get(id);
@@ -188,6 +194,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPost("{id:int}/pilih-pembimbing")]
+    [Authorize(Roles = UserRoles.Pengelola)]
     public async Task<IActionResult> PilihPembimbing(int id, PilihPembimbing pilihPembimbing)
     {
         var kelompok = await _kelompokRepository.Get(id);
@@ -209,6 +216,7 @@ public class KelompokController : ControllerBase
     }
 
     [HttpPut("{id:int}/ganti-pembimbing")]
+    [Authorize(Roles = UserRoles.Pengelola)]
     public async Task<IActionResult> GantiPembimbing(int id, GantiPembimbing gantiPembimbing)
     {
         var kelompok = await _kelompokRepository.Get(id);

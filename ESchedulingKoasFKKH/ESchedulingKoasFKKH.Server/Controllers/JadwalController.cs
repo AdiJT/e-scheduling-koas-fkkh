@@ -1,8 +1,9 @@
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.JadwalModels;
-using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -68,6 +69,7 @@ public class JadwalController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateJadwal create)
     {
         var kelompok = await _kelompokRepository.Get(create.IdKelompok);
@@ -150,6 +152,7 @@ public class JadwalController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var jadwal = await _jadwalRepository.Get(id);

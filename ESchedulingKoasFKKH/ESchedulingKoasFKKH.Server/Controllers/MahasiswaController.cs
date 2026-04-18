@@ -1,4 +1,5 @@
-﻿using ESchedulingKoasFKKH.Domain.Contracts;
+﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
@@ -39,6 +40,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateMahasiswa create)
     {
         if (await _mahasiswaRepository.IsExist(create.NIM))
@@ -62,6 +64,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Update(int id, UpdateMahasiswa update)
     {
         if (update.Id != id) return BadRequest();
@@ -82,6 +85,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var mahasiswa = await _mahasiswaRepository.Get(id);

@@ -3,7 +3,6 @@ using ESchedulingKoasFKKH.Domain.Shared;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;

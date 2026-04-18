@@ -1,4 +1,5 @@
-﻿using ESchedulingKoasFKKH.Domain.Contracts;
+﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
@@ -53,6 +54,7 @@ public class PembimbingController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreatePembimbing create)
     {
         if (await _pembimbingRepository.IsExist(create.NIP))
@@ -82,6 +84,7 @@ public class PembimbingController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Update(int id, UpdatePembimbing update)
     {
         if (id != update.Id) return BadRequest();
@@ -104,6 +107,7 @@ public class PembimbingController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var pembimbing = await _pembimbingRepository.Get(id);
