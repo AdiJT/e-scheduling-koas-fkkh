@@ -2,6 +2,7 @@
 
 GET {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa
 Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBZG1pbiIsIm5hbWUiOiJBZG1pbiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwiZXhwIjoxNzc2NTAyNjM4LCJpc3MiOiJqd3QtZXNjaGVkdWxpbmcta29hcy1ma2toIn0.-YzR6zYe_-Auf7CVn4EgsDk_vmdYSPUlNwCfpuKkc5c
 
 ###
 
@@ -65,5 +66,19 @@ DELETE {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing/2
 ###
 
 GET {{ESchedulingKoasFKKH.Server_HostAddress}}/Jadwal/1
+
+###
+
+GET {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa
+
+###
+
+POST {{ESchedulingKoasFKKH.Server_HostAddress}}/user/login
+Content-Type: application/json
+
+{
+  "userName" : "Admin",
+  "password" : "Admin"
+}
 
 ###
