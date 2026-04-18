@@ -34,3 +34,32 @@ Content-Type: application/json
 DELETE {{ESchedulingKoasFKKH.Server_HostAddress}}/mahasiswa/1
 
 ###
+
+POST {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing
+Content-Type: application/json
+
+{
+  "nip" : "1",
+  "nama" : "2"
+}
+
+###
+
+GET {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing
+
+###
+
+PUT {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing/2
+Content-Type: application/json
+
+{
+  "id" : "2",
+  "nip" : "2",
+  "nama" : "2"
+}
+
+###
+
+DELETE {{ESchedulingKoasFKKH.Server_HostAddress}}/pembimbing/2
+
+###
