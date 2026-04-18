@@ -72,7 +72,7 @@ const menuItems: MenuItem[] = [
 const statCards: StatCard[] = [
   { label: 'Total Mahasiswa', value: '156', icon: '👨‍🎓', change: '+12 bulan ini', changeType: 'up', gradient: 'from-blue-500 to-blue-600' },
   { label: 'Total Dosen', value: '24', icon: '👨‍🏫', change: '+2 bulan ini', changeType: 'up', gradient: 'from-emerald-500 to-green-600' },
-  { label: 'Stase Aktif', value: '8', icon: '🏥', change: 'Stabil', changeType: 'neutral', gradient: 'from-purple-500 to-purple-600' },
+  { label: 'Total Stase', value: '8', icon: '🏥', change: 'Stabil', changeType: 'neutral', gradient: 'from-purple-500 to-purple-600' },
   { label: 'Kelompok', value: '12', icon: '👥', change: '+3 bulan ini', changeType: 'up', gradient: 'from-orange-500 to-orange-600' },
 ];
 

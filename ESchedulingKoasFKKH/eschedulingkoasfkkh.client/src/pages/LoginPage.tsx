@@ -89,7 +89,7 @@ export default function LoginPage() {
           {/* Feature highlights */}
           <div className="space-y-4 text-left">
             {[
-              { icon: '⚡', title: 'Penjadwalan Otomatis', desc: 'Generate jadwal stase otomatis dengan AI' },
+              { icon: '⚡', title: 'Penjadwalan Otomatis', desc: 'Generate jadwal stase otomatis' },
               { icon: '📊', title: 'Dashboard Interaktif', desc: 'Monitor data mahasiswa dan dosen real-time' },
               { icon: '🔒', title: 'Aman & Terpercaya', desc: 'Data terenkripsi dan akses terkontrol' },
             ].map((feature, i) => (
@@ -244,24 +244,24 @@ export default function LoginPage() {
           </form>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">atau</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
+          {/*<div className="flex items-center gap-3 my-6">*/}
+          {/*  <div className="flex-1 h-px bg-slate-200" />*/}
+          {/*  <span className="text-xs text-slate-400 font-medium">atau</span>*/}
+          {/*  <div className="flex-1 h-px bg-slate-200" />*/}
+          {/*</div>*/}
 
           {/* SSO Button (decorative) */}
-          <button
-            type="button"
-            className="w-full py-3 px-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium text-slate-600 
-              hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 
-              flex items-center justify-center gap-3 shadow-soft"
-            onClick={() => alert('SSO Login akan segera tersedia!')}
-            id="btn-sso"
-          >
-            <span className="text-lg">🏫</span>
-            Masuk dengan SSO Universitas
-          </button>
+          {/*<button*/}
+          {/*  type="button"*/}
+          {/*  className="w-full py-3 px-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium text-slate-600 */}
+          {/*    hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 */}
+          {/*    flex items-center justify-center gap-3 shadow-soft"*/}
+          {/*  onClick={() => alert('SSO Login akan segera tersedia!')}*/}
+          {/*  id="btn-sso"*/}
+          {/*>*/}
+          {/*  <span className="text-lg">🏫</span>*/}
+          {/*  Masuk dengan SSO Universitas*/}
+          {/*</button>*/}
 
           {/* Help Section */}
           <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
