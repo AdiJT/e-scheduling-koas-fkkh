@@ -195,11 +195,15 @@ export default function JadwalPage() {
   return (
     <Layout>
       {/* Page Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3">
+      <div className="mb-6 animate-fade-in-down print:mb-4">
+        <div className="flex items-center gap-3 print:hidden">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-2xl shadow-md">📅</div>
           <div><h1 className="text-2xl font-bold text-primary-900">Kelola Jadwal</h1><p className="text-sm text-slate-500">Kelola jadwal stase KOAS</p></div>
+        </div>
+        <div className="hidden print:block text-center mb-6">
+          <h1 className="text-2xl font-bold text-black uppercase">Jadwal Stase KOAS</h1>
+          <p className="text-sm text-gray-600">Fakultas Kedokteran Hewan</p>
         </div>
       </div>
 
@@ -213,7 +217,7 @@ export default function JadwalPage() {
       )}
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 animate-fade-in-up">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 animate-fade-in-up print:hidden">
         <button onClick={() => navigate('/jadwal/tambah')}
           className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
           id="btn-tambah-jadwal">
@@ -235,7 +239,7 @@ export default function JadwalPage() {
 
       {/* Stats Cards */}
       {!loading && data.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 animate-fade-in-up">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 animate-fade-in-up print:hidden">
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-lg shadow-md">📊</div>
             <div><p className="text-xl font-bold text-primary-900">{data.length}</p><p className="text-xs text-slate-500">Total</p></div>
@@ -256,7 +260,7 @@ export default function JadwalPage() {
       )}
 
       {/* View Toggles & Filters */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4 animate-fade-in-up print:hidden" style={{ animationDelay: '100ms' }}>
         {/* Tab Toggle */}
         <div className="flex bg-slate-100 p-1 rounded-xl w-max">
           <button
@@ -334,24 +338,30 @@ export default function JadwalPage() {
         </div>
       ) : (
         /* Table View */
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up print:shadow-none print:border-none print:m-0 print:p-0" style={{ animationDelay: '150ms' }}>
           {loading ? (
-            <div className="p-16 text-center">
+            <div className="p-16 text-center print:hidden">
               <div className="w-12 h-12 border-4 border-red-200 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
               <p className="text-slate-500 text-sm">Memuat jadwal dari server...</p>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="p-16 text-center">
+            <div className="p-16 text-center print:hidden">
               <span className="text-5xl block mb-4">📅</span>
               <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
               <p className="text-sm text-slate-400 mt-1">Mulai dengan menambah jadwal baru</p>
             </div>
           ) : (
             <>
-              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between print:hidden">
                 <p className="text-xs text-slate-500 font-medium">
                   Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
                 </p>
+                <button 
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                >
+                  🖨️ Cetak PDF
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full" id="table-jadwal">
@@ -361,8 +371,8 @@ export default function JadwalPage() {
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Kelompok</th>
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Stase</th>
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Periode</th>
-                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Status</th>
-                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Aksi</th>
+                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black">Status</th>
+                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -389,18 +399,18 @@ export default function JadwalPage() {
                             {statusIcon(j.status)} {j.status}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-3.5 print:hidden">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleDetail(j.id)}
-                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100 print:opacity-100"
                               title="Detail"
                             >
                               👁️
                             </button>
                             <button
                               onClick={() => handleDelete(j.id)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100 print:opacity-100"
                               title="Hapus"
                             >
                               🗑️
