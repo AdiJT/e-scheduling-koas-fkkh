@@ -262,12 +262,8 @@ export default function DashboardPage() {
                 noEventsInRange: "Tidak ada jadwal pada periode ini.",
                 showMore: total => `+${total} lebih`
               }}
-              onSelectEvent={(event) => {
-                if (event.type === 'jadwal') {
-                  navigate('/jadwal');
-                } else {
-                  alert(`${event.title}`);
-                }
+              onSelectEvent={() => {
+                navigate('/jadwal');
               }}
             />
           </div>

@@ -62,6 +62,10 @@ export default function JadwalPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
   
+  // Holiday Modal
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
+  const [selectedHoliday, setSelectedHoliday] = useState<{title: string, start: Date} | null>(null);
+  
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
   const [calendarView, setCalendarView] = useState<View>('month');
@@ -322,7 +326,8 @@ export default function JadwalPage() {
               if (event.type === 'jadwal') {
                 handleDetail(event.jadwalId);
               } else {
-                alert(`${event.title}`);
+                setSelectedHoliday({ title: event.title, start: event.start });
+                setShowHolidayModal(true);
               }
             }}
           />
@@ -511,6 +516,27 @@ export default function JadwalPage() {
                 🗑️ Hapus Jadwal
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Holiday Modal */}
+      {showHolidayModal && selectedHoliday && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🌴</span>
+            </div>
+            <h3 className="text-lg font-bold text-primary-900 mb-1">{selectedHoliday.title}</h3>
+            <p className="text-sm text-slate-500 font-medium mb-6">
+              {formatDateDisplay(format(selectedHoliday.start, 'yyyy-MM-dd'))}
+            </p>
+            <button
+              onClick={() => setShowHolidayModal(false)}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}

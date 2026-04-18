@@ -177,6 +177,17 @@ export default function KelompokPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredData.map((kel, i) => {
                 const pembimbingNama = getPembimbingNama(kel.idPembimbing);
+                
+                // Determine current stase
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const currentJadwal = kel.daftarJadwal?.find(j => {
+                  const start = new Date(j.tanggalMulai + 'T00:00:00');
+                  const end = new Date(j.tanggalSelesai + 'T00:00:00');
+                  return today >= start && today <= end;
+                });
+                const currentStase = currentJadwal?.namaStase;
+
                 return (
                   <div key={kel.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
                     <div className={`h-2 bg-gradient-to-r ${colors[i % colors.length]}`} />
@@ -205,7 +216,18 @@ export default function KelompokPage() {
                       <div className="space-y-1.5 mb-4 text-xs text-slate-500">
                         <p>👨‍🏫 Pembimbing: {pembimbingNama || <span className="text-slate-400 italic">Belum ditentukan</span>}</p>
                         <p>👥 {kel.daftarMahasiswa.length} Anggota</p>
-                        <p>📅 {kel.daftarJadwal.length} Jadwal</p>
+                        <p className="flex justify-between">
+                          <span>📅 {kel.daftarJadwal.length} Jadwal</span>
+                          {currentStase ? (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold border border-green-100">
+                              Sedang Stase: {currentStase}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[10px] font-medium border border-slate-200">
+                              Tidak ada stase aktif
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <div className="flex gap-2 pt-3 border-t border-slate-100">
                         {editingId === kel.id ? (
