@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Contracts;
+using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.JadwalModels;
@@ -91,18 +91,22 @@ public class JadwalController : ControllerBase
             });
         
         // Cek apakah jadwal bertabrakan
-        if (kelompok.DaftarJadwal.Any(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai))
+        var tabrakanKelompok = kelompok.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai);
+        if (tabrakanKelompok is not null)
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
-                ["tanggalMulai"] = $"Jadwal bertabrakan. Kelompok '{kelompok.Nama}' memiliki jadwal di tanggal {create.TanggalMulai}"
+                ["tanggalMulai"] = $"Jadwal bertabrakan. Kelompok '{kelompok.Nama}' memiliki jadwal pada tanggal {tabrakanKelompok.TanggalMulai:M/d/yyyy} - {tabrakanKelompok.TanggalSelesai:M/d/yyyy}"
             });
 
         if (stase.Jenis == JenisStase.Terpisah)
-            if (stase.DaftarJadwal.Any(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai))
+        {
+            var tabrakanStase = stase.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai);
+            if (tabrakanStase is not null)
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
-                    ["tanggalMulai"] = $"Jadwal bertabrakan. Stase '{stase.Nama}' dijadwalkan untuk kelompok lain pada tanggal {create.TanggalMulai}"
+                    ["tanggalMulai"] = $"Jadwal bertabrakan. Stase '{stase.Nama}' dijadwalkan untuk kelompok lain pada tanggal {tabrakanStase.TanggalMulai:M/d/yyyy} - {tabrakanStase.TanggalSelesai:M/d/yyyy}"
                 });
+        }
 
         var jadwal = new Jadwal
         {

@@ -313,20 +313,42 @@ export interface Jadwal {
   id: number;
   tanggalMulai: string;
   tanggalSelesai: string;
-  idKelompok: number | null;
-  namaKelompok: string | null;
-  idStase: number | null;
-  namaStase: string | null;
+  idKelompok: number;
+  namaKelompok: string;
+  idStase: number;
+  namaStase: string;
+}
+
+export interface CreateJadwal {
+  tanggalMulai: string; // "YYYY-MM-DD" format
+  idKelompok: number;
+  idStase: number;
 }
 
 export const jadwalApi = {
   getAll: async (): Promise<Jadwal[]> => {
-    const res = await fetch(`${BASE_URL}/jadwal`);
+    const res = await fetch(`${BASE_URL}/Jadwal`);
     return handleResponse<Jadwal[]>(res);
   },
 
   get: async (id: number): Promise<Jadwal> => {
-    const res = await fetch(`${BASE_URL}/jadwal/${id}`);
+    const res = await fetch(`${BASE_URL}/Jadwal/${id}`);
     return handleResponse<Jadwal>(res);
+  },
+
+  create: async (data: CreateJadwal): Promise<Jadwal> => {
+    const res = await fetch(`${BASE_URL}/Jadwal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Jadwal>(res);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const res = await fetch(`${BASE_URL}/Jadwal/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
   },
 };
