@@ -1,103 +1,422 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-
-interface Stase {
-  id: number;
-  nama: string;
-  durasi: string;
-  lokasi: string;
-  kapasitas: number;
-  dosenPembimbing: string;
-  status: 'Aktif' | 'Tidak Aktif';
-}
-
-const sampleData: Stase[] = [
-  { id: 1, nama: 'Bedah Veteriner', durasi: '4 Minggu', lokasi: 'RS Hewan Univ', kapasitas: 8, dosenPembimbing: 'Dr. Siti Aminah', status: 'Aktif' },
-  { id: 2, nama: 'Penyakit Dalam', durasi: '4 Minggu', lokasi: 'RS Hewan Univ', kapasitas: 6, dosenPembimbing: 'drh. Budi Hartono', status: 'Aktif' },
-  { id: 3, nama: 'Reproduksi', durasi: '3 Minggu', lokasi: 'Lab Reproduksi', kapasitas: 8, dosenPembimbing: 'Dr. Rina Wulandari', status: 'Aktif' },
-  { id: 4, nama: 'Parasitologi', durasi: '3 Minggu', lokasi: 'Lab Parasitologi', kapasitas: 10, dosenPembimbing: 'drh. Andi Prasetyo', status: 'Tidak Aktif' },
-  { id: 5, nama: 'Patologi', durasi: '4 Minggu', lokasi: 'Lab Patologi', kapasitas: 8, dosenPembimbing: 'Dr. Hendra Wijaya', status: 'Aktif' },
-];
+import { staseApi, type Stase } from '../services/api';
 
 export default function StasePage() {
   const navigate = useNavigate();
   const [data, setData] = useState<Stase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterJenis, setFilterJenis] = useState<string>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { setTimeout(() => { setData(sampleData); setLoading(false); }, 600); }, []);
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ id: 0, nama: '', waktu: 1, jenis: 'Terpisah' });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  const filteredData = data.filter(s =>
-    s.nama.toLowerCase().includes(searchTerm.toLowerCase()) || s.lokasi.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await staseApi.getAll();
+      setData(result);
+    } catch {
+      setError('Gagal memuat data stase. Pastikan server backend sedang berjalan.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const confirmDelete = () => {
-    if (selectedId) setData(data.filter(s => s.id !== selectedId));
-    setShowDeleteModal(false); setSelectedId(null);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const filteredData = data.filter(s => {
+    const matchSearch = s.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchJenis = filterJenis === 'all' || s.jenis === filterJenis;
+    return matchSearch && matchJenis;
+  });
+
+  // === DELETE ===
+  const handleDelete = (id: number) => {
+    setSelectedId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedId) return;
+    try {
+      setDeleting(true);
+      await staseApi.delete(selectedId);
+      setData(prev => prev.filter(s => s.id !== selectedId));
+    } catch {
+      setError('Gagal menghapus data stase.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+      setSelectedId(null);
+    }
+  };
+
+  // === EDIT ===
+  const startEdit = (stase: Stase) => {
+    setEditForm({ id: stase.id, nama: stase.nama, waktu: stase.waktu, jenis: stase.jenis });
+    setEditErrors({});
+    setShowEditModal(true);
+  };
+
+  const saveEdit = async () => {
+    try {
+      setSaving(true);
+      setEditErrors({});
+      await staseApi.update(editForm.id, {
+        id: editForm.id,
+        nama: editForm.nama,
+        waktu: editForm.waktu,
+        jenis: editForm.jenis,
+      });
+      // Update local state
+      setData(prev =>
+        prev.map(s =>
+          s.id === editForm.id
+            ? { ...s, nama: editForm.nama, waktu: editForm.waktu, jenis: editForm.jenis }
+            : s
+        )
+      );
+      setShowEditModal(false);
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string> };
+      if (apiErr?.status === 400 && apiErr?.errors) {
+        setEditErrors(apiErr.errors);
+      } else {
+        setError('Gagal menyimpan perubahan.');
+        setShowEditModal(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedStase = data.find(s => s.id === selectedId);
+
+  const getJenisColor = (jenis: string) => {
+    return jenis === 'Terpisah'
+      ? 'bg-amber-100 text-amber-700 border-amber-200'
+      : 'bg-pink-100 text-pink-700 border-pink-200';
+  };
+
+  const getJenisIcon = (jenis: string) => {
+    return jenis === 'Terpisah' ? '🔶' : '🔷';
   };
 
   return (
     <Layout>
+      {/* Page Header */}
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl shadow-md">🏥</div>
-          <div><h1 className="text-2xl font-bold text-primary-900">Kelola Stase</h1><p className="text-sm text-slate-500">Kelola data stase/rotasi klinik</p></div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-900">Kelola Stase</h1>
+            <p className="text-sm text-slate-500">Kelola data stase/rotasi klinik KOAS</p>
+          </div>
         </div>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-red-500 text-lg">⚠️</span>
+          <p className="text-sm text-red-700 flex-1">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+        </div>
+      )}
+
+      {/* Action Bar */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-            <input type="text" placeholder="Cari stase..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all" id="search-stase" />
+            <input
+              type="text"
+              placeholder="Cari stase..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all"
+              id="search-stase"
+            />
           </div>
-          <button onClick={() => navigate('/stase/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2" id="btn-tambah-stase">
+
+          {/* Filter Jenis */}
+          <select
+            value={filterJenis}
+            onChange={(e) => setFilterJenis(e.target.value)}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+              focus:outline-none focus:border-purple-400 transition-all cursor-pointer"
+            id="filter-jenis"
+          >
+            <option value="all">Semua Jenis</option>
+            <option value="Terpisah">Terpisah</option>
+            <option value="Bersamaan">Bersamaan</option>
+          </select>
+
+          {/* Refresh */}
+          <button
+            onClick={fetchData}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100
+              text-slate-600 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+          >
+            🔄 Refresh
+          </button>
+
+          {/* Add Button */}
+          <button
+            onClick={() => navigate('/stase/tambah')}
+            className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
+              text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2"
+            id="btn-tambah-stase"
+          >
             + Tambah Stase
           </button>
         </div>
       </div>
 
-      <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-        {loading ? (
-          <div className="bg-white rounded-2xl shadow-card p-16 text-center"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" /><p className="text-slate-500 text-sm">Memuat data...</p></div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredData.map((stase, i) => (
-              <div key={stase.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform">🏥</div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${stase.status === 'Aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{stase.status}</span>
-                </div>
-                <h3 className="text-lg font-bold text-primary-900 mb-2">{stase.nama}</h3>
-                <div className="space-y-1.5 mb-4 text-xs text-slate-500">
-                  <p>📍 {stase.lokasi}</p><p>⏱️ {stase.durasi}</p><p>👨‍🏫 {stase.dosenPembimbing}</p><p>👥 Kapasitas: {stase.kapasitas}</p>
-                </div>
-                <div className="flex gap-2 pt-3 border-t border-slate-100">
-                  <button className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-all">✏️ Edit</button>
-                  <button onClick={() => { setSelectedId(stase.id); setShowDeleteModal(true); }} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all">🗑️ Hapus</button>
-                </div>
-              </div>
-            ))}
+      {/* Summary Cards */}
+      {!loading && data.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xl shadow-md">📊</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.length}</p>
+              <p className="text-xs text-slate-500">Total Stase</p>
+            </div>
           </div>
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-md">🔶</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Terpisah').length}</p>
+              <p className="text-xs text-slate-500">Stase Terpisah</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-xl shadow-md">🔷</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
+              <p className="text-xs text-slate-500">Stase Bersamaan</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Data Table */}
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        {loading ? (
+          <div className="p-16 text-center">
+            <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-slate-500 text-sm">Memuat data stase dari server...</p>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="p-16 text-center">
+            <span className="text-5xl block mb-4">🏥</span>
+            <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
+            <p className="text-sm text-slate-400 mt-1">
+              {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan menambah stase baru'}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Table Header Info */}
+            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-xs text-slate-500 font-medium">
+                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> stase
+              </p>
+              <p className="text-xs text-slate-400">
+                Total waktu: <span className="font-bold text-purple-600">{filteredData.reduce((sum, s) => sum + s.waktu, 0)} minggu</span>
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full" id="table-stase">
+                <thead>
+                  <tr className="bg-gradient-to-r from-purple-800 to-purple-700 text-white">
+                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">No</th>
+                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Nama Stase</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Waktu</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Jenis</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Jadwal</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredData.map((stase, index) => (
+                    <tr key={stase.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
+                      <td className="px-5 py-3.5 text-sm text-slate-500">{index + 1}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                            {stase.nama.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-primary-900">{stase.nama}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                          ⏱️ {stase.waktu} Minggu
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${getJenisColor(stase.jenis)}`}>
+                          {getJenisIcon(stase.jenis)} {stase.jenis}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="text-xs text-slate-500">
+                          {stase.daftarJadwal.length > 0 ? (
+                            <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+                              {stase.daftarJadwal.length} jadwal
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold">
+                              Belum ada
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={() => startEdit(stase)}
+                            className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                            title="Edit"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDelete(stase.id)}
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                            title="Hapus"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-violet-50">
+              <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-violet-500 rounded-full" />
+                Edit Stase
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Stase <span className="text-red-500">*</span></label>
+                <input
+                  value={editForm.nama}
+                  onChange={(e) => setEditForm({ ...editForm, nama: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all
+                    ${editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {editErrors.nama && <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Waktu (Minggu) <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.waktu}
+                    onChange={(e) => setEditForm({ ...editForm, waktu: parseInt(e.target.value) || 1 })}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Jenis <span className="text-red-500">*</span></label>
+                  <select
+                    value={editForm.jenis}
+                    onChange={(e) => setEditForm({ ...editForm, jenis: e.target.value })}
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all cursor-pointer
+                      ${editErrors.jenis ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                  >
+                    <option value="Terpisah">Terpisah</option>
+                    <option value="Bersamaan">Bersamaan</option>
+                  </select>
+                  {editErrors.jenis && <p className="text-xs text-red-500 mt-1">{editErrors.jenis}</p>}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                disabled={saving}
+                className="px-5 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-md transition-all text-sm disabled:opacity-70 flex items-center gap-2"
+              >
+                {saving ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                ) : '💾 Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><span className="text-3xl">⚠️</span></div>
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">⚠️</span>
+              </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Stase?</h3>
+              {selectedStase && (
+                <p className="text-sm text-slate-600 font-medium mb-1">
+                  {selectedStase.nama} ({selectedStase.waktu} Minggu)
+                </p>
+              )}
               <p className="text-sm text-slate-500">Data yang dihapus tidak dapat dikembalikan</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm">Batal</button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-xl shadow-md text-sm">Ya, Hapus</button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+                id="btn-confirm-delete-stase"
+              >
+                {deleting ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
+                ) : 'Ya, Hapus'}
+              </button>
             </div>
           </div>
         </div>

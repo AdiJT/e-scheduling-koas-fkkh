@@ -153,7 +153,7 @@ export interface Stase {
   id: number;
   nama: string;
   waktu: number;
-  jenis: number; // 0 = Terpisah, 1 = Bersamaan
+  jenis: string; // "Terpisah" or "Bersamaan"
   daftarJadwal: {
     id: number;
     tanggalMulai: string;
@@ -166,14 +166,14 @@ export interface Stase {
 export interface CreateStase {
   nama: string;
   waktu: number;
-  jenis: number;
+  jenis: string;
 }
 
 export interface UpdateStase {
   id: number;
   nama: string;
   waktu: number;
-  jenis: number;
+  jenis: string;
 }
 
 export const staseApi = {
