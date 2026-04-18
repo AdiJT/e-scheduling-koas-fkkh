@@ -2,12 +2,14 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.KelompokModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
 [Route("kelompok")]
+[Authorize]
 public class KelompokController : ControllerBase
 {
     private readonly IKelompokRepository _kelompokRepository;

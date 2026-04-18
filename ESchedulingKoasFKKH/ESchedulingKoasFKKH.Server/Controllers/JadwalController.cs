@@ -2,12 +2,14 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.JadwalModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
 [Route("Jadwal")]
+[Authorize]
 public class JadwalController : ControllerBase
 {
     private readonly IJadwalRepository _jadwalRepository;

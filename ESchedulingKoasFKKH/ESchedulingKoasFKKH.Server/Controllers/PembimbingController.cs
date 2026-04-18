@@ -2,12 +2,14 @@
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
 [Route("pembimbing")]
+[Authorize]
 public class PembimbingController : ControllerBase
 {
     private readonly IPembimbingRepository _pembimbingRepository;

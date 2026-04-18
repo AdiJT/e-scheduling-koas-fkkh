@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ESchedulingKoasFKKH.Server.Configurations;
 
-public class JwtBearerOptionsSetup : IConfigureOptions<JwtBearerOptions>
+public class JwtBearerOptionsSetup : IPostConfigureOptions<JwtBearerOptions>
 {
     private readonly JwtOptions _options;
 
@@ -14,18 +14,14 @@ public class JwtBearerOptionsSetup : IConfigureOptions<JwtBearerOptions>
         _options = options.Value;
     }
 
-    public void Configure(JwtBearerOptions options)
+    public void PostConfigure(string? name, JwtBearerOptions options)
     {
-        options.TokenValidationParameters = new()
-        {
-            ValidateAudience = false,
-            ValidateIssuer = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = _options.Issuer,
-            ValidAudience = _options.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_options.SecretKey))
-        };
+        options.TokenValidationParameters.ValidateIssuer = true;
+        options.TokenValidationParameters.ValidateAudience = false;
+        options.TokenValidationParameters.ValidateLifetime = true;
+        options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+
+        options.TokenValidationParameters.ValidIssuer = _options.Issuer;
+        options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
     }
 }

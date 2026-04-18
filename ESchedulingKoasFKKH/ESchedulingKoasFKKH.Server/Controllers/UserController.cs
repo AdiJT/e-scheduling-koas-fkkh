@@ -1,7 +1,9 @@
 ﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Shared;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -44,23 +46,22 @@ public class UserController : ControllerBase
         var claims = new Claim[]
         {
             new(JwtRegisteredClaimNames.Sub, user.Name),
-            new(JwtRegisteredClaimNames.Name, user.Name), 
-            new(ClaimTypes.Role, user.Role), 
+            new(ClaimTypes.Role, user.Role),
         };
 
-        var signingCredential = new SigningCredentials(
-            new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_jwtOptions.SecretKey)),
+        var signingCredentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey)),
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             _jwtOptions.Issuer,
-            _jwtOptions.Audience,
+            "",
             claims,
             null,
-            DateTime.UtcNow.AddHours(3),
-            signingCredential);
+            CultureInfos.DateTimeNow.AddHours(3),
+            signingCredentials);
 
-        return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+        var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
+        return Ok(new { user.Id, user.Role, token = tokenStr });
     }
 }
