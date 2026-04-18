@@ -102,7 +102,9 @@ export default function Sidebar() {
           {!collapsed && (
             <div className="animate-fade-in flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.username || 'Admin'}</p>
-              <p className="text-xs text-blue-300/50">Administrator</p>
+              <p className="text-xs text-blue-300/50">
+                {user?.username?.toLowerCase() === 'pengelola' ? 'Pengelola' : 'Administrator'}
+              </p>
             </div>
           )}
         </div>
