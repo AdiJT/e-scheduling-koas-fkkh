@@ -2,7 +2,53 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { jadwalApi, type Jadwal } from '../services/api';
-import { formatDateDisplay } from '../utils/holidays';
+import { formatDateDisplay, getHolidays } from '../utils/holidays';
+import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const locales = {
+  'id': idLocale,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+// Custom Event styles based on type
+const eventStyleGetter = (event: any) => {
+  if (event.type === 'holiday') {
+    return {
+      style: {
+        backgroundColor: '#ef4444', // red-500
+        color: 'white',
+        border: '0px',
+        display: 'block',
+        fontSize: '12px',
+        fontWeight: 'bold',
+      }
+    };
+  }
+
+  // Generate a color based on Kelompok ID so each group has a distinct color
+  const hue = (event.idKelompok * 137.5) % 360;
+  
+  return {
+    style: {
+      backgroundColor: `hsl(${hue}, 70%, 50%)`,
+      color: 'white',
+      border: '0px',
+      display: 'block',
+      fontSize: '12px',
+      fontWeight: 'bold',
+    }
+  };
+};
 
 export default function JadwalPage() {
   const navigate = useNavigate();
@@ -13,6 +59,13 @@ export default function JadwalPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  
+  // View Toggle: 'table' or 'calendar'
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
+  const [calendarView, setCalendarView] = useState<View>('month');
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   const fetchData = useCallback(async () => {
     try {
@@ -75,7 +128,43 @@ export default function JadwalPage() {
   const countAkanDatang = dataWithStatus.filter(j => j.status === 'Akan Datang').length;
   const countSelesai = dataWithStatus.filter(j => j.status === 'Selesai').length;
 
-  // === DELETE ===
+  // === PREPARE CALENDAR EVENTS ===
+  // 1. Jadwal Events
+  const jadwalEvents = data.map(j => ({
+    id: `jadwal_${j.id}`,
+    title: `${j.namaKelompok} - ${j.namaStase}`,
+    start: new Date(j.tanggalMulai + 'T00:00:00'),
+    end: new Date(j.tanggalSelesai + 'T23:59:59'),
+    type: 'jadwal',
+    idKelompok: j.idKelompok,
+    jadwalId: j.id,
+  }));
+
+  // 2. Holidays
+  // Get holidays for the current year (can extend to previous/next year based on current view date)
+  const currentYear = calendarDate.getFullYear();
+  const holidaysCurrentYear = getHolidays(currentYear);
+  const holidaysNextYear = getHolidays(currentYear + 1);
+  const allHolidays = [...holidaysCurrentYear, ...holidaysNextYear];
+  
+  const holidayEvents = allHolidays.map((h, i) => ({
+    id: `holiday_${currentYear}_${i}`,
+    title: `Libur: ${h.name}`,
+    start: new Date(h.date + 'T00:00:00'),
+    end: new Date(h.date + 'T23:59:59'),
+    type: 'holiday',
+    idKelompok: 0, // No specific group
+    jadwalId: 0,
+  }));
+
+  const calendarEvents = [...jadwalEvents, ...holidayEvents];
+
+  // === DETAIL & DELETE ===
+  const handleDetail = (id: number) => {
+    setDetailId(id);
+    setShowDetailModal(true);
+  };
+
   const handleDelete = (id: number) => {
     setSelectedId(id);
     setShowDeleteModal(true);
@@ -97,6 +186,7 @@ export default function JadwalPage() {
   };
 
   const selectedJadwal = dataWithStatus.find(j => j.id === selectedId);
+  const detailJadwal = dataWithStatus.find(j => j.id === detailId);
 
   return (
     <Layout>
@@ -161,99 +251,170 @@ export default function JadwalPage() {
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-2 mb-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-        {['all', 'Berlangsung', 'Akan Datang', 'Selesai'].map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              filterStatus === s
-                ? 'bg-primary-900 text-white shadow-md'
-                : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
-            }`}>
-            {s === 'all' ? 'Semua' : s}
+      {/* View Toggles & Filters */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        {/* Tab Toggle */}
+        <div className="flex bg-slate-100 p-1 rounded-xl w-max">
+          <button
+            onClick={() => setViewMode('calendar')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              viewMode === 'calendar' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            📅 Tampilan Kalender
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              viewMode === 'table' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            📋 Tampilan Tabel
+          </button>
+        </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-        {loading ? (
-          <div className="p-16 text-center">
-            <div className="w-12 h-12 border-4 border-red-200 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-slate-500 text-sm">Memuat jadwal dari server...</p>
+        {/* Status Filter (only for table) */}
+        {viewMode === 'table' && (
+          <div className="flex gap-2 flex-wrap">
+            {['all', 'Berlangsung', 'Akan Datang', 'Selesai'].map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  filterStatus === s
+                    ? 'bg-primary-900 text-white shadow-md'
+                    : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                }`}>
+                {s === 'all' ? 'Semua' : s}
+              </button>
+            ))}
           </div>
-        ) : filteredData.length === 0 ? (
-          <div className="p-16 text-center">
-            <span className="text-5xl block mb-4">📅</span>
-            <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
-            <p className="text-sm text-slate-400 mt-1">Mulai dengan menambah jadwal baru</p>
-          </div>
-        ) : (
-          <>
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-slate-500 font-medium">
-                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full" id="table-jadwal">
-                <thead>
-                  <tr className="bg-gradient-to-r from-rose-600 to-red-700 text-white">
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">No</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Kelompok</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Stase</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Periode</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Status</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((j, i) => (
-                    <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{i + 1}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-sm font-medium text-primary-900">{j.namaKelompok}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
-                          {j.namaStase}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="text-xs text-slate-600">
-                          <span className="font-medium">{formatDateDisplay(j.tanggalMulai)}</span>
-                          <span className="text-slate-400 mx-1.5">→</span>
-                          <span className="font-medium">{formatDateDisplay(j.tanggalSelesai)}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor(j.status)}`}>
-                          {statusIcon(j.status)} {j.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center justify-center">
-                          <button
-                            onClick={() => handleDelete(j.id)}
-                            className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
-                            title="Hapus"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
         )}
       </div>
 
+      {/* Content Area */}
+      {viewMode === 'calendar' ? (
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 animate-fade-in-up h-[700px]">
+          <Calendar
+            localizer={localizer}
+            events={calendarEvents}
+            startAccessor="start"
+            endAccessor="end"
+            culture="id"
+            view={calendarView}
+            onView={setCalendarView}
+            date={calendarDate}
+            onNavigate={setCalendarDate}
+            eventPropGetter={eventStyleGetter}
+            messages={{
+              next: "Selanjutnya",
+              previous: "Sebelumnya",
+              today: "Hari Ini",
+              month: "Bulan",
+              week: "Minggu",
+              day: "Hari",
+              agenda: "Agenda",
+              date: "Tanggal",
+              time: "Waktu",
+              event: "Kegiatan",
+              noEventsInRange: "Tidak ada jadwal pada periode ini.",
+              showMore: total => `+${total} lebih`
+            }}
+            onSelectEvent={(event) => {
+              if (event.type === 'jadwal') {
+                handleDetail(event.jadwalId);
+              } else {
+                alert(`${event.title}`);
+              }
+            }}
+          />
+        </div>
+      ) : (
+        /* Table View */
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          {loading ? (
+            <div className="p-16 text-center">
+              <div className="w-12 h-12 border-4 border-red-200 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-slate-500 text-sm">Memuat jadwal dari server...</p>
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="p-16 text-center">
+              <span className="text-5xl block mb-4">📅</span>
+              <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
+              <p className="text-sm text-slate-400 mt-1">Mulai dengan menambah jadwal baru</p>
+            </div>
+          ) : (
+            <>
+              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <p className="text-xs text-slate-500 font-medium">
+                  Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full" id="table-jadwal">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-rose-600 to-red-700 text-white">
+                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">No</th>
+                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Kelompok</th>
+                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Stase</th>
+                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase">Periode</th>
+                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Status</th>
+                      <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredData.map((j, i) => (
+                      <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
+                        <td className="px-5 py-3.5 text-sm text-slate-500">{i + 1}</td>
+                        <td className="px-5 py-3.5">
+                          <span className="text-sm font-medium text-primary-900">{j.namaKelompok}</span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
+                            {j.namaStase}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="text-xs text-slate-600">
+                            <span className="font-medium">{formatDateDisplay(j.tanggalMulai)}</span>
+                            <span className="text-slate-400 mx-1.5">→</span>
+                            <span className="font-medium">{formatDateDisplay(j.tanggalSelesai)}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor(j.status)}`}>
+                            {statusIcon(j.status)} {j.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleDetail(j.id)}
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
+                              title="Detail"
+                            >
+                              👁️
+                            </button>
+                            <button
+                              onClick={() => handleDelete(j.id)}
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-0 group-hover:opacity-100"
+                              title="Hapus"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
@@ -283,6 +444,71 @@ export default function JadwalPage() {
                 {deleting ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
                 ) : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetailModal && detailJadwal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">ℹ️</div>
+                <h3 className="text-lg font-bold text-primary-900">Detail Jadwal</h3>
+              </div>
+              <button onClick={() => setShowDetailModal(false)} className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors">✕</button>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Kelompok</p>
+                <p className="font-semibold text-slate-800 text-lg">{detailJadwal.namaKelompok}</p>
+              </div>
+              
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Stase</p>
+                <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-semibold border border-purple-100 inline-block">
+                  {detailJadwal.namaStase}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">Tanggal Mulai</p>
+                  <p className="font-medium text-slate-700">{formatDateDisplay(detailJadwal.tanggalMulai)}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">Tanggal Selesai</p>
+                  <p className="font-medium text-slate-700">{formatDateDisplay(detailJadwal.tanggalSelesai)}</p>
+                </div>
+              </div>
+              
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-2">Status</p>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusColor(detailJadwal.status)}`}>
+                  {statusIcon(detailJadwal.status)} {detailJadwal.status}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  handleDelete(detailJadwal.id);
+                }}
+                className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-all border border-red-200 flex items-center justify-center gap-2"
+              >
+                🗑️ Hapus Jadwal
               </button>
             </div>
           </div>

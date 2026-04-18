@@ -62,7 +62,6 @@ body {
   }
 }
 
-/* Smooth page transitions */
 .page-enter {
   opacity: 0;
   transform: translateY(10px);
@@ -72,4 +71,66 @@ body {
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+/* Custom Calendar Styles */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 12px 8px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  background-color: #f8fafc;
+}
+
+.rbc-month-view, .rbc-time-view, .rbc-agenda-view {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.rbc-off-range-bg {
+  background-color: #f8fafc !important;
+}
+
+.rbc-today {
+  background-color: #eff6ff !important;
+}
+
+.rbc-event {
+  border-radius: 6px !important;
+  padding: 3px 6px !important;
+  opacity: 0.95;
+  transition: opacity 0.2s, transform 0.2s !important;
+}
+
+.rbc-event:hover {
+  opacity: 1;
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+.rbc-toolbar button {
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s !important;
+}
+
+.rbc-toolbar button:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #1e3a8a !important;
+  color: white !important;
+  border-color: #1e3a8a !important;
+  box-shadow: none !important;
 }
