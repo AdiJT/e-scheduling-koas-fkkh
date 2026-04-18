@@ -68,7 +68,7 @@ public class StaseController : ControllerBase
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
         return CreatedAtAction(
-            nameof(Create),
+            nameof(Get),
             new { id = stase.Id },
             new
             {
