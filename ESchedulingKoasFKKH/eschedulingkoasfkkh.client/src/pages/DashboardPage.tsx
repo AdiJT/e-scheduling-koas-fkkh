@@ -3,7 +3,51 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
 import { mahasiswaApi, pembimbingApi, staseApi, kelompokApi, jadwalApi, type Jadwal } from '../services/api';
+import { getHolidays } from '../utils/holidays';
+import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
+const locales = {
+  'id': idLocale,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+const eventStyleGetter = (event: any) => {
+  if (event.type === 'holiday') {
+    return {
+      style: {
+        backgroundColor: '#ef4444',
+        color: 'white',
+        border: '0px',
+        display: 'block',
+        fontSize: '12px',
+        fontWeight: 'bold',
+      }
+    };
+  }
+
+  const hue = (event.idKelompok * 137.5) % 360;
+  
+  return {
+    style: {
+      backgroundColor: `hsl(${hue}, 70%, 50%)`,
+      color: 'white',
+      border: '0px',
+      display: 'block',
+      fontSize: '12px',
+      fontWeight: 'bold',
+    }
+  };
+};
 interface MenuItem {
   id: string;
   label: string;
@@ -35,6 +79,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [calendarView, setCalendarView] = useState<View>('month');
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   const fetchStats = useCallback(async () => {
     try {
@@ -77,11 +123,38 @@ export default function DashboardPage() {
     { label: 'Kelompok', value: stats.kelompok, icon: '👥', gradient: 'from-orange-500 to-orange-600' },
   ];
 
-  // Upcoming jadwal: sort by date, take next 3
   const upcomingJadwal = [...jadwalList]
     .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
     .filter(j => new Date(j.tanggalMulai) >= new Date(new Date().toDateString()))
     .slice(0, 3);
+
+  // === PREPARE CALENDAR EVENTS ===
+  const jadwalEvents = jadwalList.map(j => ({
+    id: `jadwal_${j.id}`,
+    title: `${j.namaKelompok} - ${j.namaStase}`,
+    start: new Date(j.tanggalMulai + 'T00:00:00'),
+    end: new Date(j.tanggalSelesai + 'T23:59:59'),
+    type: 'jadwal',
+    idKelompok: j.idKelompok,
+    jadwalId: j.id,
+  }));
+
+  const currentYear = calendarDate.getFullYear();
+  const holidaysCurrentYear = getHolidays(currentYear);
+  const holidaysNextYear = getHolidays(currentYear + 1);
+  const allHolidays = [...holidaysCurrentYear, ...holidaysNextYear];
+  
+  const holidayEvents = allHolidays.map((h, i) => ({
+    id: `holiday_${currentYear}_${i}`,
+    title: `Libur: ${h.name}`,
+    start: new Date(h.date + 'T00:00:00'),
+    end: new Date(h.date + 'T23:59:59'),
+    type: 'holiday',
+    idKelompok: 0,
+    jadwalId: 0,
+  }));
+
+  const calendarEvents = [...jadwalEvents, ...holidayEvents];
 
   return (
     <Layout>
@@ -155,35 +228,48 @@ export default function DashboardPage() {
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Stats Summary */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
+        {/* Calendar View */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden flex flex-col">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
               <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
-              Ringkasan Data
+              Kalender Jadwal
             </h2>
           </div>
-          <div className="p-5">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Mahasiswa Terdaftar', value: stats.mahasiswa, icon: '👨‍🎓', color: 'bg-blue-100 text-blue-600' },
-                { label: 'Dosen Pembimbing', value: stats.dosen, icon: '👨‍🏫', color: 'bg-green-100 text-green-600' },
-                { label: 'Stase Tersedia', value: stats.stase, icon: '🏥', color: 'bg-purple-100 text-purple-600' },
-                { label: 'Kelompok Aktif', value: stats.kelompok, icon: '👥', color: 'bg-orange-100 text-orange-600' },
-              ].map(item => (
-                <div key={item.label} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50/50 transition-colors group">
-                  <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                    {item.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-lg font-bold text-primary-900">
-                      {loading ? <span className="inline-block w-8 h-5 bg-slate-200 rounded animate-pulse" /> : item.value}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">{item.label}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="p-5 flex-1 min-h-[500px]">
+            <Calendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              culture="id"
+              view={calendarView}
+              onView={setCalendarView}
+              date={calendarDate}
+              onNavigate={setCalendarDate}
+              eventPropGetter={eventStyleGetter}
+              messages={{
+                next: "Selanjutnya",
+                previous: "Sebelumnya",
+                today: "Hari Ini",
+                month: "Bulan",
+                week: "Minggu",
+                day: "Hari",
+                agenda: "Agenda",
+                date: "Tanggal",
+                time: "Waktu",
+                event: "Kegiatan",
+                noEventsInRange: "Tidak ada jadwal pada periode ini.",
+                showMore: total => `+${total} lebih`
+              }}
+              onSelectEvent={(event) => {
+                if (event.type === 'jadwal') {
+                  navigate('/jadwal');
+                } else {
+                  alert(`${event.title}`);
+                }
+              }}
+            />
           </div>
         </div>
 
