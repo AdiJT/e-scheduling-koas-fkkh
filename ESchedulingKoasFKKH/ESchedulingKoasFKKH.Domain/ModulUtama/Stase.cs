@@ -8,6 +8,8 @@ public class Stase : Entity<int>
     public required int Waktu { get; set; }
     public required JenisStase Jenis { get; set; }
 
+    public int JumlahHari => Waktu * 7;
+
     public List<Jadwal> DaftarJadwal { get; set; }
 }
 

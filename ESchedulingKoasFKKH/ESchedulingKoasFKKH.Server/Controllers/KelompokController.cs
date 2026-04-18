@@ -1,5 +1,6 @@
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.KelompokModels;
 using Microsoft.AspNetCore.Authorization;
@@ -16,17 +17,20 @@ public class KelompokController : ControllerBase
     private readonly IMahasiswaRepository _mahasiswaRepository;
     private readonly IPembimbingRepository _pembimbingRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHariLiburService _hariLiburService;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
         IMahasiswaRepository mahasiswaRepository,
         IPembimbingRepository pembimbingRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IHariLiburService hariLiburService)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
+        _hariLiburService = hariLiburService;
     }
 
     [HttpGet("{id:int}")]
@@ -41,7 +45,14 @@ public class KelompokController : ControllerBase
             kelompok.Nama,
             idPembimbing = kelompok.Pembimbing?.Id,
             daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-            daftarJadwal = kelompok.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idStase = j.Stase?.Id, namaStase = j.Stase?.Nama })
+            daftarJadwal = kelompok.DaftarJadwal.Select(j => new 
+            { 
+                j.Id, 
+                j.TanggalMulai, 
+                tanggalSelesai =  j.TanggalSelesai(_hariLiburService), 
+                idStase = j.Stase?.Id, 
+                namaStase = j.Stase?.Nama 
+            })
         });
     }
 
@@ -54,7 +65,14 @@ public class KelompokController : ControllerBase
             x.Nama,
             idPembimbing = x.Pembimbing?.Id,
             daftarMahasiswa = x.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-            daftarJadwal = x.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idStase = j.Stase?.Id, namaStase = j.Stase?.Nama })
+            daftarJadwal = x.DaftarJadwal.Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                idStase = j.Stase?.Id,
+                namaStase = j.Stase?.Nama
+            })
         }));
     }
 
@@ -83,7 +101,14 @@ public class KelompokController : ControllerBase
                 kelompok.Nama,
                 idPembimbing = kelompok.Pembimbing?.Id,
                 daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = kelompok.DaftarJadwal.Select(j => new { j.Id, j.TanggalMulai, j.TanggalSelesai, idStase = j.Stase?.Id, namaStase = j.Stase?.Nama })
+                daftarJadwal = kelompok.DaftarJadwal.Select(j => new
+                {
+                    j.Id,
+                    j.TanggalMulai,
+                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    idStase = j.Stase?.Id,
+                    namaStase = j.Stase?.Nama
+                })
             });
     }
 

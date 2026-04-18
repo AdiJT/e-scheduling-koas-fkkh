@@ -2,6 +2,7 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.JadwalModels;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,17 +17,20 @@ public class JadwalController : ControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IKelompokRepository _kelompokRepository;
     private readonly IStaseRepository _staseRepository;
+    private readonly IHariLiburService _hariLiburService;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
         IUnitOfWork unitOfWork,
         IKelompokRepository kelompokRepository,
-        IStaseRepository staseRepository)
+        IStaseRepository staseRepository,
+        IHariLiburService hariLiburService)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
         _kelompokRepository = kelompokRepository;
         _staseRepository = staseRepository;
+        _hariLiburService = hariLiburService;
     }
 
     [HttpGet("{id:int}")]
@@ -39,7 +43,7 @@ public class JadwalController : ControllerBase
         {
             jadwal.Id,
             jadwal.TanggalMulai,
-            jadwal.TanggalSelesai,
+            tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
             idStase = jadwal.Stase.Id,
             namaStase = jadwal.Stase.Nama,
             idKelompok = jadwal.Kelompok.Id,
@@ -55,7 +59,7 @@ public class JadwalController : ControllerBase
         return Ok(daftarjadwal.Select(x => new {
             x.Id,
             x.TanggalMulai,
-            x.TanggalSelesai,
+            tanggalSelesai = x.TanggalSelesai(_hariLiburService),
             idStase = x.Stase.Id,
             namaStase = x.Stase.Nama,
             idKelompok = x.Kelompok.Id,
@@ -70,30 +74,36 @@ public class JadwalController : ControllerBase
         if (kelompok is null)
             return HelpersFunctions.NotFound(new Dictionary<string, string> 
             { 
-                ["idKelompok"] = $"kelompok dengan id '{create.IdKelompok}' tidak ditemukan" 
+                ["idKelompok"] = $"Kelompok dengan id '{create.IdKelompok}' tidak ditemukan" 
             });
 
         var stase = await _staseRepository.Get(create.IdStase);
         if (stase is null)
             return HelpersFunctions.NotFound(new Dictionary<string, string>
             {
-                ["idStase"] = $"stase dengan id '{create.IdStase}' tidak ditemukan"
+                ["idStase"] = $"Stase dengan id '{create.IdStase}' tidak ditemukan"
             });
 
         if (kelompok.Pembimbing is null)
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
-                ["idKelompok"] = $"kelompok '{kelompok.Nama}' belum memiliki pembimbing"
+                ["idKelompok"] = $"Kelompok '{kelompok.Nama}' belum memiliki pembimbing"
             });
 
         if (kelompok.DaftarJadwal.Any(x => x.Stase == stase))
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
-                ["idStase"] = $"kelompok '{kelompok.Nama}' sudah memiliki jadwal untuk stase '{stase.Nama}'"
+                ["idStase"] = $"Kelompok '{kelompok.Nama}' sudah memiliki jadwal untuk stase '{stase.Nama}'"
             });
-        
+
+        if (_hariLiburService.HariLibur(create.TanggalMulai))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["tanggalMulai"] = $"Tanggal {create.TanggalMulai} merupakan hari libur"
+            });
+
         // Cek apakah jadwal bertabrakan
-        var tabrakanKelompok = kelompok.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai);
+        var tabrakanKelompok = kelompok.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai(_hariLiburService));
         if (tabrakanKelompok is not null)
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
@@ -102,7 +112,7 @@ public class JadwalController : ControllerBase
 
         if (stase.Jenis == JenisStase.Terpisah)
         {
-            var tabrakanStase = stase.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai);
+            var tabrakanStase = stase.DaftarJadwal.FirstOrDefault(x => create.TanggalMulai >= x.TanggalMulai && create.TanggalMulai <= x.TanggalSelesai(_hariLiburService));
             if (tabrakanStase is not null)
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
@@ -129,7 +139,7 @@ public class JadwalController : ControllerBase
             {
                 jadwal.Id,
                 jadwal.TanggalMulai,
-                jadwal.TanggalSelesai,
+                tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
                 idStase = jadwal.Stase.Id,
                 namaStase = jadwal.Stase.Nama,
                 idKelompok = jadwal.Kelompok.Id,
