@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("stase")]
+[Route("api/stase")]
 [Authorize]
 public class StaseController : ControllerBase
 {
@@ -77,13 +77,13 @@ public class StaseController : ControllerBase
     public async Task<IActionResult> Create(CreateStase create)
     {
         if (await _staseRepository.IsExist(create.Nama))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{create.Nama}' sudah digunakan" });
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{create.Nama}' sudah digunakan" });
 
         if (!Enum.TryParse<JenisStase>(create.Jenis, out var jenis))
             return HelpersFunctions.BadRequest(
                 new Dictionary<string, string>
                 {
-                    ["jenis"] = $"jenis '{create.Jenis}' tidak valid. " +
+                    ["jenis"] = $"Jenis '{create.Jenis}' tidak valid. " +
                     $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
                 }
             );
@@ -118,18 +118,18 @@ public class StaseController : ControllerBase
     public async Task<IActionResult> Update(int id, UpdateStase update)
     {
         if (update.Id != id)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "id pada body tidak sesuai dengan id pada url" });
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "Id pada body tidak sesuai dengan id pada url" });
 
         var stase = await _staseRepository.Get(id);
         if (stase is null) return NotFound();
 
         if (await _staseRepository.IsExist(update.Nama, id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"nama stase '{update.Nama}' sudah digunakan" });
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{update.Nama}' sudah digunakan" });
 
         if (!Enum.TryParse<JenisStase>(update.Jenis, out var jenis))
             return HelpersFunctions.BadRequest(
                 new Dictionary<string, string> { 
-                    ["jenis"] = $"jenis '{update.Jenis}' tidak valid. " +
+                    ["jenis"] = $"Jenis '{update.Jenis}' tidak valid. " +
                     $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}" 
                 }
             );

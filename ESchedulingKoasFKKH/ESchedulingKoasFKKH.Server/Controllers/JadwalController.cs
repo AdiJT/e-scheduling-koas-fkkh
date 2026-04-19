@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("Jadwal")]
+[Route("api/jadwal")]
 [Authorize]
 public class JadwalController : ControllerBase
 {
