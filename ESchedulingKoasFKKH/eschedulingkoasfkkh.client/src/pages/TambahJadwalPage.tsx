@@ -297,7 +297,7 @@ export default function TambahJadwalPage() {
                 <p>• Tanggal selesai dihitung otomatis (<strong>7 hari per minggu</strong>)</p>
                 <p>• <strong>Sabtu dan Minggu</strong> tetap dihitung sebagai hari kerja</p>
                 <p>• <strong>Hari libur nasional</strong> tidak dihitung sebagai hari kerja</p>
-                <p>• Dosen pembimbing otomatis dari kelompok yang dipilih</p>
+                <p>• <strong>Ujian Komprehensip</strong> dapat diambil setelah <strong>Seminar</strong></p>
               </div>
             </div>
           </div>
