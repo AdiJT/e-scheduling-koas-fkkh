@@ -9,3 +9,11 @@ Informasi Login
    username : Pengelola
 
    password : Admin
+
+Setelah Clone wajib Update-Database
+
+Database menggunakan Postgresql
+
+Username database : postgres
+
+Password database : user
