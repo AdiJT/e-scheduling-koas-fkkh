@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.JadwalModels;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,19 +20,22 @@ public class JadwalController : ControllerBase
     private readonly IKelompokRepository _kelompokRepository;
     private readonly IStaseRepository _staseRepository;
     private readonly IHariLiburService _hariLiburService;
+    private readonly IJadwalAutoScheduler _jadwalAutoScheduler;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
         IUnitOfWork unitOfWork,
         IKelompokRepository kelompokRepository,
         IStaseRepository staseRepository,
-        IHariLiburService hariLiburService)
+        IHariLiburService hariLiburService,
+        IJadwalAutoScheduler jadwalAutoScheduler)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
         _kelompokRepository = kelompokRepository;
         _staseRepository = staseRepository;
         _hariLiburService = hariLiburService;
+        _jadwalAutoScheduler = jadwalAutoScheduler;
     }
 
     [HttpGet("{id:int}")]
@@ -166,6 +170,21 @@ public class JadwalController : ControllerBase
                 idKelompok = jadwal.Kelompok.Id,
                 namaKelompok = jadwal.Kelompok.Nama
             });
+    }
+
+    [HttpPost("generate")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Generate(CancellationToken cancellationToken)
+    {
+        var result = await _jadwalAutoScheduler.GenerateAsync(cancellationToken);
+        if (result.IsFailure)
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Generate jadwal otomatis gagal.",
+                errors = result.Errors.Select(x => x.Message),
+            });
+
+        return Ok(result.Value);
     }
 
     [HttpDelete("{id:int}")]

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, type Jadwal } from '../services/api';
+import { jadwalApi, type GenerateJadwalResult, type Jadwal } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -65,6 +65,8 @@ export default function JadwalPage() {
   // Holiday Modal
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [selectedHoliday, setSelectedHoliday] = useState<{title: string, start: Date} | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<GenerateJadwalResult | null>(null);
   
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
@@ -174,6 +176,21 @@ export default function JadwalPage() {
     setShowDeleteModal(true);
   };
 
+  const handleGenerate = async () => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      const result = await jadwalApi.generate();
+      setGenerateResult(result);
+      await fetchData();
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      setError(apiErr?.message || 'Gagal menjalankan generate jadwal otomatis.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!selectedId) return;
     try {
@@ -216,8 +233,25 @@ export default function JadwalPage() {
         </div>
       )}
 
+      {generateResult && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-fade-in-down">
+          <div className="flex items-start gap-3">
+            <span className="text-green-600 text-lg">OK</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-800">
+                Generate otomatis selesai. {generateResult.jadwalDibuat} jadwal baru dibuat mulai {formatDateDisplay(generateResult.tanggalMulaiAcuan)}.
+              </p>
+              <p className="text-xs text-green-700 mt-1">
+                Berhasil: {generateResult.kelompokBerhasil.length} kelompok, tanpa perubahan: {generateResult.kelompokTanpaPerubahan.length}, dilewati: {generateResult.kelompokDilewati.length}.
+              </p>
+            </div>
+            <button onClick={() => setGenerateResult(null)} className="text-green-400 hover:text-green-600 text-lg">x</button>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 animate-fade-in-up print:hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up print:hidden">
         <button onClick={() => navigate('/jadwal/tambah')}
           className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
           id="btn-tambah-jadwal">
@@ -225,6 +259,15 @@ export default function JadwalPage() {
           <div className="text-left">
             <p className="font-bold text-sm">Tambah Jadwal</p>
             <p className="text-xs text-blue-200/60">Buat jadwal stase baru</p>
+          </div>
+        </button>
+        <button onClick={handleGenerate} disabled={isGenerating}
+          className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
+          id="btn-generate-jadwal">
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">AI</div>
+          <div className="text-left">
+            <p className="font-bold text-sm">{isGenerating ? 'Memproses...' : 'Generate Otomatis'}</p>
+            <p className="text-xs text-red-100/80">Susun semua jadwal yang belum ada</p>
           </div>
         </button>
         <button onClick={fetchData}

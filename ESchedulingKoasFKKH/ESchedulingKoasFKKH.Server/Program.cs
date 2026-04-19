@@ -1,6 +1,7 @@
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Infrastructure;
 using ESchedulingKoasFKKH.Server.Configurations;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using NSwag;
@@ -33,6 +34,7 @@ builder.Services.AddOpenApiDocument(o =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o => o.IncludeErrorDetails = true);
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 
 var app = builder.Build();
 
