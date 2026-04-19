@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 // ============================================================
 // Holiday utility for calculating end dates
 // Holidays are defined per year and can be updated annually
