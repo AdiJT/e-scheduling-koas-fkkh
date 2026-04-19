@@ -3,11 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, pembimbingApi, mahasiswaApi, type Kelompok, type Pembimbing, type Mahasiswa } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function DetailKelompokPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const kelompokId = Number(id);
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   const [kelompok, setKelompok] = useState<Kelompok | null>(null);
   const [allPembimbing, setAllPembimbing] = useState<Pembimbing[]>([]);
@@ -185,12 +188,14 @@ export default function DetailKelompokPage() {
           <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
             <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Dosen Pembimbing
           </h2>
-          <button
-            onClick={() => { setShowPembimbingModal(true); setSelectedPembimbingId(''); }}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
-          >
-            {kelompok.idPembimbing ? '🔄 Ganti Pembimbing' : '+ Pilih Pembimbing'}
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={() => { setShowPembimbingModal(true); setSelectedPembimbingId(''); }}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+            >
+              {kelompok.idPembimbing ? '🔄 Ganti Pembimbing' : '+ Pilih Pembimbing'}
+            </button>
+          )}
         </div>
         {kelompok.idPembimbing ? (
           <div className="overflow-x-auto pb-4">
@@ -231,12 +236,14 @@ export default function DetailKelompokPage() {
             <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Anggota Kelompok
             <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{kelompok.daftarMahasiswa.length}</span>
           </h2>
-          <button
-            onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); }}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
-          >
-            + Tambah Anggota
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); }}
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+            >
+              + Tambah Anggota
+            </button>
+          )}
         </div>
 
         {kelompok.daftarMahasiswa.length === 0 ? (
@@ -252,7 +259,9 @@ export default function DetailKelompokPage() {
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
-                  <th className="px-4 md:px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                  {!isAdmin && (
+                    <th className="px-4 md:px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -268,17 +277,19 @@ export default function DetailKelompokPage() {
                         <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
                       </div>
                     </td>
-                    <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
-                        <button
-                          onClick={() => { setRemoveMemberId(mhs.id); setShowRemoveMember(true); }}
-                          className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
-                          title="Keluarkan dari kelompok"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
+                    {!isAdmin && (
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={() => { setRemoveMemberId(mhs.id); setShowRemoveMember(true); }}
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                            title="Keluarkan dari kelompok"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

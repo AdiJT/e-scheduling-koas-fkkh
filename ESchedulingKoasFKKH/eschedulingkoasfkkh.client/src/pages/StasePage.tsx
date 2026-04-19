@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { staseApi, type Stase } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function StasePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const [data, setData] = useState<Stase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,14 +180,16 @@ export default function StasePage() {
           </button>
 
           {/* Add Button */}
-          <button
-            onClick={() => navigate('/stase/tambah')}
-            className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
-              text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2"
-            id="btn-tambah-stase"
-          >
-            + Tambah Stase
-          </button>
+          {!isPengelola && (
+            <button
+              onClick={() => navigate('/stase/tambah')}
+              className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
+                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2"
+              id="btn-tambah-stase"
+            >
+              + Tambah Stase
+            </button>
+          )}
         </div>
       </div>
 
@@ -250,7 +255,9 @@ export default function StasePage() {
                     <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Waktu</th>
                     <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jenis</th>
                     <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    {!isPengelola && (
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -288,24 +295,26 @@ export default function StasePage() {
                           )}
                         </span>
                       </td>
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={() => startEdit(stase)}
-                            className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(stase.id)}
-                            className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
-                            title="Hapus"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
+                      {!isPengelola && (
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              onClick={() => startEdit(stase)}
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                              title="Edit"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDelete(stase.id)}
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                              title="Hapus"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

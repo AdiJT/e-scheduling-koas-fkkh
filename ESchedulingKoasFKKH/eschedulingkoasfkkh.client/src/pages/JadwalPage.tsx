@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { jadwalApi, type GenerateJadwalResult, type Jadwal } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
+import { useAuth } from '../contexts/AuthContext';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -54,6 +55,8 @@ const eventStyleGetter = (event: any) => {
 
 export default function JadwalPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const [data, setData] = useState<Jadwal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -269,32 +272,38 @@ export default function JadwalPage() {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up print:hidden">
-        <button onClick={() => navigate('/jadwal/tambah')}
-          className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
-          id="btn-tambah-jadwal">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
-          <div className="text-left">
-            <p className="font-bold text-sm">Tambah Jadwal</p>
-            <p className="text-xs text-blue-200/60">Buat jadwal stase baru</p>
-          </div>
-        </button>
-        <button onClick={handleGenerate} disabled={isGenerating}
-          className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
-          id="btn-generate-jadwal">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">AI</div>
-          <div className="text-left">
-            <p className="font-bold text-sm">{isGenerating ? 'Memproses...' : 'Generate Otomatis'}</p>
-            <p className="text-xs text-red-100/80">Susun semua jadwal yang belum ada</p>
-          </div>
-        </button>
-        <button onClick={fetchData}
-          className="p-4 bg-white border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 text-slate-600 hover:text-blue-600 rounded-2xl shadow-soft hover:shadow-card transition-all flex items-center gap-4 group">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-2xl transition-all">🔄</div>
-          <div className="text-left">
-            <p className="font-bold text-sm">Refresh Data</p>
-            <p className="text-xs text-slate-400">Muat ulang data dari server</p>
-          </div>
-        </button>
+        {!isPengelola && (
+          <>
+            <button onClick={() => navigate('/jadwal/tambah')}
+              className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
+              id="btn-tambah-jadwal">
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
+              <div className="text-left">
+                <p className="font-bold text-sm">Tambah Jadwal</p>
+                <p className="text-xs text-blue-200/60">Buat jadwal stase baru</p>
+              </div>
+            </button>
+            <button onClick={handleGenerate} disabled={isGenerating}
+              className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
+              id="btn-generate-jadwal">
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">AI</div>
+              <div className="text-left">
+                <p className="font-bold text-sm">{isGenerating ? 'Memproses...' : 'Generate Otomatis'}</p>
+                <p className="text-xs text-red-100/80">Susun semua jadwal yang belum ada</p>
+              </div>
+            </button>
+          </>
+        )}
+        {!isPengelola && (
+          <button onClick={fetchData}
+            className="p-4 bg-white border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 text-slate-600 hover:text-blue-600 rounded-2xl shadow-soft hover:shadow-card transition-all flex items-center gap-4 group">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-2xl transition-all">🔄</div>
+            <div className="text-left">
+              <p className="font-bold text-sm">Refresh Data</p>
+              <p className="text-xs text-slate-400">Muat ulang data dari server</p>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -419,12 +428,14 @@ export default function JadwalPage() {
                   Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
                 </p>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => setShowDeleteAllModal(true)}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
-                  >
-                    🗑️ Hapus Semua
-                  </button>
+                  {!isPengelola && (
+                    <button 
+                      onClick={() => setShowDeleteAllModal(true)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                    >
+                      🗑️ Hapus Semua
+                    </button>
+                  )}
                   <button 
                   onClick={() => window.print()}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
@@ -478,13 +489,15 @@ export default function JadwalPage() {
                             >
                               👁️
                             </button>
-                            <button
-                              onClick={() => handleDelete(j.id)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
-                              title="Hapus"
-                            >
-                              🗑️
-                            </button>
+                            {!isPengelola && (
+                              <button
+                                onClick={() => handleDelete(j.id)}
+                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
+                                title="Hapus"
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -586,15 +599,17 @@ export default function JadwalPage() {
               >
                 Tutup
               </button>
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  handleDelete(detailJadwal.id);
-                }}
-                className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-all border border-red-200 flex items-center justify-center gap-2"
-              >
-                🗑️ Hapus Jadwal
-              </button>
+              {!isPengelola && (
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    handleDelete(detailJadwal.id);
+                  }}
+                  className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-all border border-red-200 flex items-center justify-center gap-2"
+                >
+                  🗑️ Hapus Jadwal
+                </button>
+              )}
             </div>
           </div>
         </div>

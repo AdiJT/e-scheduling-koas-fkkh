@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { username: string } | null;
+  user: { username: string; role: string } | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -20,29 +20,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   });
 
-  const [user, setUser] = useState<{ username: string } | null>(() => {
+  const [user, setUser] = useState<{ username: string; role: string } | null>(() => {
     const username = localStorage.getItem('username');
-    return username ? { username } : null;
+    const role = localStorage.getItem('role');
+    return username && role ? { username, role } : null;
   });
 
   // Restore state from localStorage on mount
   useEffect(() => {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     const username = localStorage.getItem('username');
+    const role = localStorage.getItem('role');
     const loginTimestamp = localStorage.getItem('loginTimestamp');
 
-    if (isAuth && username && loginTimestamp) {
+    if (isAuth && username && role && loginTimestamp) {
       const now = new Date().getTime();
       const timeDiff = now - parseInt(loginTimestamp);
       
       // 10 minutes = 10 * 60 * 1000 = 600,000 ms
       if (timeDiff < 600000) {
         setIsAuthenticated(true);
-        setUser({ username });
+        setUser({ username, role });
       } else {
         // Expired
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('username');
+        localStorage.removeItem('role');
         localStorage.removeItem('token');
         localStorage.removeItem('loginTimestamp');
       }
@@ -63,12 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       const token = data.token;
+      const role = data.role || data.Role;
       
       if (token) {
         setIsAuthenticated(true);
-        setUser({ username });
+        setUser({ username, role });
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('username', username);
+        localStorage.setItem('role', role);
         localStorage.setItem('token', token);
         localStorage.setItem('loginTimestamp', new Date().getTime().toString());
       }
@@ -83,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('username');
+    localStorage.removeItem('role');
     localStorage.removeItem('token');
     localStorage.removeItem('loginTimestamp');
   };

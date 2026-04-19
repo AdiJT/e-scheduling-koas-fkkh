@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { mahasiswaApi, type Mahasiswa } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function MahasiswaPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const [data, setData] = useState<Mahasiswa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,15 +169,17 @@ export default function MahasiswaPage() {
           </button>
 
           {/* Add Button */}
-          <button
-            onClick={() => navigate('/mahasiswa/tambah')}
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-              text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
-              transition-all duration-300 active:scale-95 text-sm flex items-center gap-2 whitespace-nowrap"
-            id="btn-tambah-mahasiswa"
-          >
-            <span>+</span> Tambah Mahasiswa
-          </button>
+          {!isPengelola && (
+            <button
+              onClick={() => navigate('/mahasiswa/tambah')}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
+                transition-all duration-300 active:scale-95 text-sm flex items-center gap-2 whitespace-nowrap"
+              id="btn-tambah-mahasiswa"
+            >
+              <span>+</span> Tambah Mahasiswa
+            </button>
+          )}
         </div>
       </div>
 
@@ -209,7 +214,9 @@ export default function MahasiswaPage() {
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Kelompok</th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    {!isPengelola && (
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -270,50 +277,52 @@ export default function MahasiswaPage() {
                       </td>
 
                       {/* Aksi */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2">
-                          {editingId === mhs.id ? (
-                            <>
-                              <button
-                                onClick={saveEdit}
-                                disabled={saving}
-                                className="px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium
-                                  transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
-                              >
-                                {saving ? (
-                                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : '✓'} Simpan
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-medium
-                                  transition-all duration-200"
-                              >
-                                ✕ Batal
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => startEdit(mhs)}
-                                className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm
-                                  opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                title="Edit"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => handleDelete(mhs.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm
-                                  opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                title="Hapus"
-                              >
-                                🗑️
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                      {!isPengelola && (
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2">
+                            {editingId === mhs.id ? (
+                              <>
+                                <button
+                                  onClick={saveEdit}
+                                  disabled={saving}
+                                  className="px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium
+                                    transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {saving ? (
+                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  ) : '✓'} Simpan
+                                </button>
+                                <button
+                                  onClick={cancelEdit}
+                                  className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-medium
+                                    transition-all duration-200"
+                                >
+                                  ✕ Batal
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => startEdit(mhs)}
+                                  className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm
+                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                  title="Edit"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(mhs.id)}
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm
+                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                  title="Hapus"
+                                >
+                                  🗑️
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

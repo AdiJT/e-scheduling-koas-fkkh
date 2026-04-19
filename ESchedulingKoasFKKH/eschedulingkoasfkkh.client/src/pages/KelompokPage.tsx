@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, pembimbingApi, type Kelompok, type Pembimbing } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const colors = [
   'from-blue-500 to-blue-600', 'from-emerald-500 to-green-600', 'from-purple-500 to-purple-600',
@@ -11,6 +12,8 @@ const colors = [
 
 export default function KelompokPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const [data, setData] = useState<Kelompok[]>([]);
   const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,9 +150,11 @@ export default function KelompokPage() {
           >
             🔄 Refresh
           </button>
-          <button onClick={() => navigate('/kelompok/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm flex items-center gap-2" id="btn-tambah-kelompok">
-            + Buat Kelompok
-          </button>
+          {!isPengelola && (
+            <button onClick={() => navigate('/kelompok/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm flex items-center gap-2" id="btn-tambah-kelompok">
+              + Buat Kelompok
+            </button>
+          )}
         </div>
       </div>
 
@@ -247,8 +252,12 @@ export default function KelompokPage() {
                         ) : (
                           <>
                             <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-all">👁️ Detail</button>
-                            <button onClick={() => startEdit(kel)} className="flex-1 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-xl transition-all">✏️ Edit</button>
-                            <button onClick={() => handleDelete(kel.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all">🗑️ Hapus</button>
+                            {!isPengelola && (
+                              <>
+                                <button onClick={() => startEdit(kel)} className="flex-1 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-xl transition-all">✏️ Edit</button>
+                                <button onClick={() => handleDelete(kel.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all">🗑️ Hapus</button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
