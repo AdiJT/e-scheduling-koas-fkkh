@@ -8,6 +8,7 @@ const BASE_URL = '/api';
 interface ApiError {
     errors?: Record<string, string>;
     message?: string;
+    requiresConfirmation?: boolean;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -18,6 +19,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
         }
         if (response.status === 404) {
             throw { status: 404, message: 'Data tidak ditemukan' };
+        }
+        if (response.status === 409) {
+            const errorData: ApiError = await response.json().catch(() => ({}));
+            throw {
+                status: 409,
+                errors: errorData.errors || {},
+                message: errorData.message || 'Perubahan membutuhkan konfirmasi.',
+                requiresConfirmation: errorData.requiresConfirmation || false,
+            };
         }
         throw { status: response.status, message: `Server error: ${response.status}` };
     }
@@ -338,6 +348,11 @@ export interface CreateJadwal {
   idStase: number;
 }
 
+export interface UpdateJadwalRequest {
+  tanggalMulai: string;
+  konfirmasiOverride?: boolean;
+}
+
 export interface GenerateJadwalKelompokSummary {
   id: number;
   nama: string;
@@ -373,6 +388,15 @@ export const jadwalApi = {
   create: async (data: CreateJadwal): Promise<Jadwal> => {
     const res = await apiFetch(`${BASE_URL}/Jadwal`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Jadwal>(res);
+  },
+
+  update: async (id: number, data: UpdateJadwalRequest): Promise<Jadwal> => {
+    const res = await apiFetch(`${BASE_URL}/Jadwal/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });

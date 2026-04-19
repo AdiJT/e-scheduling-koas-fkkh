@@ -187,6 +187,58 @@ public class JadwalController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Update(int id, UpdateJadwal update)
+    {
+        var jadwal = await _jadwalRepository.Get(id);
+        if (jadwal is null) return NotFound();
+
+        var kelompok = await _kelompokRepository.Get(jadwal.Kelompok.Id);
+        if (kelompok is null)
+            return HelpersFunctions.NotFound(new Dictionary<string, string>
+            {
+                ["idKelompok"] = $"Kelompok dengan id '{jadwal.Kelompok.Id}' tidak ditemukan"
+            });
+
+        var stase = await _staseRepository.Get(jadwal.Stase.Id);
+        if (stase is null)
+            return HelpersFunctions.NotFound(new Dictionary<string, string>
+            {
+                ["idStase"] = $"Stase dengan id '{jadwal.Stase.Id}' tidak ditemukan"
+            });
+
+        var blockingErrors = ValidasiEditJadwalPenting(jadwal, kelompok, stase, update.TanggalMulai);
+        if (blockingErrors.Count > 0)
+            return HelpersFunctions.BadRequest(blockingErrors);
+
+        var warnings = ValidasiEditJadwalPeringatan(jadwal, kelompok, stase, update.TanggalMulai);
+        if (warnings.Count > 0 && !update.KonfirmasiOverride)
+            return HelpersFunctions.Conflict(
+                warnings,
+                "Tanggal baru melanggar beberapa rule penjadwalan. Centang konfirmasi jika Anda tetap ingin menyimpan perubahan.");
+
+        jadwal.TanggalMulai = update.TanggalMulai;
+        jadwal.Kelompok = kelompok;
+        jadwal.Stase = stase;
+
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure)
+            return StatusCode(StatusCodes.Status500InternalServerError);
+
+        return Ok(new
+        {
+            jadwal.Id,
+            jadwal.TanggalMulai,
+            tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
+            idStase = jadwal.Stase.Id,
+            namaStase = jadwal.Stase.Nama,
+            idKelompok = jadwal.Kelompok.Id,
+            namaKelompok = jadwal.Kelompok.Nama,
+            overrideDigunakan = warnings.Count > 0
+        });
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
@@ -207,5 +259,116 @@ public class JadwalController : ControllerBase
     {
         await _jadwalRepository.DeleteAll();
         return NoContent();
+    }
+
+    private Dictionary<string, string> ValidasiEditJadwalPenting(Jadwal jadwal, Kelompok kelompok, Stase stase, DateOnly tanggalMulaiBaru)
+    {
+        var errors = new Dictionary<string, string>();
+        var tanggalSelesaiBaru = HitungTanggalSelesai(tanggalMulaiBaru, stase);
+
+        if (stase.Jenis == JenisStase.Terpisah)
+        {
+            var tabrakanStase = stase.DaftarJadwal
+                .Where(x => x.Id != jadwal.Id)
+                .FirstOrDefault(x => ApakahBertabrakan(
+                    tanggalMulaiBaru,
+                    tanggalSelesaiBaru,
+                    x.TanggalMulai,
+                    x.TanggalSelesai(_hariLiburService)));
+
+            if (tabrakanStase is not null)
+            {
+                errors["tanggalMulai"] =
+                    $"Perubahan ditolak. Stase terpisah '{stase.Nama}' sudah dipakai kelompok '{tabrakanStase.Kelompok.Nama}' pada " +
+                    $"{tabrakanStase.TanggalMulai:M/d/yyyy} - {tabrakanStase.TanggalSelesai(_hariLiburService):M/d/yyyy}.";
+            }
+        }
+
+        return errors;
+    }
+
+    private Dictionary<string, string> ValidasiEditJadwalPeringatan(Jadwal jadwal, Kelompok kelompok, Stase stase, DateOnly tanggalMulaiBaru)
+    {
+        var warnings = new Dictionary<string, string>();
+        var tanggalSelesaiBaru = HitungTanggalSelesai(tanggalMulaiBaru, stase);
+
+        if (_hariLiburService.HariLibur(tanggalMulaiBaru))
+        {
+            warnings["hariLibur"] = $"Tanggal {tanggalMulaiBaru:M/d/yyyy} merupakan hari libur.";
+        }
+
+        var tabrakanKelompok = kelompok.DaftarJadwal
+            .Where(x => x.Id != jadwal.Id)
+            .FirstOrDefault(x => ApakahBertabrakan(
+                tanggalMulaiBaru,
+                tanggalSelesaiBaru,
+                x.TanggalMulai,
+                x.TanggalSelesai(_hariLiburService)));
+
+        if (tabrakanKelompok is not null)
+        {
+            warnings["tabrakanKelompok"] =
+                $"Kelompok '{kelompok.Nama}' sudah memiliki stase '{tabrakanKelompok.Stase.Nama}' pada " +
+                $"{tabrakanKelompok.TanggalMulai:M/d/yyyy} - {tabrakanKelompok.TanggalSelesai(_hariLiburService):M/d/yyyy}.";
+        }
+
+        if (IsUjian(stase))
+        {
+            var jadwalSeminar = kelompok.DaftarJadwal
+                .Where(x => x.Id != jadwal.Id)
+                .FirstOrDefault(x => IsSeminar(x.Stase));
+
+            if (jadwalSeminar is null)
+            {
+                warnings["seminar"] = $"Kelompok '{kelompok.Nama}' belum memiliki jadwal Seminar sebelum '{stase.Nama}'.";
+            }
+            else if (jadwalSeminar.TanggalSelesai(_hariLiburService) > tanggalMulaiBaru)
+            {
+                warnings["seminar"] =
+                    $"Stase '{stase.Nama}' dimulai sebelum Seminar selesai pada {jadwalSeminar.TanggalSelesai(_hariLiburService):M/d/yyyy}.";
+            }
+        }
+
+        if (IsSeminar(stase))
+        {
+            var ujianLebihAwal = kelompok.DaftarJadwal
+                .Where(x => x.Id != jadwal.Id && IsUjian(x.Stase))
+                .OrderBy(x => x.TanggalMulai)
+                .FirstOrDefault(x => x.TanggalMulai < tanggalSelesaiBaru);
+
+            if (ujianLebihAwal is not null)
+            {
+                warnings["ujian"] =
+                    $"Seminar akan selesai setelah stase '{ujianLebihAwal.Stase.Nama}' dimulai pada {ujianLebihAwal.TanggalMulai:M/d/yyyy}.";
+            }
+        }
+
+        return warnings;
+    }
+
+    private DateOnly HitungTanggalSelesai(DateOnly tanggalMulai, Stase stase)
+    {
+        return new Jadwal
+        {
+            TanggalMulai = tanggalMulai,
+            Stase = stase,
+            Kelompok = new Kelompok { Nama = "_" }
+        }.TanggalSelesai(_hariLiburService);
+    }
+
+    private bool ApakahBertabrakan(DateOnly mulaiA, DateOnly selesaiA, DateOnly mulaiB, DateOnly selesaiB)
+    {
+        return mulaiA <= selesaiB && mulaiB <= selesaiA;
+    }
+
+    private bool IsSeminar(Stase stase)
+    {
+        return stase.Nama.Contains("Seminar", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsUjian(Stase stase)
+    {
+        return stase.Nama.Contains("Ujian", StringComparison.OrdinalIgnoreCase)
+            || stase.Nama.Contains("Komprehensif", StringComparison.OrdinalIgnoreCase);
     }
 }

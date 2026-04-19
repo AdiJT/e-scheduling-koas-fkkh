@@ -23,4 +23,16 @@ public static class HelpersFunctions
             errors
         });
     }
+
+    public static ConflictObjectResult Conflict(Dictionary<string, string> errors, string? message = null)
+    {
+        return new ConflictObjectResult(new {
+            type = "https://datatracker.ietf.org/doc/html/rfc9110#section-15.5.10",
+            title = "Confirmation required.",
+            status = 409,
+            requiresConfirmation = true,
+            message = message ?? "Perubahan membutuhkan konfirmasi admin.",
+            errors
+        });
+    }
 }

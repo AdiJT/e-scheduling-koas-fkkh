@@ -74,6 +74,13 @@ export default function JadwalPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingJadwal, setEditingJadwal] = useState<Jadwal | null>(null);
+  const [editTanggalMulai, setEditTanggalMulai] = useState('');
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editWarnings, setEditWarnings] = useState<Record<string, string>>({});
+  const [editConfirmed, setEditConfirmed] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   
   // Holiday Modal
   const [showHolidayModal, setShowHolidayModal] = useState(false);
@@ -191,6 +198,22 @@ export default function JadwalPage() {
     setShowDeleteModal(true);
   };
 
+  const handleOpenEdit = (jadwal: Jadwal) => {
+    setEditingJadwal(jadwal);
+    setEditTanggalMulai(jadwal.tanggalMulai);
+    setEditErrors({});
+    setEditWarnings({});
+    setEditConfirmed(false);
+    setShowEditModal(true);
+  };
+
+  const handleEditDateChange = (value: string) => {
+    setEditTanggalMulai(value);
+    setEditErrors({});
+    setEditWarnings({});
+    setEditConfirmed(false);
+  };
+
   const openGenerateModal = () => {
     setGenerateStartDate((current) => current || getDefaultGenerateDate());
     setShowGenerateModal(true);
@@ -211,6 +234,49 @@ export default function JadwalPage() {
       setError(apiErr?.message || 'Gagal menjalankan generate jadwal otomatis.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingJadwal || !editTanggalMulai) return;
+
+    try {
+      setIsSavingEdit(true);
+      setEditErrors({});
+
+      const updated = await jadwalApi.update(editingJadwal.id, {
+        tanggalMulai: editTanggalMulai,
+        konfirmasiOverride: editConfirmed,
+      });
+
+      setData(prev => prev.map(item => item.id === updated.id ? updated : item));
+      setShowEditModal(false);
+      setEditingJadwal(null);
+      setEditWarnings({});
+      setEditConfirmed(false);
+      await fetchData();
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string>; message?: string };
+
+      if (apiErr?.status === 409) {
+        setEditErrors({});
+        setEditWarnings(apiErr.errors || { general: apiErr.message || 'Perubahan membutuhkan konfirmasi.' });
+        setEditConfirmed(false);
+        return;
+      }
+
+      if (apiErr?.errors) {
+        setEditWarnings({});
+        setEditConfirmed(false);
+        setEditErrors(apiErr.errors);
+        return;
+      }
+
+      setEditWarnings({});
+      setEditConfirmed(false);
+      setEditErrors({ general: apiErr?.message || 'Gagal mengubah jadwal.' });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -507,6 +573,15 @@ export default function JadwalPage() {
                             </button>
                             {!isPengelola && (
                               <button
+                                onClick={() => handleOpenEdit(j)}
+                                className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
+                                title="Edit"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {!isPengelola && (
+                              <button
                                 onClick={() => handleDelete(j.id)}
                                 className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                                 title="Hapus"
@@ -523,6 +598,116 @@ export default function JadwalPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingJadwal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-primary-900">Edit Jadwal</h3>
+                <p className="text-sm text-slate-500">Ubah tanggal mulai untuk jadwal yang dipilih.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingJadwal(null);
+                  setEditErrors({});
+                  setEditWarnings({});
+                  setEditConfirmed(false);
+                }}
+                className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Kelompok</p>
+                <p className="font-semibold text-slate-800">{editingJadwal.namaKelompok}</p>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Stase</p>
+                <p className="font-semibold text-slate-800">{editingJadwal.namaStase}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal Mulai Baru</label>
+                <input
+                  type="date"
+                  value={editTanggalMulai}
+                  onChange={(e) => handleEditDateChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
+                />
+              </div>
+
+              {editErrors.general && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  {editErrors.general}
+                </div>
+              )}
+
+              {Object.entries(editErrors).filter(([key]) => key !== 'general').length > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-sm font-semibold text-red-700 mb-2">Perubahan ditolak karena rule penting berikut:</p>
+                  <div className="space-y-2">
+                    {Object.entries(editErrors).filter(([key]) => key !== 'general').map(([key, value]) => (
+                      <div key={key} className="text-sm text-red-700">{value}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Object.keys(editWarnings).length > 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-sm font-semibold text-amber-800 mb-2">Perubahan melanggar rule berikut, tetapi masih bisa dipaksa oleh admin:</p>
+                  <div className="space-y-2 mb-3">
+                    {Object.entries(editWarnings).map(([key, value]) => (
+                      <div key={key} className="text-sm text-amber-800">{value}</div>
+                    ))}
+                  </div>
+                  <label className="flex items-start gap-2 text-sm text-amber-900">
+                    <input
+                      type="checkbox"
+                      checked={editConfirmed}
+                      onChange={(e) => setEditConfirmed(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>Saya memahami pelanggaran rule di atas dan tetap ingin mengubah jadwal ini.</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingJadwal(null);
+                  setEditErrors({});
+                  setEditWarnings({});
+                  setEditConfirmed(false);
+                }}
+                disabled={isSavingEdit}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit || !editTanggalMulai || (Object.keys(editWarnings).length > 0 && !editConfirmed)}
+                className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+              >
+                {isSavingEdit ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                ) : Object.keys(editWarnings).length > 0 ? 'Konfirmasi Perubahan' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
