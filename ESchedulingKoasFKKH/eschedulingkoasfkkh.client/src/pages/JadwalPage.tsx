@@ -577,7 +577,7 @@ export default function JadwalPage() {
                                 className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                                 title="Edit"
                               >
-                                Edit
+                               ✏️
                               </button>
                             )}
                             {!isPengelola && (
