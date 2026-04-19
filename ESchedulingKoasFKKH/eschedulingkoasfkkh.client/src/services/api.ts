@@ -338,6 +338,23 @@ export interface CreateJadwal {
   idStase: number;
 }
 
+export interface GenerateJadwalKelompokSummary {
+  id: number;
+  nama: string;
+  jadwalDibuat: number;
+  pesan: string;
+  staseDibuat: string[];
+}
+
+export interface GenerateJadwalResult {
+  tanggalMulaiAcuan: string;
+  jadwalDibuat: number;
+  kelompokDiproses: number;
+  kelompokBerhasil: GenerateJadwalKelompokSummary[];
+  kelompokTanpaPerubahan: GenerateJadwalKelompokSummary[];
+  kelompokDilewati: GenerateJadwalKelompokSummary[];
+}
+
 export const jadwalApi = {
   getAll: async (): Promise<Jadwal[]> => {
     const res = await apiFetch(`${BASE_URL}/Jadwal`);
@@ -358,8 +375,21 @@ export const jadwalApi = {
     return handleResponse<Jadwal>(res);
   },
 
+  generate: async (): Promise<GenerateJadwalResult> => {
+    const res = await apiFetch(`${BASE_URL}/Jadwal/generate`, {
+      method: 'POST',
+    });
+    return handleResponse<GenerateJadwalResult>(res);
+  },
+
   delete: async (id: number): Promise<void> => {
     const res = await apiFetch(`${BASE_URL}/Jadwal/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+  deleteAll: async (): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/Jadwal/all`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);

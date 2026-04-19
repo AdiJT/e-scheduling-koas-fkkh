@@ -41,14 +41,14 @@ public class StaseController : ControllerBase
             stase.Nama,
             stase.Waktu,
             jenis = stase.Jenis.Humanize(),
-            daftarJadwal = stase.DaftarJadwal.Select(j => new 
+            daftarJadwal = stase.DaftarJadwal?.Select(j => new 
             { 
                 j.Id, 
                 j.TanggalMulai, 
                 tanggalSelesai = j.TanggalSelesai(_hariLiburService), 
                 idKelompok = j.Kelompok?.Id, 
                 namaKelompok = j.Kelompok?.Nama 
-            })
+            }) ?? []
         });
     }
 
@@ -61,14 +61,14 @@ public class StaseController : ControllerBase
             x.Nama,
             x.Waktu,
             jenis = x.Jenis.Humanize(),
-            daftarJadwal = x.DaftarJadwal.Select(j => new
+            daftarJadwal = x.DaftarJadwal?.Select(j => new
             {
                 j.Id,
                 j.TanggalMulai,
                 tanggalSelesai = j.TanggalSelesai(_hariLiburService),
                 idKelompok = j.Kelompok?.Id,
                 namaKelompok = j.Kelompok?.Nama
-            })
+            }) ?? []
         }));
     }
 

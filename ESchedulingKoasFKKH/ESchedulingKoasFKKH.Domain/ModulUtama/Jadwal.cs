@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Abstracts;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
@@ -35,4 +35,5 @@ public interface IJadwalRepository
     void Add(Jadwal jadwal);
     void Update(Jadwal jadwal);
     void Delete(Jadwal jadwal);
+    Task DeleteAll();
 }

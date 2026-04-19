@@ -118,14 +118,6 @@ export function getHolidays(year: number): Holiday[] {
 }
 
 /**
- * Check if a date is a weekend (Saturday or Sunday)
- */
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
-  return day === 0 || day === 6; // Sunday = 0, Saturday = 6
-}
-
-/**
  * Format date to YYYY-MM-DD string
  */
 function formatDate(date: Date): string {
