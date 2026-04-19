@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, pembimbingApi, mahasiswaApi, type Kelompok, type Pembimbing, type Mahasiswa } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateDisplay } from '../utils/holidays';
 
 export default function DetailKelompokPage() {
   const navigate = useNavigate();
@@ -290,6 +291,60 @@ export default function DetailKelompokPage() {
                         </div>
                       </td>
                     )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Jadwal Section */}
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden mt-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+            <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" /> Jadwal Lengkap Kelompok
+            <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">{kelompok.daftarJadwal.length}</span>
+          </h2>
+          <button 
+            onClick={() => navigate('/jadwal')}
+            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+          >
+            Lihat Semua Jadwal
+          </button>
+        </div>
+
+        {kelompok.daftarJadwal.length === 0 ? (
+          <div className="p-10 text-center">
+            <span className="text-4xl block mb-3">📅</span>
+            <p className="text-slate-500 text-sm">Belum ada jadwal untuk kelompok ini</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full min-w-max">
+              <thead>
+                <tr className="bg-gradient-to-r from-purple-600 to-pink-700 text-white">
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Stase</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tanggal Mulai</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tanggal Selesai</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {kelompok.daftarJadwal.map((jadwal, index) => (
+                  <tr key={jadwal.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
+                    <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                    <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium border border-purple-100">
+                        {jadwal.namaStase}
+                      </span>
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5 text-sm text-slate-600 whitespace-nowrap">
+                      {formatDateDisplay(jadwal.tanggalMulai)}
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5 text-sm text-slate-600 whitespace-nowrap">
+                      {formatDateDisplay(jadwal.tanggalSelesai)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

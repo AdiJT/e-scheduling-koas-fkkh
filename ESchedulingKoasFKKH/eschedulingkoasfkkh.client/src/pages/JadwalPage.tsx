@@ -543,7 +543,12 @@ export default function JadwalPage() {
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
                         <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{i + 1}</td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                          <span className="text-sm font-medium text-primary-900">{j.namaKelompok}</span>
+                          <button 
+                            onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
+                            className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
+                          >
+                            {j.namaKelompok}
+                          </button>
                         </td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
@@ -564,6 +569,13 @@ export default function JadwalPage() {
                         </td>
                         <td className="px-4 md:px-5 py-3.5 print:hidden whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
+                              className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                              title="Lihat Detail Kelompok"
+                            >
+                              👥
+                            </button>
                             <button
                               onClick={() => handleDetail(j.id)}
                               className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
@@ -795,6 +807,12 @@ export default function JadwalPage() {
             
             <div className="flex gap-3">
               <button
+                onClick={() => navigate(`/kelompok/${detailJadwal.idKelompok}`)}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                Lihat Kelompok
+              </button>
+              <button
                 onClick={() => setShowDetailModal(false)}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
               >
@@ -808,7 +826,7 @@ export default function JadwalPage() {
                   }}
                   className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-medium rounded-xl text-sm transition-all border border-red-200 flex items-center justify-center gap-2"
                 >
-                  🗑️ Hapus Jadwal
+                  Hapus Jadwal
                 </button>
               )}
             </div>
