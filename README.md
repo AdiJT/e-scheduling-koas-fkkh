@@ -1,19 +1,25 @@
-Informasi Login
-1. Admin :
+## 🔐 Informasi Login
 
-   username : Admin
+### 👤 Admin
+- **Username:** `Admin`
+- **Password:** `Admin`
 
-   password : Admin
-2. Pengelola :
+### 👤 Pengelola
+- **Username:** `Pengelola`
+- **Password:** `Admin`
 
-   username : Pengelola
+---
 
-   password : Admin
+## ⚙️ Setup
 
-Setelah Clone wajib Update-Database
+Setelah melakukan clone repository, jalankan:
 
-Database menggunakan Postgresql
+`Update-Database`
 
-Username database : postgres
+---
 
-Password database : user
+## 🗄️ Database
+
+- **DBMS:** PostgreSQL
+- **Username:** `postgres`
+- **Password:** `user`
