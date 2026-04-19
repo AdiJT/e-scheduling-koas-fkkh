@@ -66,8 +66,11 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
         if (staseList.Count == 0 || kelompokList.Count == 0)
             return result;
 
-        var orderedStase = UrutkanStase(staseList);
         var pemakaianStaseTerpisah = BangunPetaPemakaianStaseTerpisah(staseList);
+        var idStaseSeminar = staseList
+            .Where(IsSeminar)
+            .Select(x => x.Id)
+            .ToHashSet();
 
         foreach (var kelompok in kelompokList.OrderBy(x => DapatkanTanggalMulaiKelompok(x, tanggalMulaiAcuan)).ThenBy(x => x.Id))
         {
@@ -87,7 +90,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 .Select(x => x.Stase.Id)
                 .ToHashSet();
 
-            var staseTersisa = orderedStase
+            var staseTersisa = staseList
                 .Where(x => !staseSudahAda.Contains(x.Id))
                 .ToList();
 
@@ -106,13 +109,21 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             var tanggalBerikutnya = DapatkanTanggalMulaiKelompok(kelompok, tanggalMulaiAcuan);
             var staseDibuat = new List<string>();
 
-            foreach (var stase in staseTersisa)
+            while (staseTersisa.Count > 0)
             {
-                var tanggalMulai = stase.Jenis == JenisStase.Terpisah
-                    ? CariSlotTerdekatUntukStaseTerpisah(stase, tanggalBerikutnya, pemakaianStaseTerpisah[stase.Id])
-                    : GeserKeHariKerja(tanggalBerikutnya);
+                var kandidat = PilihKandidatStaseTerbaik(
+                    staseTersisa,
+                    staseSudahAda,
+                    tanggalBerikutnya,
+                    pemakaianStaseTerpisah,
+                    idStaseSeminar);
 
-                var tanggalSelesai = HitungTanggalSelesai(tanggalMulai, stase);
+                if (kandidat is null)
+                    break;
+
+                var stase = kandidat.Stase;
+                var tanggalMulai = kandidat.TanggalMulai;
+                var tanggalSelesai = kandidat.TanggalSelesai;
 
                 _jadwalRepository.Add(new Jadwal
                 {
@@ -126,6 +137,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
 
                 staseDibuat.Add(stase.Nama);
                 staseSudahAda.Add(stase.Id);
+                staseTersisa.RemoveAll(x => x.Id == stase.Id);
                 tanggalBerikutnya = GeserKeHariKerja(tanggalSelesai.AddDays(1));
             }
 
@@ -165,33 +177,32 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                     .ToList());
     }
 
-    private List<Stase> UrutkanStase(IEnumerable<Stase> staseList)
+    private KandidatJadwal? PilihKandidatStaseTerbaik(
+        IEnumerable<Stase> staseTersisa,
+        HashSet<int> staseSudahAda,
+        DateOnly tanggalMulaiMinimal,
+        Dictionary<int, List<RentangTanggal>> pemakaianStaseTerpisah,
+        HashSet<int> idStaseSeminar)
     {
-        var staseSeminar = staseList
-            .Where(IsSeminar)
-            .OrderBy(x => x.Id);
+        return staseTersisa
+            .Where(stase => !IsUjian(stase) || idStaseSeminar.Count == 0 || idStaseSeminar.Overlaps(staseSudahAda))
+            .Select(stase =>
+            {
+                var tanggalMulai = stase.Jenis == JenisStase.Terpisah
+                    ? CariSlotTerdekatUntukStaseTerpisah(stase, tanggalMulaiMinimal, pemakaianStaseTerpisah[stase.Id])
+                    : GeserKeHariKerja(tanggalMulaiMinimal);
 
-        var staseUjian = staseList
-            .Where(IsUjian)
-            .OrderBy(x => x.Id);
-
-        var staseReguler = staseList
-            .Where(x => !IsSeminar(x) && !IsUjian(x))
-            .ToList();
-
-        return
-        [
-            .. staseReguler
-                .Where(x => x.Jenis == JenisStase.Terpisah)
-                .OrderByDescending(x => x.Waktu)
-                .ThenBy(x => x.Nama),
-            .. staseReguler
-                .Where(x => x.Jenis == JenisStase.Bersamaan)
-                .OrderByDescending(x => x.Waktu)
-                .ThenBy(x => x.Nama),
-            .. staseSeminar,
-            .. staseUjian,
-        ];
+                return new KandidatJadwal(
+                    stase,
+                    tanggalMulai,
+                    HitungTanggalSelesai(tanggalMulai, stase));
+            })
+            .OrderBy(x => x.TanggalMulai)
+            .ThenBy(x => x.Stase.Jenis == JenisStase.Bersamaan)
+            .ThenByDescending(x => x.Stase.Waktu)
+            .ThenBy(x => x.TanggalSelesai)
+            .ThenBy(x => x.Stase.Nama)
+            .FirstOrDefault();
     }
 
     private DateOnly DapatkanTanggalMulaiKelompok(Kelompok kelompok, DateOnly tanggalMulaiAcuan)
@@ -264,5 +275,6 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             || stase.Nama.Contains("Komprehensif", StringComparison.OrdinalIgnoreCase);
     }
 
+    private sealed record KandidatJadwal(Stase Stase, DateOnly TanggalMulai, DateOnly TanggalSelesai);
     private sealed record RentangTanggal(DateOnly Mulai, DateOnly Selesai);
 }

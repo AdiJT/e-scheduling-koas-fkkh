@@ -201,4 +201,11 @@ public class JadwalController : ControllerBase
 
         return NoContent();
     }
+    [HttpDelete("all")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> DeleteAll()
+    {
+        await _jadwalRepository.DeleteAll();
+        return NoContent();
+    }
 }

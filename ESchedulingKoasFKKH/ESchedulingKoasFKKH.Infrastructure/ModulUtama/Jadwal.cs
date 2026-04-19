@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -40,4 +40,6 @@ internal class JadwalRepository : IJadwalRepository
         .ToListAsync();
 
     public void Update(Jadwal jadwal) => _appDbContext.Jadwal.Update(jadwal);
+    
+    public async Task DeleteAll() => await _appDbContext.Jadwal.ExecuteDeleteAsync();
 }

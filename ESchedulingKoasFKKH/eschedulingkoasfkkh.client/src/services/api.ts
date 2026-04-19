@@ -388,4 +388,10 @@ export const jadwalApi = {
     });
     return handleResponse<void>(res);
   },
+  deleteAll: async (): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/Jadwal/all`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
 };
