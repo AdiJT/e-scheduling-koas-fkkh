@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("pembimbing")]
+[Route("api/pembimbing")]
 [Authorize]
 public class PembimbingController : ControllerBase
 {

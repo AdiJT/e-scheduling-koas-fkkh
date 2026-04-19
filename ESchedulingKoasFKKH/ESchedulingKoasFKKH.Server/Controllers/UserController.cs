@@ -13,7 +13,7 @@ using System.Text;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
-[Route("user")]
+[Route("api/user")]
 [ApiController]
 public class UserController : ControllerBase
 {

@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("stase")]
+[Route("api/stase")]
 [Authorize]
 public class StaseController : ControllerBase
 {

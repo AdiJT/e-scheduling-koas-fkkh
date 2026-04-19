@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("kelompok")]
+[Route("api/kelompok")]
 [Authorize]
 public class KelompokController : ControllerBase
 {
