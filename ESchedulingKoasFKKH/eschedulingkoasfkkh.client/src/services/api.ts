@@ -346,6 +346,10 @@ export interface GenerateJadwalKelompokSummary {
   staseDibuat: string[];
 }
 
+export interface GenerateJadwalRequest {
+  tanggalMulai?: string;
+}
+
 export interface GenerateJadwalResult {
   tanggalMulaiAcuan: string;
   jadwalDibuat: number;
@@ -375,9 +379,11 @@ export const jadwalApi = {
     return handleResponse<Jadwal>(res);
   },
 
-  generate: async (): Promise<GenerateJadwalResult> => {
+  generate: async (data?: GenerateJadwalRequest): Promise<GenerateJadwalResult> => {
     const res = await apiFetch(`${BASE_URL}/Jadwal/generate`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data ?? {}),
     });
     return handleResponse<GenerateJadwalResult>(res);
   },

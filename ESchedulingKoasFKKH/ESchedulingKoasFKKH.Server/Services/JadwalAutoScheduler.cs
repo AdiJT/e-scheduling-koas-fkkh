@@ -7,7 +7,7 @@ namespace ESchedulingKoasFKKH.Server.Services;
 
 public interface IJadwalAutoScheduler
 {
-    Task<Result<GenerateJadwalResult>> GenerateAsync(CancellationToken cancellationToken = default);
+    Task<Result<GenerateJadwalResult>> GenerateAsync(DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class GenerateJadwalResult
@@ -51,15 +51,15 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
         _hariLiburService = hariLiburService;
     }
 
-    public async Task<Result<GenerateJadwalResult>> GenerateAsync(CancellationToken cancellationToken = default)
+    public async Task<Result<GenerateJadwalResult>> GenerateAsync(DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default)
     {
         var staseList = await _staseRepository.GetAll();
         var kelompokList = await _kelompokRepository.GetAll();
 
-        var tanggalMulaiAcuan = GeserKeHariKerja(CultureInfos.DateOnlyNow);
+        var tanggalMulaiAcuanFinal = GeserKeHariKerja(tanggalMulaiAcuan ?? CultureInfos.DateOnlyNow);
         var result = new GenerateJadwalResult
         {
-            TanggalMulaiAcuan = tanggalMulaiAcuan,
+            TanggalMulaiAcuan = tanggalMulaiAcuanFinal,
             KelompokDiproses = kelompokList.Count,
         };
 
@@ -72,7 +72,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             .Select(x => x.Id)
             .ToHashSet();
 
-        foreach (var kelompok in kelompokList.OrderBy(x => DapatkanTanggalMulaiKelompok(x, tanggalMulaiAcuan)).ThenBy(x => x.Id))
+        foreach (var kelompok in kelompokList.OrderBy(x => DapatkanTanggalMulaiKelompok(x, tanggalMulaiAcuanFinal)).ThenBy(x => x.Id))
         {
             if (kelompok.Pembimbing is null)
             {
@@ -106,7 +106,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 continue;
             }
 
-            var tanggalBerikutnya = DapatkanTanggalMulaiKelompok(kelompok, tanggalMulaiAcuan);
+            var tanggalBerikutnya = DapatkanTanggalMulaiKelompok(kelompok, tanggalMulaiAcuanFinal);
             var staseDibuat = new List<string>();
 
             while (staseTersisa.Count > 0)

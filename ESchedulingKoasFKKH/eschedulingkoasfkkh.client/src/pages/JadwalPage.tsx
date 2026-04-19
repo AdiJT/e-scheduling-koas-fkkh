@@ -23,6 +23,12 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+function getDefaultGenerateDate(): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
 // Custom Event styles based on type
 const eventStyleGetter = (event: any) => {
   if (event.type === 'holiday') {
@@ -74,6 +80,8 @@ export default function JadwalPage() {
   const [selectedHoliday, setSelectedHoliday] = useState<{title: string, start: Date} | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<GenerateJadwalResult | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateStartDate, setGenerateStartDate] = useState(getDefaultGenerateDate);
   
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
@@ -183,12 +191,20 @@ export default function JadwalPage() {
     setShowDeleteModal(true);
   };
 
+  const openGenerateModal = () => {
+    setGenerateStartDate((current) => current || getDefaultGenerateDate());
+    setShowGenerateModal(true);
+  };
+
   const handleGenerate = async () => {
     try {
       setIsGenerating(true);
       setError(null);
-      const result = await jadwalApi.generate();
+      const result = await jadwalApi.generate({
+        tanggalMulai: generateStartDate,
+      });
       setGenerateResult(result);
+      setShowGenerateModal(false);
       await fetchData();
     } catch (err: unknown) {
       const apiErr = err as { message?: string };
@@ -283,9 +299,9 @@ export default function JadwalPage() {
                 <p className="text-xs text-blue-200/60">Buat jadwal stase baru</p>
               </div>
             </button>
-            <button onClick={handleGenerate} disabled={isGenerating}
-              className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
-              id="btn-generate-jadwal">
+        <button onClick={openGenerateModal} disabled={isGenerating}
+          className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
+          id="btn-generate-jadwal">
               <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">AI</div>
               <div className="text-left">
                 <p className="font-bold text-sm">{isGenerating ? 'Memproses...' : 'Generate Otomatis'}</p>
@@ -610,6 +626,48 @@ export default function JadwalPage() {
                   🗑️ Hapus Jadwal
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGenerateModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-primary-900 mb-1">Tanggal Mulai Generate</h3>
+              <p className="text-sm text-slate-500">
+                Pilih tanggal mulai KOAS. Jika tanggal yang dipilih adalah hari libur, sistem akan otomatis menggeser ke hari kerja berikutnya.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal Mulai</label>
+              <input
+                type="date"
+                value={generateStartDate}
+                onChange={(e) => setGenerateStartDate(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                disabled={isGenerating}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !generateStartDate}
+                className="flex-1 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+              >
+                {isGenerating ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Memproses...</>
+                ) : 'Generate Jadwal'}
+              </button>
             </div>
           </div>
         </div>

@@ -174,9 +174,9 @@ public class JadwalController : ControllerBase
 
     [HttpPost("generate")]
     [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> Generate(CancellationToken cancellationToken)
+    public async Task<IActionResult> Generate(GenerateJadwalOtomatis? generate, CancellationToken cancellationToken)
     {
-        var result = await _jadwalAutoScheduler.GenerateAsync(cancellationToken);
+        var result = await _jadwalAutoScheduler.GenerateAsync(generate?.TanggalMulai, cancellationToken);
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
