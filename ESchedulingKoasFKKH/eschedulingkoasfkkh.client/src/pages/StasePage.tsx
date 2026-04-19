@@ -161,7 +161,7 @@ export default function StasePage() {
           <select
             value={filterJenis}
             onChange={(e) => setFilterJenis(e.target.value)}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+            className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
               focus:outline-none focus:border-purple-400 transition-all cursor-pointer"
             id="filter-jenis"
           >

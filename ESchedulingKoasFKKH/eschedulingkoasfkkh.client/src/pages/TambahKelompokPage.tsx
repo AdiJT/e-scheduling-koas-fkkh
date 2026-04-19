@@ -82,7 +82,7 @@ export default function TambahKelompokPage() {
             <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl p-4">
               <h4 className="text-sm font-semibold text-orange-800 mb-2">ℹ️ Informasi</h4>
               <p className="text-xs text-orange-700 leading-relaxed">
-                Anda dapat menambahkan mahasiswa ke dalam kelompok ini setelah kelompok berhasil dibuat. Pembimbing juga dapat ditentukan di halaman detail kelompok.
+                Hanya Pengelola yang dapat menambahkan mahasiswa dan pembimbing ke dalam kelompok ini setelah kelompok berhasil dibuat. Penambahan dilakukan pada halaman detail kelompok.
               </p>
             </div>
           </div>

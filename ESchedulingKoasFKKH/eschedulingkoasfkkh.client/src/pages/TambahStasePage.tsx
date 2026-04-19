@@ -133,8 +133,8 @@ export default function TambahStasePage() {
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
               <h4 className="text-sm font-semibold text-purple-800 mb-2">ℹ️ Keterangan Jenis Stase</h4>
               <div className="space-y-1.5 text-xs text-purple-700">
-                <p><span className="font-semibold">🔶 Terpisah:</span> Stase dilaksanakan secara individual oleh masing-masing kelompok dalam waktu yang berbeda.</p>
-                <p><span className="font-semibold">🔷 Bersamaan:</span> Stase dilaksanakan bersamaan oleh semua kelompok dalam waktu yang sama.</p>
+                <p><span className="font-semibold">🔶 Terpisah:</span> Stase yang hanya bisa dilaksanakan oleh satu kelompok dalam satu waktu.</p>
+                <p><span className="font-semibold">🔷 Bersamaan:</span> Stase yang bisa dilaksanakan bersamaan oleh banyak kelompok dalam waktu yang sama.</p>
               </div>
             </div>
           </div>
