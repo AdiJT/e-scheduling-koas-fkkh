@@ -1,4 +1,5 @@
 ﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Auth;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 
@@ -8,6 +9,7 @@ public class Pembimbing : Entity<int>
     public required string Nama { get; set; }
 
     public List<Kelompok> DaftarKelompok { get; set; } = [];
+    public User User { get; set; }
 }
 
 public interface IPembimbingRepository

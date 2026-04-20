@@ -1,4 +1,5 @@
 ﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Auth;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 
@@ -8,6 +9,7 @@ public class Mahasiswa : Entity<int>
     public required string Nama { get; set; }
 
     public Kelompok? Kelompok { get; set; }
+    public User User { get; set; }
 }
 
 public interface IMahasiswaRepository

@@ -15,27 +15,29 @@ internal class MahasiswaConfiguration : IEntityTypeConfiguration<Mahasiswa>
     public void Configure(EntityTypeBuilder<Mahasiswa> builder)
     {
         builder.HasOne(x => x.Kelompok).WithMany(y => y.DaftarMahasiswa).IsRequired(false);
+        builder.HasOne(x => x.User).WithOne(y => y.Mahasiswa).HasForeignKey<Mahasiswa>("UserId");
+
         builder.HasData(
-            new Mahasiswa { Id = 1, NIM = "2201001", Nama = "Ahmad Fauzi" },
-            new Mahasiswa { Id = 2, NIM = "2201002", Nama = "Siti Nurhaliza" },
-            new Mahasiswa { Id = 3, NIM = "2201003", Nama = "Muhammad Rizky" },
-            new Mahasiswa { Id = 4, NIM = "2201004", Nama = "Dewi Anggraini" },
-            new Mahasiswa { Id = 5, NIM = "2201005", Nama = "Budi Santoso" },
-            new Mahasiswa { Id = 6, NIM = "2201006", Nama = "Putri Rahayu" },
-            new Mahasiswa { Id = 7, NIM = "2201007", Nama = "Andi Pratama" },
-            new Mahasiswa { Id = 8, NIM = "2201008", Nama = "Rina Wati" },
-            new Mahasiswa { Id = 9, NIM = "2201009", Nama = "Fajar Nugroho" },
-            new Mahasiswa { Id = 10, NIM = "2201010", Nama = "Lestari Dewi" },
-            new Mahasiswa { Id = 11, NIM = "2201011", Nama = "Hendra Gunawan" },
-            new Mahasiswa { Id = 12, NIM = "2201012", Nama = "Indah Permata" },
-            new Mahasiswa { Id = 13, NIM = "2201013", Nama = "Yoga Aditya" },
-            new Mahasiswa { Id = 14, NIM = "2201014", Nama = "Nadia Safitri" },
-            new Mahasiswa { Id = 15, NIM = "2201015", Nama = "Rizal Ramadhan" },
-            new Mahasiswa { Id = 16, NIM = "2201016", Nama = "Fitri Handayani" },
-            new Mahasiswa { Id = 17, NIM = "2201017", Nama = "Dimas Ardiansyah" },
-            new Mahasiswa { Id = 18, NIM = "2201018", Nama = "Sari Mulyani" },
-            new Mahasiswa { Id = 19, NIM = "2201019", Nama = "Agus Setiawan" },
-            new Mahasiswa { Id = 20, NIM = "2201020", Nama = "Maya Puspita" }
+            new { Id = 1, NIM = "2201001", Nama = "Ahmad Fauzi", UserId = 3, },
+            new { Id = 2, NIM = "2201002", Nama = "Siti Nurhaliza", UserId = 4, },
+            new { Id = 3, NIM = "2201003", Nama = "Muhammad Rizky", UserId = 5, },
+            new { Id = 4, NIM = "2201004", Nama = "Dewi Anggraini", UserId = 6, },
+            new { Id = 5, NIM = "2201005", Nama = "Budi Santoso", UserId = 7, },
+            new { Id = 6, NIM = "2201006", Nama = "Putri Rahayu", UserId = 8, },
+            new { Id = 7, NIM = "2201007", Nama = "Andi Pratama", UserId = 9, },
+            new { Id = 8, NIM = "2201008", Nama = "Rina Wati", UserId = 10, },
+            new { Id = 9, NIM = "2201009", Nama = "Fajar Nugroho", UserId = 11, },
+            new { Id = 10, NIM = "2201010", Nama = "Lestari Dewi", UserId = 12, },
+            new { Id = 11, NIM = "2201011", Nama = "Hendra Gunawan", UserId = 13, },
+            new { Id = 12, NIM = "2201012", Nama = "Indah Permata", UserId = 14, },
+            new { Id = 13, NIM = "2201013", Nama = "Yoga Aditya", UserId = 15, },
+            new { Id = 14, NIM = "2201014", Nama = "Nadia Safitri", UserId = 16, },
+            new { Id = 15, NIM = "2201015", Nama = "Rizal Ramadhan", UserId = 17, },
+            new { Id = 16, NIM = "2201016", Nama = "Fitri Handayani", UserId = 18, },
+            new { Id = 17, NIM = "2201017", Nama = "Dimas Ardiansyah", UserId = 19, },
+            new { Id = 18, NIM = "2201018", Nama = "Sari Mulyani", UserId = 20, },
+            new { Id = 19, NIM = "2201019", Nama = "Agus Setiawan", UserId = 21, },
+            new { Id = 20, NIM = "2201020", Nama = "Maya Puspita", UserId = 22, }
         );
     }
 }

@@ -10,18 +10,19 @@ internal class PembimbingConfiguration : IEntityTypeConfiguration<Pembimbing>
     public void Configure(EntityTypeBuilder<Pembimbing> builder)
     {
         builder.HasMany(x => x.DaftarKelompok).WithOne(y => y.Pembimbing).IsRequired(false);
+        builder.HasOne(x => x.User).WithOne(y => y.Pembimbing).HasForeignKey<Pembimbing>("UserId");
 
         builder.HasData(
-            new Pembimbing { Id = 1, NIP = "198501012010011001", Nama = "Drg. Adi Wijaya, Sp.KG" },
-            new Pembimbing { Id = 2, NIP = "198602022011012002", Nama = "Drg. Sinta Maharani, M.Kes" },
-            new Pembimbing { Id = 3, NIP = "197803032009011003", Nama = "Drg. Bambang Hermanto, Sp.BM" },
-            new Pembimbing { Id = 4, NIP = "198204042012012004", Nama = "Drg. Ratna Sari, Sp.Perio" },
-            new Pembimbing { Id = 5, NIP = "197905052010011005", Nama = "Drg. Hasan Basri, Sp.Ort" },
-            new Pembimbing { Id = 6, NIP = "198306062013012006", Nama = "Drg. Anita Kusuma, Sp.PM" },
-            new Pembimbing { Id = 7, NIP = "197607072008011007", Nama = "Drg. Taufik Hidayat, Sp.Pros" },
-            new Pembimbing { Id = 8, NIP = "198408082014012008", Nama = "Drg. Wulandari, M.Sc" },
-            new Pembimbing { Id = 9, NIP = "197709092007011009", Nama = "Drg. Surya Darma, Sp.RKG" },
-            new Pembimbing { Id = 10, NIP = "198510102015012010", Nama = "Drg. Lina Marlina, Sp.KGA" }
+            new { Id = 1, NIP = "198501012010011001", Nama = "Drg. Adi Wijaya, Sp.KG", UserId = 23 },
+            new { Id = 2, NIP = "198602022011012002", Nama = "Drg. Sinta Maharani, M.Kes", UserId = 24 },
+            new { Id = 3, NIP = "197803032009011003", Nama = "Drg. Bambang Hermanto, Sp.BM", UserId = 25 },
+            new { Id = 4, NIP = "198204042012012004", Nama = "Drg. Ratna Sari, Sp.Perio", UserId = 26 },
+            new { Id = 5, NIP = "197905052010011005", Nama = "Drg. Hasan Basri, Sp.Ort", UserId = 27 },
+            new { Id = 6, NIP = "198306062013012006", Nama = "Drg. Anita Kusuma, Sp.PM", UserId = 28 },
+            new { Id = 7, NIP = "197607072008011007", Nama = "Drg. Taufik Hidayat, Sp.Pros", UserId = 29 },
+            new { Id = 8, NIP = "198408082014012008", Nama = "Drg. Wulandari, M.Sc", UserId = 30 },
+            new { Id = 9, NIP = "197709092007011009", Nama = "Drg. Surya Darma, Sp.RKG", UserId = 31 },
+            new { Id = 10, NIP = "198510102015012010", Nama = "Drg. Lina Marlina, Sp.KGA", UserId = 32 }
         );
     }
 }
