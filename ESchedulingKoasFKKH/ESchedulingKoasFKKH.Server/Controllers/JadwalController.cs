@@ -78,36 +78,40 @@ public class JadwalController : ControllerBase
         return Forbid();
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [HttpGet()]
+    public async Task<IActionResult> GetAll(int? idKelompok = null, int? idStase = null)
     {
         var daftarjadwal = await _jadwalRepository.GetAll();
 
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
-            return Ok(daftarjadwal.Select(x => new
-            {
-                x.Id,
-                x.TanggalMulai,
-                tanggalSelesai = x.TanggalSelesai(_hariLiburService),
-                idStase = x.Stase.Id,
-                namaStase = x.Stase.Nama,
-                idKelompok = x.Kelompok.Id,
-                namaKelompok = x.Kelompok.Nama
-            }));
+            return Ok(daftarjadwal
+                .Where(x => (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TanggalMulai,
+                    tanggalSelesai = x.TanggalSelesai(_hariLiburService),
+                    idStase = x.Stase.Id,
+                    namaStase = x.Stase.Nama,
+                    idKelompok = x.Kelompok.Id,
+                    namaKelompok = x.Kelompok.Nama
+                }));
 
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
         if (mahasiswa is not null)
-            return Ok(daftarjadwal.Where(x => x.Kelompok == mahasiswa!.Kelompok).Select(x => new
-            {
-                x.Id,
-                x.TanggalMulai,
-                tanggalSelesai = x.TanggalSelesai(_hariLiburService),
-                idStase = x.Stase.Id,
-                namaStase = x.Stase.Nama,
-                idKelompok = x.Kelompok.Id,
-                namaKelompok = x.Kelompok.Nama
-            }));
+            return Ok(daftarjadwal
+                .Where(x => x.Kelompok == mahasiswa!.Kelompok && (idStase is null || x.Stase.Id == idStase))
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TanggalMulai,
+                    tanggalSelesai = x.TanggalSelesai(_hariLiburService),
+                    idStase = x.Stase.Id,
+                    namaStase = x.Stase.Nama,
+                    idKelompok = x.Kelompok.Id,
+                    namaKelompok = x.Kelompok.Nama
+                }));
 
         return Forbid();
     }
