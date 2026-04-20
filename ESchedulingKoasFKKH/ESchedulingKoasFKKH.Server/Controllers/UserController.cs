@@ -3,6 +3,7 @@ using ESchedulingKoasFKKH.Domain.Shared;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -31,6 +32,20 @@ public class UserController : ControllerBase
         _jwtOptions = jwtOptions.Value;
     }
 
+    [Authorize]
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id)
+    {
+        var user = await _userRepository.Get(id);
+        if (user is null) return NotFound();
+
+        if (User.IsInRole(UserRoles.Admin)) return Ok(user);
+
+        if (User?.Identity?.Name == user.Name) return Ok(user);
+
+        return Forbid();
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login(Login login)
     {
@@ -45,6 +60,8 @@ public class UserController : ControllerBase
         var claims = new Claim[]
         {
             new(JwtRegisteredClaimNames.Sub, user.Name),
+            new(JwtRegisteredClaimNames.Name, user.Name),
+            new(ClaimTypes.Name, user.Name),
             new(ClaimTypes.Role, user.Role),
         };
 

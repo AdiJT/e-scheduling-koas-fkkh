@@ -15,7 +15,7 @@ public class Stase : Entity<int>
 
 public enum JenisStase
 {
-    Terpisah, Bersamaan
+    Terpisah, Bersamaan, Seminar, Ujian
 }
 
 public interface IStaseRepository

@@ -67,10 +67,8 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             return result;
 
         var pemakaianStaseTerpisah = BangunPetaPemakaianStaseTerpisah(staseList);
-        var idStaseSeminar = staseList
-            .Where(IsSeminar)
-            .Select(x => x.Id)
-            .ToHashSet();
+        var staseSeminar = staseList.FirstOrDefault(x => x.Jenis == JenisStase.Seminar);
+        var staseUjian = staseList.FirstOrDefault(x => x.Jenis == JenisStase.Ujian);
 
         foreach (var kelompok in kelompokList.OrderBy(x => DapatkanTanggalMulaiKelompok(x, tanggalMulaiAcuanFinal)).ThenBy(x => x.Id))
         {
@@ -113,10 +111,8 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             {
                 var kandidat = PilihKandidatStaseTerbaik(
                     staseTersisa,
-                    staseSudahAda,
                     tanggalBerikutnya,
-                    pemakaianStaseTerpisah,
-                    idStaseSeminar);
+                    pemakaianStaseTerpisah);
 
                 if (kandidat is null)
                     break;
@@ -139,6 +135,40 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 staseSudahAda.Add(stase.Id);
                 staseTersisa.RemoveAll(x => x.Id == stase.Id);
                 tanggalBerikutnya = GeserKeHariKerja(tanggalSelesai.AddDays(1));
+            }
+
+            //Tambah seminar
+            if (staseSeminar is not null)
+            {
+                var jadwalSeminar = kelompok.DaftarJadwal.FirstOrDefault(x => x.Stase.Jenis == JenisStase.Seminar);
+                if (jadwalSeminar is null)
+                {
+                    jadwalSeminar = new Jadwal
+                    {
+                        TanggalMulai = tanggalBerikutnya,
+                        Kelompok = kelompok,
+                        Stase = staseSeminar
+                    };
+
+                    _jadwalRepository.Add(jadwalSeminar);
+                    staseDibuat.Add(staseSeminar.Nama);
+                }
+
+                if (staseUjian is not null)
+                {
+                    var jadwalUjian = kelompok.DaftarJadwal.FirstOrDefault(x => x.Stase.Jenis == JenisStase.Ujian);
+                    if (jadwalUjian is null)
+                    {
+                        jadwalUjian = new Jadwal
+                        {
+                            TanggalMulai = GeserKeHariKerja(jadwalSeminar.TanggalSelesai(_hariLiburService).AddDays(1)),
+                            Kelompok = kelompok,
+                            Stase = staseUjian
+                        };
+                        _jadwalRepository.Add(jadwalUjian);
+                        staseDibuat.Add(staseUjian.Nama);
+                    }    
+                }
             }
 
             result.JadwalDibuat += staseDibuat.Count;
@@ -179,13 +209,11 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
 
     private KandidatJadwal? PilihKandidatStaseTerbaik(
         IEnumerable<Stase> staseTersisa,
-        HashSet<int> staseSudahAda,
         DateOnly tanggalMulaiMinimal,
-        Dictionary<int, List<RentangTanggal>> pemakaianStaseTerpisah,
-        HashSet<int> idStaseSeminar)
+        Dictionary<int, List<RentangTanggal>> pemakaianStaseTerpisah)
     {
         return staseTersisa
-            .Where(stase => !IsUjian(stase) || idStaseSeminar.Count == 0 || idStaseSeminar.Overlaps(staseSudahAda))
+            .Where(stase => !IsUjian(stase) && !IsSeminar(stase))
             .Select(stase =>
             {
                 var tanggalMulai = stase.Jenis == JenisStase.Terpisah
@@ -266,13 +294,12 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
 
     private static bool IsSeminar(Stase stase)
     {
-        return stase.Nama.Contains("Seminar", StringComparison.OrdinalIgnoreCase);
+        return stase.Jenis == JenisStase.Seminar;
     }
 
     private static bool IsUjian(Stase stase)
     {
-        return stase.Nama.Contains("Ujian", StringComparison.OrdinalIgnoreCase)
-            || stase.Nama.Contains("Komprehensif", StringComparison.OrdinalIgnoreCase);
+        return stase.Jenis == JenisStase.Ujian;
     }
 
     private sealed record KandidatJadwal(Stase Stase, DateOnly TanggalMulai, DateOnly TanggalSelesai);

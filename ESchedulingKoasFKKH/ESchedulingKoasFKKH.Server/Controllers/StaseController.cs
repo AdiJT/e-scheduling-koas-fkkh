@@ -88,6 +88,15 @@ public class StaseController : ControllerBase
                 }
             );
 
+        var daftarStase = await _staseRepository.GetAll();
+        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Jenis == jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
+                }
+            );
+
         var stase = new Stase
         {
             Nama = create.Nama,
@@ -131,6 +140,15 @@ public class StaseController : ControllerBase
                 new Dictionary<string, string> { 
                     ["jenis"] = $"Jenis '{update.Jenis}' tidak valid. " +
                     $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}" 
+                }
+            );
+
+        var daftarStase = await _staseRepository.GetAll();
+        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Id != id && x.Jenis == jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
                 }
             );
 

@@ -58,16 +58,19 @@ internal class MahasiswaRepository : IMahasiswaRepository
     public async Task<Mahasiswa?> Get(int id) => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Mahasiswa?> Get(string nim) => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.NIM == nim);
 
     public async Task<List<Mahasiswa>> GetAll() => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.User)
         .ToListAsync();
 
     public async Task<bool> IsExist(string nim, int? id = null) => await _appDbContext.Mahasiswa

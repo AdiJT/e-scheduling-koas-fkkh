@@ -19,19 +19,22 @@ public class KelompokController : ControllerBase
     private readonly IPembimbingRepository _pembimbingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
+    private readonly IUserRepository _userRepository;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
         IMahasiswaRepository mahasiswaRepository,
         IPembimbingRepository pembimbingRepository,
         IUnitOfWork unitOfWork,
-        IHariLiburService hariLiburService)
+        IHariLiburService hariLiburService,
+        IUserRepository userRepository)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
+        _userRepository = userRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -40,24 +43,47 @@ public class KelompokController : ControllerBase
         var kelompok = await _kelompokRepository.Get(id);
         if (kelompok is null) return NotFound();
 
-        return Ok(new
-        {
-            kelompok.Id,
-            kelompok.Nama,
-            idPembimbing = kelompok.Pembimbing?.Id,
-            daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-            daftarJadwal = kelompok.DaftarJadwal.Select(j => new 
-            { 
-                j.Id, 
-                j.TanggalMulai, 
-                tanggalSelesai =  j.TanggalSelesai(_hariLiburService), 
-                idStase = j.Stase?.Id, 
-                namaStase = j.Stase?.Nama 
-            })
-        });
+        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
+            return Ok(new
+            {
+                kelompok.Id,
+                kelompok.Nama,
+                idPembimbing = kelompok.Pembimbing?.Id,
+                daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
+                daftarJadwal = kelompok.DaftarJadwal.Select(j => new
+                {
+                    j.Id,
+                    j.TanggalMulai,
+                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    idStase = j.Stase?.Id,
+                    namaStase = j.Stase?.Nama
+                })
+            });
+
+
+        var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
+        if (mahasiswa is not null && mahasiswa.Kelompok == kelompok)
+            return Ok(new
+            {
+                kelompok.Id,
+                kelompok.Nama,
+                idPembimbing = kelompok.Pembimbing?.Id,
+                daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
+                daftarJadwal = kelompok.DaftarJadwal.Select(j => new
+                {
+                    j.Id,
+                    j.TanggalMulai,
+                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    idStase = j.Stase?.Id,
+                    namaStase = j.Stase?.Nama
+                })
+            });
+
+        return Forbid();
     }
 
     [HttpGet]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola},{UserRoles.Dosen}")]
     public async Task<IActionResult> GetAll()
     {
         return Ok((await _kelompokRepository.GetAll()).Select(x => new

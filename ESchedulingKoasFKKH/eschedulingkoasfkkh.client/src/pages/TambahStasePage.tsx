@@ -124,6 +124,8 @@ export default function TambahStasePage() {
                   <option value="">Pilih jenis stase</option>
                   <option value="Terpisah">🔶 Terpisah</option>
                   <option value="Bersamaan">🔷 Bersamaan</option>
+                  <option value="Seminar">🔷 Seminar</option>
+                  <option value="Ujian">🔷 Ujian</option>
                 </select>
                 {errors.jenis && <p className="text-xs text-red-500 mt-1">{errors.jenis}</p>}
               </div>
@@ -135,6 +137,8 @@ export default function TambahStasePage() {
               <div className="space-y-1.5 text-xs text-purple-700">
                 <p><span className="font-semibold">🔶 Terpisah:</span> Stase yang hanya bisa dilaksanakan oleh satu kelompok dalam satu waktu.</p>
                 <p><span className="font-semibold">🔷 Bersamaan:</span> Stase yang bisa dilaksanakan bersamaan oleh banyak kelompok dalam waktu yang sama.</p>
+                <p><span className="font-semibold">🔷 Seminar:</span> Stase yang dilaksanakan setelah semua stase telah dilaksanakan dan sebelum stase ujian.</p>
+                <p><span className="font-semibold">🔷 Ujian:</span> Stase yang dilaksanakan setelah stase seminar telah dilaksanakan.</p>
               </div>
             </div>
           </div>
