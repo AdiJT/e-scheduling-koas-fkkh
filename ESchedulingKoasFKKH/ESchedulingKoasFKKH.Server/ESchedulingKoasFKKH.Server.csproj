@@ -23,9 +23,11 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.17.0" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.17.0" />
     <PackageReference Include="NSwag.AspNetCore" Version="14.7.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.15" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\eschedulingkoasfkkh.client\eschedulingkoasfkkh.client.esproj" />
     <ProjectReference Include="..\ESchedulingKoasFKKH.Domain\ESchedulingKoasFKKH.Domain.csproj" />
     <ProjectReference Include="..\ESchedulingKoasFKKH.Infrastructure\ESchedulingKoasFKKH.Infrastructure.csproj" />
   </ItemGroup>
