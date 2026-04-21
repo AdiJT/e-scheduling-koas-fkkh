@@ -13,6 +13,7 @@ export default function DetailKelompokPage() {
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'administrator';
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const isDosen = user?.role?.toLowerCase() === 'dosen';
 
   const [kelompok, setKelompok] = useState<Kelompok | null>(null);
   const [allPembimbing, setAllPembimbing] = useState<Pembimbing[]>([]);
@@ -37,30 +38,47 @@ export default function DetailKelompokPage() {
     try {
       setLoading(true);
       setError(null);
-      const [kel, pemb, mhs] = await Promise.all([
-        kelompokApi.get(kelompokId),
-        pembimbingApi.getAll(),
-        mahasiswaApi.getAll(),
-      ]);
+      
+      const kel = await kelompokApi.get(kelompokId);
       setKelompok(kel);
-      setAllPembimbing(pemb);
-      setAllMahasiswa(mhs);
-    } catch {
-      setError('Gagal memuat data kelompok.');
+
+      // Only fetch list of all supervisors and students if not a student (for admin/dosen who might need to manage members)
+      if (!isMahasiswa) {
+        try {
+          const [pemb, mhs] = await Promise.all([
+            pembimbingApi.getAll(),
+            mahasiswaApi.getAll(),
+          ]);
+          setAllPembimbing(pemb);
+          setAllMahasiswa(mhs);
+        } catch (e) {
+          console.warn("Failed to fetch support data:", e);
+          // Don't set error here, because we still have the main group data
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch kelompok:", err);
+      if (err.status === 403) {
+        setError('Anda tidak memiliki akses ke kelompok ini.');
+      } else if (err.status === 404) {
+        setError('Kelompok tidak ditemukan.');
+      } else {
+        setError('Gagal memuat data kelompok.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [kelompokId]);
+  }, [kelompokId, isMahasiswa]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const pembimbingNama = kelompok?.idPembimbing
+  const pembimbingNama = kelompok?.namaPembimbing || (kelompok?.idPembimbing
     ? allPembimbing.find(p => p.id === kelompok.idPembimbing)?.nama || 'Unknown'
-    : null;
+    : null);
 
-  const pembimbingNip = kelompok?.idPembimbing
+  const pembimbingNip = kelompok?.nipPembimbing || (kelompok?.idPembimbing
     ? allPembimbing.find(p => p.id === kelompok.idPembimbing)?.nip || ''
-    : '';
+    : '');
 
   // Available mahasiswa (not in any kelompok)
   const availableMahasiswa = allMahasiswa.filter(m => !m.idKelompok);
@@ -149,6 +167,19 @@ export default function DetailKelompokPage() {
     );
   }
 
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-16 text-center">
+          <span className="text-5xl block mb-4">⚠️</span>
+          <p className="text-slate-600 font-medium">{error}</p>
+          <button onClick={() => navigate('/kelompok')} className="mt-4 px-4 py-2 bg-slate-500 text-white rounded-xl text-sm mr-2">Kembali</button>
+          <button onClick={() => fetchData()} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm">Coba Lagi</button>
+        </div>
+      </Layout>
+    );
+  }
+
   if (!kelompok) {
     return (
       <Layout>
@@ -190,7 +221,7 @@ export default function DetailKelompokPage() {
           <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
             <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Dosen Pembimbing
           </h2>
-          {!isAdmin && !isMahasiswa && (
+          {!isAdmin && !isMahasiswa && !isDosen && (
             <button
               onClick={() => { setShowPembimbingModal(true); setSelectedPembimbingId(''); }}
               className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
@@ -238,7 +269,7 @@ export default function DetailKelompokPage() {
             <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Anggota Kelompok
             <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{kelompok.daftarMahasiswa.length}</span>
           </h2>
-          {!isAdmin && !isMahasiswa && (
+          {!isAdmin && !isMahasiswa && !isDosen && (
             <button
               onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); }}
               className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
@@ -261,7 +292,7 @@ export default function DetailKelompokPage() {
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
-                  {!isAdmin && !isMahasiswa && (
+                  {!isAdmin && !isMahasiswa && !isDosen && (
                     <th className="px-4 md:px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   )}
                 </tr>
@@ -279,7 +310,7 @@ export default function DetailKelompokPage() {
                         <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
                       </div>
                     </td>
-                    {!isAdmin && !isMahasiswa && (
+                    {!isAdmin && !isMahasiswa && !isDosen && (
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                           <button

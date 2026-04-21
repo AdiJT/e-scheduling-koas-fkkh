@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
@@ -46,7 +46,7 @@ public class MahasiswaController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola},{UserRoles.Dosen}")]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola},{UserRoles.Dosen},{UserRoles.Mahasiswa}")]
     public async Task<IActionResult> GetAll()
     {
         return Ok((await _mahasiswaRepository.GetAll()).Select(x => new { x.Id, x.NIM, x.Nama, idKelompok = x.Kelompok?.Id }));

@@ -64,6 +64,7 @@ export default function JadwalPage() {
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [data, setData] = useState<Jadwal[]>([]);
   const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,19 +102,12 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const [result, kelompokData] = await Promise.all([
-        jadwalApi.getAll(),
-        isMahasiswa ? (async () => {
-            const allKel = await (await fetch('/api/kelompok')).json();
-            return allKel;
-        })() : Promise.resolve([])
-      ]);
+      const result = await jadwalApi.getAll();
       
       if (isMahasiswa) {
-        const myKel = kelompokData.find((k: any) => 
-          k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
-        );
-        if (myKel) setUserKelompokId(myKel.id);
+        // We can still try to find the kelompokId for local filtering if needed, 
+        // but backend already filters for us.
+        if (result.length > 0) setUserKelompokId(result[0].idKelompok);
       }
       
       setData(result);
@@ -122,7 +116,7 @@ export default function JadwalPage() {
     } finally {
       setLoading(false);
     }
-  }, [isMahasiswa, user?.username]);
+  }, [isMahasiswa]);
 
   useEffect(() => {
     fetchData();
@@ -168,6 +162,9 @@ export default function JadwalPage() {
     if (isMahasiswa) {
       return matchStatus && j.idKelompok === userKelompokId;
     }
+    if (isDosen) {
+      return matchStatus && (j as any).idPembimbing === user?.profileId;
+    }
     return matchStatus;
   });
 
@@ -179,7 +176,11 @@ export default function JadwalPage() {
   // === PREPARE CALENDAR EVENTS ===
   // 1. Jadwal Events
   const jadwalEvents = data
-    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
+    .filter(j => {
+      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      return true;
+    })
     .map(j => ({
       id: `jadwal_${j.id}`,
       title: `${j.namaKelompok} - ${j.namaStase}`,
@@ -376,7 +377,7 @@ export default function JadwalPage() {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up print:hidden">
-        {!isPengelola && !isMahasiswa && (
+        {!isPengelola && !isMahasiswa && !isDosen && (
           <>
             <button onClick={() => navigate('/jadwal/tambah')}
               className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
@@ -398,7 +399,7 @@ export default function JadwalPage() {
             </button>
           </>
         )}
-        {!isPengelola && !isMahasiswa && (
+        {!isPengelola && !isMahasiswa && !isDosen && (
           <button onClick={fetchData}
             className="p-4 bg-white border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 text-slate-600 hover:text-blue-600 rounded-2xl shadow-soft hover:shadow-card transition-all flex items-center gap-4 group">
             <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-2xl transition-all">🔄</div>
@@ -532,7 +533,7 @@ export default function JadwalPage() {
                   Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
                 </p>
                 <div className="flex gap-2">
-                  {!isPengelola && !isMahasiswa && (
+                  {!isPengelola && !isMahasiswa && !isDosen && (
                     <button 
                       onClick={() => setShowDeleteAllModal(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
@@ -605,7 +606,7 @@ export default function JadwalPage() {
                             >
                               👁️
                             </button>
-                            {!isPengelola && !isMahasiswa && (
+                            {!isPengelola && !isMahasiswa && !isDosen && (
                               <button
                                 onClick={() => handleOpenEdit(j)}
                                 className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
@@ -614,7 +615,7 @@ export default function JadwalPage() {
                                ✏️
                               </button>
                             )}
-                            {!isPengelola && !isMahasiswa && (
+                            {!isPengelola && !isMahasiswa && !isDosen && (
                               <button
                                 onClick={() => handleDelete(j.id)}
                                 className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
@@ -840,7 +841,7 @@ export default function JadwalPage() {
               >
                 Tutup
               </button>
-              {!isPengelola && (
+              {!isPengelola && !isDosen && !isMahasiswa && (
                 <button
                   onClick={() => {
                     setShowDetailModal(false);

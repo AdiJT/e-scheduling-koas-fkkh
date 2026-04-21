@@ -72,6 +72,7 @@ export default function TambahDosenPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-dosen">
           <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-green-50">
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Data Dosen</h2>
+            <p className="mt-1 text-xs text-green-600 font-medium">💡 Informasi: Akun dosen akan otomatis dibuat dengan <b>Username</b> dan <b>Password</b> menggunakan NIP dosen tersebut.</p>
           </div>
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

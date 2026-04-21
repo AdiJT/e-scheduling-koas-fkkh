@@ -56,9 +56,10 @@ export default function Sidebar({
   };
 
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const isDosen = user?.role?.toLowerCase() === 'dosen';
   
   const filteredNavItems = navItems.filter(item => {
-    if (isMahasiswa) {
+    if (isMahasiswa || isDosen) {
       return ['dashboard', 'stase', 'kelompok', 'jadwal'].includes(item.id);
     }
     return true;

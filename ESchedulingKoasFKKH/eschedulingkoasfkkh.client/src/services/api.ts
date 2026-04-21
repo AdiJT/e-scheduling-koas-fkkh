@@ -243,6 +243,8 @@ export interface Kelompok {
     id: number;
     nama: string;
     idPembimbing: number | null;
+    namaPembimbing?: string | null;
+    nipPembimbing?: string | null;
     daftarMahasiswa: { id: number; nim: string; nama: string }[];
     daftarJadwal: { id: number; tanggalMulai: string; tanggalSelesai: string; idStase: number | null; namaStase: string | null }[];
 }

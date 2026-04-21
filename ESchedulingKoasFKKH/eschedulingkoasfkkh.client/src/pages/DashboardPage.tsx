@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
   const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
@@ -183,7 +184,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-900 mb-1">
-              {getGreeting()}, {getFirstName(user?.fullName || user?.username || 'Admin')}! 👋
+              {getGreeting()}, {isDosen ? (user?.fullName || user?.username) : getFirstName(user?.fullName || user?.username || 'Admin')}! 👋
             </h1>
             <p className="text-slate-500">Berikut ringkasan sistem E-Scheduling KOAS hari ini</p>
           </div>
@@ -197,7 +198,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      {!isMahasiswa && (
+      {!isMahasiswa && !isDosen && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {statCards.map((stat, index) => (
             <div
@@ -228,7 +229,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {menuItems
             .filter(item => {
-              if (isMahasiswa) {
+              if (isMahasiswa || isDosen) {
                 return ['stase', 'kelompok', 'jadwal'].includes(item.id);
               }
               return true;
@@ -248,7 +249,7 @@ export default function DashboardPage() {
                 {item.icon}
               </div>
               <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">
-                {isMahasiswa ? item.label.replace('Kelola ', 'Lihat ') : item.label}
+                {(isMahasiswa || isDosen) ? item.label.replace('Kelola ', 'Lihat ') : item.label}
               </h3>
               <p className="text-xs text-slate-400">{item.description}</p>
               <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
@@ -305,7 +306,7 @@ export default function DashboardPage() {
         {/* Quick Info */}
         <div className="space-y-4">
           {/* System Status */}
-          {!isMahasiswa && (
+          {!isMahasiswa && !isDosen && (
             <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5">
               <h3 className="text-sm font-bold text-primary-900 mb-4 flex items-center gap-2">
                 <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />

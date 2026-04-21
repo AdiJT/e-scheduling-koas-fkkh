@@ -10,6 +10,7 @@ export default function StasePage() {
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [data, setData] = useState<Stase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +160,7 @@ export default function StasePage() {
           </div>
 
           {/* Filter Jenis */}
-          {!isMahasiswa && (
+          {!isMahasiswa && !isDosen && (
             <select
               value={filterJenis}
               onChange={(e) => setFilterJenis(e.target.value)}
@@ -183,7 +184,7 @@ export default function StasePage() {
           </button>
 
           {/* Add Button */}
-          {!isPengelola && !isMahasiswa && (
+          {!isPengelola && !isMahasiswa && !isDosen && (
             <button
               onClick={() => navigate('/stase/tambah')}
               className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
@@ -206,7 +207,7 @@ export default function StasePage() {
               <p className="text-xs text-slate-500">Total Stase</p>
             </div>
           </div>
-          {!isMahasiswa && (
+          {!isMahasiswa && !isDosen && (
             <>
               <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-md">🔶</div>
@@ -260,13 +261,13 @@ export default function StasePage() {
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Stase</th>
                     <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Waktu</th>
-                    {!isMahasiswa && (
+                    {!isMahasiswa && !isDosen && (
                       <>
                         <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jenis</th>
                         <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
                       </>
                     )}
-                    {!isPengelola && !isMahasiswa && (
+                    {!isPengelola && !isMahasiswa && !isDosen && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
@@ -288,7 +289,7 @@ export default function StasePage() {
                           ⏱️ {stase.waktu} Minggu
                         </span>
                       </td>
-                      {!isMahasiswa && (
+                      {!isMahasiswa && !isDosen && (
                         <>
                           <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
@@ -310,7 +311,7 @@ export default function StasePage() {
                           </td>
                         </>
                       )}
-                      {!isPengelola && !isMahasiswa && (
+                      {!isPengelola && !isMahasiswa && !isDosen && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                             <button

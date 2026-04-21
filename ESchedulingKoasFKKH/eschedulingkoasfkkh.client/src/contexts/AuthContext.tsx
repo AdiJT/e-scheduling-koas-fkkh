@@ -4,7 +4,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { username: string; role: string; fullName?: string } | null;
+  user: { username: string; role: string; fullName?: string; profileId?: number } | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -22,11 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   });
 
-  const [user, setUser] = useState<{ username: string; role: string; fullName?: string } | null>(() => {
+  const [user, setUser] = useState<{ username: string; role: string; fullName?: string; profileId?: number } | null>(() => {
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
     const fullName = localStorage.getItem('fullName') || undefined;
-    return username && role ? { username, role, fullName } : null;
+    const profileId = localStorage.getItem('profileId');
+    return username && role ? { username, role, fullName, profileId: profileId ? parseInt(profileId) : undefined } : null;
   });
 
   // Restore state from localStorage on mount
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
     const fullName = localStorage.getItem('fullName');
+    const profileId = localStorage.getItem('profileId');
     const loginTimestamp = localStorage.getItem('loginTimestamp');
 
     if (isAuth && username && role && loginTimestamp) {
@@ -44,13 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 10 minutes = 10 * 60 * 1000 = 600,000 ms
       if (timeDiff < 600000) {
         setIsAuthenticated(true);
-        setUser({ username, role, fullName: fullName || undefined });
+        setUser({ username, role, fullName: fullName || undefined, profileId: profileId ? parseInt(profileId) : undefined });
       } else {
         // Expired
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('username');
         localStorage.removeItem('role');
         localStorage.removeItem('fullName');
+        localStorage.removeItem('profileId');
         localStorage.removeItem('token');
         localStorage.removeItem('loginTimestamp');
       }
@@ -73,14 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = data.token;
       const role = data.role || data.Role;
       const fullName = data.fullName;
+      const profileId = data.profileId;
       
       if (token) {
         setIsAuthenticated(true);
-        setUser({ username, role, fullName });
+        setUser({ username, role, fullName, profileId });
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('username', username);
         localStorage.setItem('role', role);
         if (fullName) localStorage.setItem('fullName', fullName);
+        if (profileId) localStorage.setItem('profileId', profileId.toString());
         localStorage.setItem('token', token);
         localStorage.setItem('loginTimestamp', new Date().getTime().toString());
       }
@@ -97,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('username');
     localStorage.removeItem('role');
     localStorage.removeItem('fullName');
+    localStorage.removeItem('profileId');
     localStorage.removeItem('token');
     localStorage.removeItem('loginTimestamp');
   };

@@ -86,6 +86,13 @@ public class UserController : ControllerBase
             _ => user.Name
         };
 
-        return Ok(new { user.Id, user.Role, token = tokenStr, fullName });
+        int? profileId = user.Role switch
+        {
+            UserRoles.Mahasiswa => user.Mahasiswa?.Id,
+            UserRoles.Dosen => user.Pembimbing?.Id,
+            _ => null
+        };
+
+        return Ok(new { user.Id, user.Role, token = tokenStr, fullName, profileId });
     }
 }

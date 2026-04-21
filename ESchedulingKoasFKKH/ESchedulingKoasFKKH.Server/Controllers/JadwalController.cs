@@ -23,6 +23,7 @@ public class JadwalController : ControllerBase
     private readonly IJadwalAutoScheduler _jadwalAutoScheduler;
     private readonly IUserRepository _userRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
+    private readonly IPembimbingRepository _pembimbingRepository;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
@@ -32,7 +33,8 @@ public class JadwalController : ControllerBase
         IHariLiburService hariLiburService,
         IJadwalAutoScheduler jadwalAutoScheduler,
         IUserRepository userRepository,
-        IMahasiswaRepository mahasiswaRepository)
+        IMahasiswaRepository mahasiswaRepository,
+        IPembimbingRepository pembimbingRepository)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
@@ -42,6 +44,7 @@ public class JadwalController : ControllerBase
         _jadwalAutoScheduler = jadwalAutoScheduler;
         _userRepository = userRepository;
         _mahasiswaRepository = mahasiswaRepository;
+        _pembimbingRepository = pembimbingRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -59,7 +62,8 @@ public class JadwalController : ControllerBase
                 idStase = jadwal.Stase.Id,
                 namaStase = jadwal.Stase.Nama,
                 idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama
+                namaKelompok = jadwal.Kelompok.Nama,
+                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
             });
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
@@ -72,7 +76,8 @@ public class JadwalController : ControllerBase
                 idStase = jadwal.Stase.Id,
                 namaStase = jadwal.Stase.Nama,
                 idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama
+                namaKelompok = jadwal.Kelompok.Nama,
+                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
             });
 
         return Forbid();
@@ -94,8 +99,28 @@ public class JadwalController : ControllerBase
                     idStase = x.Stase.Id,
                     namaStase = x.Stase.Nama,
                     idKelompok = x.Kelompok.Id,
-                    namaKelompok = x.Kelompok.Nama
+                    namaKelompok = x.Kelompok.Nama,
+                    idPembimbing = x.Kelompok.Pembimbing?.Id
                 }));
+
+        if (User.IsInRole(UserRoles.Dosen))
+        {
+            var pembimbing = await _pembimbingRepository.Get(User?.Identity?.Name!);
+            if (pembimbing is not null)
+                return Ok(daftarjadwal
+                    .Where(x => x.Kelompok.Pembimbing != null && x.Kelompok.Pembimbing.Id == pembimbing.Id && (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.TanggalMulai,
+                        tanggalSelesai = x.TanggalSelesai(_hariLiburService),
+                        idStase = x.Stase.Id,
+                        namaStase = x.Stase.Nama,
+                        idKelompok = x.Kelompok.Id,
+                        namaKelompok = x.Kelompok.Nama,
+                        idPembimbing = x.Kelompok.Pembimbing?.Id
+                    }));
+        }
 
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
@@ -110,7 +135,8 @@ public class JadwalController : ControllerBase
                     idStase = x.Stase.Id,
                     namaStase = x.Stase.Nama,
                     idKelompok = x.Kelompok.Id,
-                    namaKelompok = x.Kelompok.Nama
+                    namaKelompok = x.Kelompok.Nama,
+                    idPembimbing = x.Kelompok.Pembimbing?.Id
                 }));
 
         return Forbid();
@@ -235,7 +261,8 @@ public class JadwalController : ControllerBase
                 idStase = jadwal.Stase.Id,
                 namaStase = jadwal.Stase.Nama,
                 idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama
+                namaKelompok = jadwal.Kelompok.Nama,
+                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
             });
     }
 
@@ -302,6 +329,7 @@ public class JadwalController : ControllerBase
             namaStase = jadwal.Stase.Nama,
             idKelompok = jadwal.Kelompok.Id,
             namaKelompok = jadwal.Kelompok.Nama,
+            idPembimbing = jadwal.Kelompok.Pembimbing?.Id,
             overrideDigunakan = warnings.Count > 0
         });
     }
