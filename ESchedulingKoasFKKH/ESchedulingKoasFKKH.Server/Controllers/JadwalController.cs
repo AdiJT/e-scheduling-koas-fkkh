@@ -21,7 +21,6 @@ public class JadwalController : ControllerBase
     private readonly IStaseRepository _staseRepository;
     private readonly IHariLiburService _hariLiburService;
     private readonly IJadwalAutoScheduler _jadwalAutoScheduler;
-    private readonly IUserRepository _userRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
     private readonly IPembimbingRepository _pembimbingRepository;
 
@@ -32,7 +31,6 @@ public class JadwalController : ControllerBase
         IStaseRepository staseRepository,
         IHariLiburService hariLiburService,
         IJadwalAutoScheduler jadwalAutoScheduler,
-        IUserRepository userRepository,
         IMahasiswaRepository mahasiswaRepository,
         IPembimbingRepository pembimbingRepository)
     {
@@ -42,7 +40,6 @@ public class JadwalController : ControllerBase
         _staseRepository = staseRepository;
         _hariLiburService = hariLiburService;
         _jadwalAutoScheduler = jadwalAutoScheduler;
-        _userRepository = userRepository;
         _mahasiswaRepository = mahasiswaRepository;
         _pembimbingRepository = pembimbingRepository;
     }

@@ -39,9 +39,22 @@ public class UserController : ControllerBase
         var user = await _userRepository.Get(id);
         if (user is null) return NotFound();
 
-        if (User.IsInRole(UserRoles.Admin)) return Ok(user);
+        if (User.IsInRole(UserRoles.Admin))
+            return Ok(new
+            {
+                user.Id,
+                user.Name,
+                user.Role
+            });
 
-        if (User?.Identity?.Name == user.Name) return Ok(user);
+        if (User?.Identity?.Name == user.Name)
+            return user.Role switch
+            {
+                UserRoles.Pengelola => Ok(new { user.Id, user.Name }),
+                UserRoles.Dosen => Ok(new { user.Id, user.Name, PembimbingId = user.Pembimbing?.Id }),
+                UserRoles.Mahasiswa => Ok(new { user.Id, user.Name, MahasiswaId = user.Mahasiswa?.Id }),
+                _ => Forbid()
+            };
 
         return Forbid();
     }
@@ -78,7 +91,7 @@ public class UserController : ControllerBase
             signingCredentials);
 
         var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
-        
+
         string? fullName = user.Role switch
         {
             UserRoles.Mahasiswa => user.Mahasiswa?.Nama,
