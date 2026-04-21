@@ -14,6 +14,7 @@ export default function KelompokPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const [data, setData] = useState<Kelompok[]>([]);
   const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +51,14 @@ export default function KelompokPage() {
     fetchData();
   }, [fetchData]);
 
-  const filteredData = data.filter(k =>
-    k.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = data.filter(k => {
+    const matchSearch = k.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    if (isMahasiswa) {
+      const isMember = k.daftarMahasiswa.some(m => m.nim === user?.username);
+      return matchSearch && isMember;
+    }
+    return matchSearch;
+  });
 
   const getPembimbingNama = (idPembimbing: number | null) => {
     if (!idPembimbing) return null;
@@ -150,7 +156,7 @@ export default function KelompokPage() {
           >
             🔄 Refresh
           </button>
-          {!isPengelola && (
+          {!isPengelola && !isMahasiswa && (
             <button onClick={() => navigate('/kelompok/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm flex items-center gap-2" id="btn-tambah-kelompok">
               + Buat Kelompok
             </button>
@@ -252,7 +258,7 @@ export default function KelompokPage() {
                         ) : (
                           <>
                             <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-all">👁️ Detail</button>
-                            {!isPengelola && (
+                            {!isPengelola && !isMahasiswa && (
                               <>
                                 <button onClick={() => startEdit(kel)} className="flex-1 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-xl transition-all">✏️ Edit</button>
                                 <button onClick={() => handleDelete(kel.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all">🗑️ Hapus</button>

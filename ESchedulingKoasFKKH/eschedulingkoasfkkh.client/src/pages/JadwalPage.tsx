@@ -63,7 +63,9 @@ export default function JadwalPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const [data, setData] = useState<Jadwal[]>([]);
+  const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -99,14 +101,28 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const result = await jadwalApi.getAll();
+      const [result, kelompokData] = await Promise.all([
+        jadwalApi.getAll(),
+        isMahasiswa ? (async () => {
+            const allKel = await (await fetch('/api/kelompok')).json();
+            return allKel;
+        })() : Promise.resolve([])
+      ]);
+      
+      if (isMahasiswa) {
+        const myKel = kelompokData.find((k: any) => 
+          k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
+        );
+        if (myKel) setUserKelompokId(myKel.id);
+      }
+      
       setData(result);
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isMahasiswa, user?.username]);
 
   useEffect(() => {
     fetchData();
@@ -147,9 +163,13 @@ export default function JadwalPage() {
     status: getStatus(j.tanggalMulai, j.tanggalSelesai),
   }));
 
-  const filteredData = dataWithStatus.filter(j =>
-    filterStatus === 'all' || j.status === filterStatus
-  );
+  const filteredData = dataWithStatus.filter(j => {
+    const matchStatus = filterStatus === 'all' || j.status === filterStatus;
+    if (isMahasiswa) {
+      return matchStatus && j.idKelompok === userKelompokId;
+    }
+    return matchStatus;
+  });
 
   // Stats
   const countBerlangsung = dataWithStatus.filter(j => j.status === 'Berlangsung').length;
@@ -158,15 +178,17 @@ export default function JadwalPage() {
 
   // === PREPARE CALENDAR EVENTS ===
   // 1. Jadwal Events
-  const jadwalEvents = data.map(j => ({
-    id: `jadwal_${j.id}`,
-    title: `${j.namaKelompok} - ${j.namaStase}`,
-    start: new Date(j.tanggalMulai + 'T00:00:00'),
-    end: new Date(j.tanggalSelesai + 'T23:59:59'),
-    type: 'jadwal',
-    idKelompok: j.idKelompok,
-    jadwalId: j.id,
-  }));
+  const jadwalEvents = data
+    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
+    .map(j => ({
+      id: `jadwal_${j.id}`,
+      title: `${j.namaKelompok} - ${j.namaStase}`,
+      start: new Date(j.tanggalMulai + 'T00:00:00'),
+      end: new Date(j.tanggalSelesai + 'T23:59:59'),
+      type: 'jadwal',
+      idKelompok: j.idKelompok,
+      jadwalId: j.id,
+    }));
 
   // 2. Holidays
   // Get holidays for the current year (can extend to previous/next year based on current view date)
@@ -354,7 +376,7 @@ export default function JadwalPage() {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up print:hidden">
-        {!isPengelola && (
+        {!isPengelola && !isMahasiswa && (
           <>
             <button onClick={() => navigate('/jadwal/tambah')}
               className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
@@ -376,7 +398,7 @@ export default function JadwalPage() {
             </button>
           </>
         )}
-        {!isPengelola && (
+        {!isPengelola && !isMahasiswa && (
           <button onClick={fetchData}
             className="p-4 bg-white border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 text-slate-600 hover:text-blue-600 rounded-2xl shadow-soft hover:shadow-card transition-all flex items-center gap-4 group">
             <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-2xl transition-all">🔄</div>
@@ -510,7 +532,7 @@ export default function JadwalPage() {
                   Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
                 </p>
                 <div className="flex gap-2">
-                  {!isPengelola && (
+                  {!isPengelola && !isMahasiswa && (
                     <button 
                       onClick={() => setShowDeleteAllModal(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
@@ -583,7 +605,7 @@ export default function JadwalPage() {
                             >
                               👁️
                             </button>
-                            {!isPengelola && (
+                            {!isPengelola && !isMahasiswa && (
                               <button
                                 onClick={() => handleOpenEdit(j)}
                                 className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
@@ -592,7 +614,7 @@ export default function JadwalPage() {
                                ✏️
                               </button>
                             )}
-                            {!isPengelola && (
+                            {!isPengelola && !isMahasiswa && (
                               <button
                                 onClick={() => handleDelete(j.id)}
                                 className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"

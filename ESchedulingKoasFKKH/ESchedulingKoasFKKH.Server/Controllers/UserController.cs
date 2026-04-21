@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Shared;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
@@ -78,6 +78,14 @@ public class UserController : ControllerBase
             signingCredentials);
 
         var tokenStr = new JwtSecurityTokenHandler().WriteToken(token);
-        return Ok(new { user.Id, user.Role, token = tokenStr });
+        
+        string? fullName = user.Role switch
+        {
+            UserRoles.Mahasiswa => user.Mahasiswa?.Nama,
+            UserRoles.Dosen => user.Pembimbing?.Nama,
+            _ => user.Name
+        };
+
+        return Ok(new { user.Id, user.Role, token = tokenStr, fullName });
     }
 }

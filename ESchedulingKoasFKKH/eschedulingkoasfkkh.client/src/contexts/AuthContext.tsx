@@ -4,7 +4,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { username: string; role: string } | null;
+  user: { username: string; role: string; fullName?: string } | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -22,10 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   });
 
-  const [user, setUser] = useState<{ username: string; role: string } | null>(() => {
+  const [user, setUser] = useState<{ username: string; role: string; fullName?: string } | null>(() => {
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
-    return username && role ? { username, role } : null;
+    const fullName = localStorage.getItem('fullName') || undefined;
+    return username && role ? { username, role, fullName } : null;
   });
 
   // Restore state from localStorage on mount
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
+    const fullName = localStorage.getItem('fullName');
     const loginTimestamp = localStorage.getItem('loginTimestamp');
 
     if (isAuth && username && role && loginTimestamp) {
@@ -42,12 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 10 minutes = 10 * 60 * 1000 = 600,000 ms
       if (timeDiff < 600000) {
         setIsAuthenticated(true);
-        setUser({ username, role });
+        setUser({ username, role, fullName: fullName || undefined });
       } else {
         // Expired
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('username');
         localStorage.removeItem('role');
+        localStorage.removeItem('fullName');
         localStorage.removeItem('token');
         localStorage.removeItem('loginTimestamp');
       }
@@ -69,13 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       const token = data.token;
       const role = data.role || data.Role;
+      const fullName = data.fullName;
       
       if (token) {
         setIsAuthenticated(true);
-        setUser({ username, role });
+        setUser({ username, role, fullName });
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('username', username);
         localStorage.setItem('role', role);
+        if (fullName) localStorage.setItem('fullName', fullName);
         localStorage.setItem('token', token);
         localStorage.setItem('loginTimestamp', new Date().getTime().toString());
       }
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
+    localStorage.removeItem('fullName');
     localStorage.removeItem('token');
     localStorage.removeItem('loginTimestamp');
   };

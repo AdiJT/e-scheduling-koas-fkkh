@@ -78,8 +78,10 @@ interface Stats {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
+  const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [calendarView, setCalendarView] = useState<View>('month');
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -94,6 +96,14 @@ export default function DashboardPage() {
         kelompokApi.getAll(),
         jadwalApi.getAll(),
       ]);
+
+      if (isMahasiswa) {
+        const myKel = kel.find((k: any) => 
+          k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
+        );
+        if (myKel) setUserKelompokId(myKel.id);
+      }
+
       setStats({
         mahasiswa: mhs.length,
         dosen: pemb.length,
@@ -106,7 +116,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isMahasiswa, user?.username]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -126,20 +136,23 @@ export default function DashboardPage() {
   ];
 
   const upcomingJadwal = [...jadwalList]
+    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
     .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
     .filter(j => new Date(j.tanggalMulai) >= new Date(new Date().toDateString()))
     .slice(0, 3);
 
   // === PREPARE CALENDAR EVENTS ===
-  const jadwalEvents = jadwalList.map(j => ({
-    id: `jadwal_${j.id}`,
-    title: `${j.namaKelompok} - ${j.namaStase}`,
-    start: new Date(j.tanggalMulai + 'T00:00:00'),
-    end: new Date(j.tanggalSelesai + 'T23:59:59'),
-    type: 'jadwal',
-    idKelompok: j.idKelompok,
-    jadwalId: j.id,
-  }));
+  const jadwalEvents = jadwalList
+    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
+    .map(j => ({
+      id: `jadwal_${j.id}`,
+      title: `${j.namaKelompok} - ${j.namaStase}`,
+      start: new Date(j.tanggalMulai + 'T00:00:00'),
+      end: new Date(j.tanggalSelesai + 'T23:59:59'),
+      type: 'jadwal',
+      idKelompok: j.idKelompok,
+      jadwalId: j.id,
+    }));
 
   const currentYear = calendarDate.getFullYear();
   const holidaysCurrentYear = getHolidays(currentYear);
@@ -158,6 +171,11 @@ export default function DashboardPage() {
 
   const calendarEvents = [...jadwalEvents, ...holidayEvents];
 
+  const getFirstName = (name: string) => {
+    if (!name) return '';
+    return name.split(' ')[0];
+  };
+
   return (
     <Layout>
       {/* Welcome Section */}
@@ -165,7 +183,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-900 mb-1">
-              {getGreeting()}, {user?.username || 'Admin'}! 👋
+              {getGreeting()}, {getFirstName(user?.fullName || user?.username || 'Admin')}! 👋
             </h1>
             <p className="text-slate-500">Berikut ringkasan sistem E-Scheduling KOAS hari ini</p>
           </div>
@@ -179,25 +197,27 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        {statCards.map((stat, index) => (
-          <div
-            key={stat.label}
-            className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 hover:shadow-elevated transition-all duration-300 group animate-fade-in-up cursor-default"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                {stat.icon}
+      {!isMahasiswa && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+          {statCards.map((stat, index) => (
+            <div
+              key={stat.label}
+              className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 hover:shadow-elevated transition-all duration-300 group animate-fade-in-up cursor-default"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  {stat.icon}
+                </div>
               </div>
+              <p className="text-3xl font-bold text-primary-900 mb-1">
+                {loading ? <span className="inline-block w-10 h-8 bg-slate-200 rounded animate-pulse" /> : stat.value}
+              </p>
+              <p className="text-sm text-slate-500">{stat.label}</p>
             </div>
-            <p className="text-3xl font-bold text-primary-900 mb-1">
-              {loading ? <span className="inline-block w-10 h-8 bg-slate-200 rounded animate-pulse" /> : stat.value}
-            </p>
-            <p className="text-sm text-slate-500">{stat.label}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Menu Grid */}
       <div className="mb-8">
@@ -206,7 +226,14 @@ export default function DashboardPage() {
           Menu Utama
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {menuItems.map((item, index) => (
+          {menuItems
+            .filter(item => {
+              if (isMahasiswa) {
+                return ['stase', 'kelompok', 'jadwal'].includes(item.id);
+              }
+              return true;
+            })
+            .map((item, index) => (
             <button
               key={item.id}
               id={`menu-${item.id}`}
@@ -220,7 +247,9 @@ export default function DashboardPage() {
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center text-2xl mb-4 shadow-md group-hover:scale-110 group-hover:${item.shadowColor} transition-all duration-300`}>
                 {item.icon}
               </div>
-              <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">{item.label}</h3>
+              <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">
+                {isMahasiswa ? item.label.replace('Kelola ', 'Lihat ') : item.label}
+              </h3>
               <p className="text-xs text-slate-400">{item.description}</p>
               <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
             </button>
@@ -276,27 +305,29 @@ export default function DashboardPage() {
         {/* Quick Info */}
         <div className="space-y-4">
           {/* System Status */}
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5">
-            <h3 className="text-sm font-bold text-primary-900 mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />
-              Status Sistem
-            </h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Server', status: 'Online', color: 'bg-green-500' },
-                { label: 'Database', status: 'Connected', color: 'bg-green-500' },
-                { label: 'API', status: 'Active', color: 'bg-green-500' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">{item.label}</span>
-                  <span className="flex items-center gap-2 text-xs font-medium text-green-600">
-                    <span className={`w-2 h-2 rounded-full ${item.color} animate-pulse-slow`} />
-                    {item.status}
-                  </span>
-                </div>
-              ))}
+          {!isMahasiswa && (
+            <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5">
+              <h3 className="text-sm font-bold text-primary-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />
+                Status Sistem
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: 'Server', status: 'Online', color: 'bg-green-500' },
+                  { label: 'Database', status: 'Connected', color: 'bg-green-500' },
+                  { label: 'API', status: 'Active', color: 'bg-green-500' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">{item.label}</span>
+                    <span className="flex items-center gap-2 text-xs font-medium text-green-600">
+                      <span className={`w-2 h-2 rounded-full ${item.color} animate-pulse-slow`} />
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Upcoming Schedule */}
           <div className="bg-gradient-to-br from-primary-900 to-blue-800 rounded-2xl shadow-dark p-5 text-white">

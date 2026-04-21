@@ -9,6 +9,7 @@ export default function StasePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const [data, setData] = useState<Stase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,17 +159,19 @@ export default function StasePage() {
           </div>
 
           {/* Filter Jenis */}
-          <select
-            value={filterJenis}
-            onChange={(e) => setFilterJenis(e.target.value)}
-            className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
-              focus:outline-none focus:border-purple-400 transition-all cursor-pointer"
-            id="filter-jenis"
-          >
-            <option value="all">Semua Jenis</option>
-            <option value="Terpisah">Terpisah</option>
-            <option value="Bersamaan">Bersamaan</option>
-          </select>
+          {!isMahasiswa && (
+            <select
+              value={filterJenis}
+              onChange={(e) => setFilterJenis(e.target.value)}
+              className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+                focus:outline-none focus:border-purple-400 transition-all cursor-pointer"
+              id="filter-jenis"
+            >
+              <option value="all">Semua Jenis</option>
+              <option value="Terpisah">Terpisah</option>
+              <option value="Bersamaan">Bersamaan</option>
+            </select>
+          )}
 
           {/* Refresh */}
           <button
@@ -180,7 +183,7 @@ export default function StasePage() {
           </button>
 
           {/* Add Button */}
-          {!isPengelola && (
+          {!isPengelola && !isMahasiswa && (
             <button
               onClick={() => navigate('/stase/tambah')}
               className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
@@ -203,20 +206,24 @@ export default function StasePage() {
               <p className="text-xs text-slate-500">Total Stase</p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-md">🔶</div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Terpisah').length}</p>
-              <p className="text-xs text-slate-500">Stase Terpisah</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-xl shadow-md">🔷</div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
-              <p className="text-xs text-slate-500">Stase Bersamaan</p>
-            </div>
-          </div>
+          {!isMahasiswa && (
+            <>
+              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-md">🔶</div>
+                <div>
+                  <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Terpisah').length}</p>
+                  <p className="text-xs text-slate-500">Stase Terpisah</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-xl shadow-md">🔷</div>
+                <div>
+                  <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
+                  <p className="text-xs text-slate-500">Stase Bersamaan</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -253,9 +260,13 @@ export default function StasePage() {
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Stase</th>
                     <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Waktu</th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jenis</th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
-                    {!isPengelola && (
+                    {!isMahasiswa && (
+                      <>
+                        <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jenis</th>
+                        <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
+                      </>
+                    )}
+                    {!isPengelola && !isMahasiswa && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
@@ -277,25 +288,29 @@ export default function StasePage() {
                           ⏱️ {stase.waktu} Minggu
                         </span>
                       </td>
-                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
-                          {getJenisIcon(stase.jenis)} {stase.jenis}
-                        </span>
-                      </td>
-                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
-                        <span className="text-xs text-slate-500">
-                          {stase.daftarJadwal.length > 0 ? (
-                            <span className="inline-block px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">
-                              {stase.daftarJadwal.length} jadwal
+                      {!isMahasiswa && (
+                        <>
+                          <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
+                              {getJenisIcon(stase.jenis)} {stase.jenis}
                             </span>
-                          ) : (
-                            <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold whitespace-nowrap">
-                              Belum ada
+                          </td>
+                          <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                            <span className="text-xs text-slate-500">
+                              {stase.daftarJadwal.length > 0 ? (
+                                <span className="inline-block px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">
+                                  {stase.daftarJadwal.length} jadwal
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold whitespace-nowrap">
+                                  Belum ada
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                      </td>
-                      {!isPengelola && (
+                          </td>
+                        </>
+                      )}
+                      {!isPengelola && !isMahasiswa && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                             <button

@@ -46,6 +46,33 @@ export default function Sidebar({
     setMobileOpen(false); // Close mobile menu after navigation
   };
 
+  const getInitials = (name: string) => {
+    if (!name) return 'A';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+    return parts[0].charAt(0).toUpperCase();
+  };
+
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  
+  const filteredNavItems = navItems.filter(item => {
+    if (isMahasiswa) {
+      return ['dashboard', 'stase', 'kelompok', 'jadwal'].includes(item.id);
+    }
+    return true;
+  });
+
+  const getRoleDisplay = () => {
+    const role = user?.role?.toLowerCase();
+    if (role === 'admin' || role === 'administrator') return 'Administrator';
+    if (role === 'pengelola') return 'Pengelola';
+    if (role === 'mahasiswa') return 'Mahasiswa';
+    if (role === 'dosen') return 'Dosen';
+    return role || 'Guest';
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -102,7 +129,7 @@ export default function Sidebar({
               Menu Utama
             </p>
           )}
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <button
               key={item.id}
               id={`nav-${item.id}`}
@@ -130,14 +157,14 @@ export default function Sidebar({
         {/* User Section */}
         <div className="p-3 border-t border-white/10">
           <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-sm font-bold shadow-md flex-shrink-0">
-              {user?.username?.charAt(0).toUpperCase() || 'A'}
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xs font-bold shadow-md flex-shrink-0">
+              {getInitials(user?.fullName || user?.username || 'Admin')}
             </div>
             {!collapsed && (
               <div className="animate-fade-in flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.username || 'Admin'}</p>
+                <p className="text-sm font-medium text-white truncate">{user?.fullName || user?.username || 'Admin'}</p>
                 <p className="text-xs text-blue-300/50">
-                  {user?.username?.toLowerCase() === 'pengelola' ? 'Pengelola' : 'Administrator'}
+                  {getRoleDisplay()}
                 </p>
               </div>
             )}

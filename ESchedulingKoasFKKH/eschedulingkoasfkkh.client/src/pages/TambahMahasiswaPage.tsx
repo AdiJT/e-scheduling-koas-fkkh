@@ -72,6 +72,7 @@ export default function TambahMahasiswaPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-mahasiswa">
           <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Data Mahasiswa</h2>
+            <p className="mt-1 text-xs text-blue-600 font-medium">💡 Informasi: Akun mahasiswa akan otomatis dibuat dengan <b>Username</b> dan <b>Password</b> menggunakan NIM mahasiswa tersebut.</p>
           </div>
           <div className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
