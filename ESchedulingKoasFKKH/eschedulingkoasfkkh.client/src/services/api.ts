@@ -342,6 +342,7 @@ export interface Jadwal {
   namaKelompok: string;
   idStase: number;
   namaStase: string;
+  idPembimbing?: number | null;
 }
 
 export interface CreateJadwal {

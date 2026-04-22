@@ -579,9 +579,19 @@ export default function JadwalPage() {
                           </button>
                         </td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                          <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
-                            {j.namaStase}
-                          </span>
+                          {isMahasiswa ? (
+                            <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
+                              {j.namaStase}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => navigate(`/stase/${j.idStase}`)}
+                              className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100"
+                              title="Lihat Detail Stase"
+                            >
+                              {j.namaStase}
+                            </button>
+                          )}
                         </td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="text-xs text-slate-600">

@@ -267,7 +267,7 @@ export default function StasePage() {
                         <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
                       </>
                     )}
-                    {!isPengelola && !isMahasiswa && !isDosen && (
+                    {!isMahasiswa && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
@@ -311,23 +311,34 @@ export default function StasePage() {
                           </td>
                         </>
                       )}
-                      {!isPengelola && !isMahasiswa && !isDosen && (
+                      {!isMahasiswa && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                             <button
-                              onClick={() => startEdit(stase)}
-                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
-                              title="Edit"
+                              onClick={() => navigate(`/stase/${stase.id}`)}
+                              className="p-2 rounded-lg text-purple-600 hover:bg-purple-100 transition-all duration-200 text-sm"
+                              title="Detail"
                             >
-                              ✏️
+                              👁️
                             </button>
-                            <button
-                              onClick={() => handleDelete(stase.id)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
-                              title="Hapus"
-                            >
-                              🗑️
-                            </button>
+                            {!isPengelola && !isDosen && (
+                              <>
+                                <button
+                                  onClick={() => startEdit(stase)}
+                                  className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                                  title="Edit"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(stase.id)}
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                                  title="Hapus"
+                                >
+                                  🗑️
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}

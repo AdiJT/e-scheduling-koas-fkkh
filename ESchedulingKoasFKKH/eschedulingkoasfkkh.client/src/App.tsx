@@ -14,6 +14,7 @@ import TambahStasePage from './pages/TambahStasePage';
 import TambahKelompokPage from './pages/TambahKelompokPage';
 import DetailKelompokPage from './pages/DetailKelompokPage';
 import TambahJadwalPage from './pages/TambahJadwalPage';
+import DetailStasePage from './pages/DetailStasePage';
 
 function App() {
     return (
@@ -61,6 +62,9 @@ function App() {
                     } />
                     <Route path="/jadwal/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahJadwalPage /></ProtectedRoute>
+                    } />
+                    <Route path="/stase/:id" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola', 'dosen']}><DetailStasePage /></ProtectedRoute>
                     } />
 
                     {/* Default */}
