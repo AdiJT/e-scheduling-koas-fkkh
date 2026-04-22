@@ -341,11 +341,14 @@ export default function JadwalPage() {
         <div className="flex items-center gap-3 print:hidden">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-2xl shadow-md">📅</div>
-          <div><h1 className="text-2xl font-bold text-primary-900">Kelola Jadwal</h1><p className="text-sm text-slate-500">Kelola jadwal stase KOAS</p></div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Jadwal Stase' : 'Kelola Jadwal'}</h1>
+            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat jadwal stase KOAS Anda' : 'Kelola jadwal stase KOAS'}</p>
+          </div>
         </div>
         <div className="hidden print:block text-center mb-6">
           <h1 className="text-2xl font-bold text-black uppercase">Jadwal Stase KOAS</h1>
-          <p className="text-sm text-gray-600">Fakultas Kedokteran Hewan</p>
+          <p className="text-sm text-gray-600">Pendidikan Profesi Dokter Hewan</p>
         </div>
       </div>
 
@@ -524,7 +527,9 @@ export default function JadwalPage() {
             <div className="p-16 text-center print:hidden">
               <span className="text-5xl block mb-4">📅</span>
               <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
-              <p className="text-sm text-slate-400 mt-1">Mulai dengan menambah jadwal baru</p>
+              <p className="text-sm text-slate-400 mt-1">
+                {isMahasiswa || isDosen ? 'Kamu belum memiliki jadwal stase' : 'Mulai dengan menambah jadwal baru'}
+              </p>
             </div>
           ) : (
             <>

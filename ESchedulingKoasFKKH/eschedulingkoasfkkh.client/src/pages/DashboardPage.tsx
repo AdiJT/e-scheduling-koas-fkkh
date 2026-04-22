@@ -140,7 +140,7 @@ export default function DashboardPage() {
     .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
     .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
     .filter(j => new Date(j.tanggalMulai) >= new Date(new Date().toDateString()))
-    .slice(0, 3);
+    .slice(0, 6);
 
   // === PREPARE CALENDAR EVENTS ===
   const jadwalEvents = jadwalList
@@ -249,9 +249,19 @@ export default function DashboardPage() {
                 {item.icon}
               </div>
               <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">
-                {(isMahasiswa || isDosen) ? item.label.replace('Kelola ', 'Lihat ') : item.label}
+                {isMahasiswa || isDosen ? (
+                  item.id === 'stase' ? 'Daftar Stase' :
+                  item.id === 'kelompok' ? (isMahasiswa ? 'Kelompok Saya' : 'Kelompok Bimbingan') :
+                  item.id === 'jadwal' ? 'Jadwal Stase' : item.label
+                ) : item.label}
               </h3>
-              <p className="text-xs text-slate-400">{item.description}</p>
+              <p className="text-xs text-slate-400">
+                {isMahasiswa || isDosen ? (
+                  item.id === 'stase' ? 'Lihat daftar rotasi klinik' :
+                  item.id === 'kelompok' ? 'Informasi anggota dan pembimbing' :
+                  item.id === 'jadwal' ? 'Lihat jadwal kegiatan KOAS' : item.description
+                ) : item.description}
+              </p>
               <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
             </button>
           ))}
@@ -306,29 +316,7 @@ export default function DashboardPage() {
         {/* Quick Info */}
         <div className="space-y-4">
           {/* System Status */}
-          {!isMahasiswa && !isDosen && (
-            <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5">
-              <h3 className="text-sm font-bold text-primary-900 mb-4 flex items-center gap-2">
-                <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />
-                Status Sistem
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { label: 'Server', status: 'Online', color: 'bg-green-500' },
-                  { label: 'Database', status: 'Connected', color: 'bg-green-500' },
-                  { label: 'API', status: 'Active', color: 'bg-green-500' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500">{item.label}</span>
-                    <span className="flex items-center gap-2 text-xs font-medium text-green-600">
-                      <span className={`w-2 h-2 rounded-full ${item.color} animate-pulse-slow`} />
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Upcoming Schedule */}
           <div className="bg-gradient-to-br from-primary-900 to-blue-800 rounded-2xl shadow-dark p-5 text-white">

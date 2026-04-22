@@ -81,10 +81,10 @@ export default function LoginPage() {
 
           <h1 className="text-5xl font-black text-white mb-4 leading-tight">
             E-Scheduling
-            <span className="block text-gradient text-3xl font-bold mt-2">KOAS FKKH</span>
+            <span className="block text-gradient text-3xl font-bold mt-2">KOAS PPDH</span>
           </h1>
           <p className="text-blue-200/70 text-lg leading-relaxed mb-10">
-            Sistem Penjadwalan Koas Otomatis untuk Fakultas Kedokteran Hewan
+            Sistem Penjadwalan Koas Otomatis untuk program Pendidikan Profesi Dokter Hewan
           </p>
 
           {/* Feature highlights */}
@@ -280,7 +280,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="text-center text-xs text-slate-400 mt-6">
-            © 2026 E-Scheduling KOAS FKKH. All rights reserved.
+            © 2026 E-Scheduling KOAS PPDH. All rights reserved.
           </p>
         </div>
       </div>

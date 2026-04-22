@@ -133,7 +133,10 @@ export default function KelompokPage() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-2xl shadow-md">👥</div>
-          <div><h1 className="text-2xl font-bold text-primary-900">Kelola Kelompok</h1><p className="text-sm text-slate-500">Buat dan kelola kelompok mahasiswa</p></div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Data Kelompok' : 'Kelola Kelompok'}</h1>
+            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat informasi kelompok Anda' : 'Buat dan kelola kelompok mahasiswa'}</p>
+          </div>
         </div>
       </div>
 
@@ -181,7 +184,7 @@ export default function KelompokPage() {
             <span className="text-5xl block mb-4">👥</span>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
-              {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan membuat kelompok baru'}
+              {searchTerm ? 'Coba ubah kata kunci pencarian' : (isMahasiswa || isDosen ? 'Kamu belum memiliki kelompok' : 'Mulai dengan menambah kelompok baru')}
             </p>
           </div>
         ) : (

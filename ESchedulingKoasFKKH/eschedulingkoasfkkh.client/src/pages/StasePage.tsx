@@ -129,8 +129,8 @@ export default function StasePage() {
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl shadow-md">🏥</div>
           <div>
-            <h1 className="text-2xl font-bold text-primary-900">Kelola Stase</h1>
-            <p className="text-sm text-slate-500">Kelola data stase/rotasi klinik KOAS</p>
+            <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
+            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
           </div>
         </div>
       </div>

@@ -100,7 +100,7 @@ export default function Sidebar({
             {!collapsed && (
               <div className="animate-fade-in overflow-hidden whitespace-nowrap">
                 <h1 className="text-lg font-bold tracking-tight">E-Scheduling</h1>
-                <p className="text-xs text-blue-300/70">KOAS FKKH</p>
+                <p className="text-xs text-blue-300/70">KOAS PPDH</p>
               </div>
             )}
           </div>
