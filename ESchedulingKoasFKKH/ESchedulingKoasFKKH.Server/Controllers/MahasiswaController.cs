@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -57,7 +58,10 @@ public class MahasiswaController : ControllerBase
     public async Task<IActionResult> Create(CreateMahasiswa create)
     {
         if (await _mahasiswaRepository.IsExist(create.NIM))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM  '{create.NIM}' sudah digunakan" });
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{create.NIM}' sudah digunakan" });
+
+        if (await _userRepository.IsExist(create.NIM))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"Akun dengan user name '{create.NIM}' sudah digunakan" });
 
         var user = new User
         {
@@ -98,6 +102,9 @@ public class MahasiswaController : ControllerBase
 
         if (await _mahasiswaRepository.IsExist(update.NIM, id))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{update.NIM}' sudah digunakan" });
+
+        if (await _userRepository.IsExist(update.NIM, mahasiswa.User.Id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"Akun dengan user name '{update.NIM}' sudah digunakan" });
 
         mahasiswa.Nama = update.Nama;
         mahasiswa.NIM = update.NIM;

@@ -67,6 +67,9 @@ public class PembimbingController : ControllerBase
         if (await _pembimbingRepository.IsExist(create.NIP))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{create.NIP}' sudah digunakan"});
 
+        if (await _userRepository.IsExist(create.NIP))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"Akun dengan user name '{create.NIP}' sudah digunakan" });
+
         var pembimbing = new Pembimbing
         {
             NIP = create.NIP,
@@ -113,6 +116,10 @@ public class PembimbingController : ControllerBase
 
         if (await _pembimbingRepository.IsExist(update.NIP, id))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{update.NIP}' sudah digunakan" });
+
+
+        if (await _userRepository.IsExist(update.NIP, pembimbing.User.Id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"Akun dengan user name '{update.NIP}' sudah digunakan" });
 
         pembimbing.NIP = update.NIP;
         pembimbing.Nama = update.Nama;

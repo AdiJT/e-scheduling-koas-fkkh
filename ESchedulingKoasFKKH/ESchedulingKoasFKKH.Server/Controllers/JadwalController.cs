@@ -85,7 +85,7 @@ public class JadwalController : ControllerBase
     {
         var daftarjadwal = await _jadwalRepository.GetAll();
 
-        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
+        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola))
             return Ok(daftarjadwal
                 .Where(x => (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
                 .Select(x => new
@@ -105,7 +105,10 @@ public class JadwalController : ControllerBase
             var pembimbing = await _pembimbingRepository.Get(User?.Identity?.Name!);
             if (pembimbing is not null)
                 return Ok(daftarjadwal
-                    .Where(x => x.Kelompok.Pembimbing != null && x.Kelompok.Pembimbing.Id == pembimbing.Id && (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
+                    .Where(x => 
+                        x.Kelompok.Pembimbing == pembimbing && 
+                        (idKelompok is null || x.Kelompok.Id == idKelompok) && 
+                        (idStase is null || x.Stase.Id == idStase))
                     .Select(x => new
                     {
                         x.Id,
@@ -119,11 +122,10 @@ public class JadwalController : ControllerBase
                     }));
         }
 
-
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
         if (mahasiswa is not null)
             return Ok(daftarjadwal
-                .Where(x => x.Kelompok == mahasiswa!.Kelompok && (idStase is null || x.Stase.Id == idStase))
+                .Where(x => x.Kelompok == mahasiswa?.Kelompok && (idStase is null || x.Stase.Id == idStase))
                 .Select(x => new
                 {
                     x.Id,
