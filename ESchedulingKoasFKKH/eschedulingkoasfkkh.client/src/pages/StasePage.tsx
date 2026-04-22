@@ -382,6 +382,8 @@ export default function StasePage() {
                   >
                     <option value="Terpisah">Terpisah</option>
                     <option value="Bersamaan">Bersamaan</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Ujian">Ujian</option>
                   </select>
                   {editErrors.jenis && <p className="text-xs text-red-500 mt-1">{editErrors.jenis}</p>}
                 </div>
