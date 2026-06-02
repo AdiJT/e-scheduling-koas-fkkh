@@ -120,9 +120,9 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-2">
-               <img className="h-16 object-cover ..." src="src\assets\logo_undana.png" />
+                <img className="h-16 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
-            <h1 className="text-2xl font-bold text-primary-900">E-Scheduling KOAS</h1>
+            <h1 className="text-2xl font-bold text-primary-900">E-Scheduling FKKH</h1>
           </div>
 
           {/* Welcome Text */}
@@ -281,7 +281,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="text-center text-xs text-slate-400 mt-6">
-            © 2026 E-Scheduling KOAS PPDH. All rights reserved.
+            © 2026 E-Scheduling FKKH UNDANA. All rights reserved.
           </p>
         </div>
       </div>

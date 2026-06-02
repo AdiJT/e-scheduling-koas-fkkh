@@ -94,13 +94,13 @@ export default function Sidebar({
         {/* Logo Section */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-lg font-bold shadow-glow-blue flex-shrink-0">
-              ES
+            <div className="w-14 h-14 rounded-xl  flex items-center justify-center text-lg font-bold flex-shrink-0">
+                <img className="h-14 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
             {!collapsed && (
               <div className="animate-fade-in overflow-hidden whitespace-nowrap">
                 <h1 className="text-lg font-bold tracking-tight">E-Scheduling</h1>
-                <p className="text-xs text-blue-300/70">KOAS PPDH</p>
+                <p className="text-xs text-blue-300/70">FKKH UNDANA</p>
               </div>
             )}
           </div>
