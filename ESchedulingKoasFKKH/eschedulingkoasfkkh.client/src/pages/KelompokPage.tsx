@@ -53,16 +53,7 @@ export default function KelompokPage() {
   }, [fetchData]);
 
   const filteredData = data.filter(k => {
-    const matchSearch = k.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    if (isMahasiswa) {
-      const isMember = k.daftarMahasiswa.some(m => m.nim === user?.username);
-      return matchSearch && isMember;
-    }
-    if (isDosen) {
-      const isAssigned = k.idPembimbing === user?.profileId;
-      return matchSearch && isAssigned;
-    }
-    return matchSearch;
+    return k.nama.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const getPembimbingNama = (idPembimbing: number | null) => {
@@ -135,7 +126,7 @@ export default function KelompokPage() {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-2xl shadow-md">👥</div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Data Kelompok' : 'Kelola Kelompok'}</h1>
-            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat informasi kelompok Anda' : 'Buat dan kelola kelompok mahasiswa'}</p>
+            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat daftar semua kelompok' : 'Buat dan kelola kelompok mahasiswa'}</p>
           </div>
         </div>
       </div>
@@ -184,7 +175,7 @@ export default function KelompokPage() {
             <span className="text-5xl block mb-4">👥</span>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
-              {searchTerm ? 'Coba ubah kata kunci pencarian' : (isMahasiswa || isDosen ? 'Kamu belum memiliki kelompok' : 'Mulai dengan menambah kelompok baru')}
+              {searchTerm ? 'Coba ubah kata kunci pencarian' : (isMahasiswa || isDosen ? 'Belum ada kelompok yang terdaftar' : 'Mulai dengan menambah kelompok baru')}
             </p>
           </div>
         ) : (
