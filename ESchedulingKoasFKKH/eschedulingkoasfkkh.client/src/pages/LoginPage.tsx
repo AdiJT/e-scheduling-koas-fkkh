@@ -63,7 +63,7 @@ export default function LoginPage() {
           <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-float" />
           <div className="absolute top-1/4 right-10 w-60 h-60 bg-cyan-400/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
           <div className="absolute bottom-20 left-1/4 w-96 h-96 bg-purple-500/8 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }} />
-          
+
           {/* Grid pattern */}
           <div className="absolute inset-0 opacity-5" style={{
             backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
@@ -74,9 +74,9 @@ export default function LoginPage() {
         <div className={`relative z-10 max-w-lg text-center transition-all duration-1000 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           {/* Logo */}
           <div className="mb-6 inline-flex">
-          {/*Update Logo*/}
+            {/*Update Logo*/}
             <div className="w-50 rounded-3xl flex items-center justify-center animate-bounce-gentle">
-                <img className="h-40 object-cover ..." src="src\assets\logo_undana.png" />
+              <img className="h-40 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
           </div>
 
@@ -91,12 +91,12 @@ export default function LoginPage() {
           {/* Feature highlights */}
           <div className="space-y-4 text-left">
             {[
-              { icon: '⚡', title: 'Penjadwalan Otomatis', desc: 'Generate jadwal stase otomatis' },
-              { icon: '📊', title: 'Dashboard Interaktif', desc: 'Monitor data mahasiswa dan dosen real-time' },
-              { icon: '🔒', title: 'Aman & Terpercaya', desc: 'Data terenkripsi dan akses terkontrol' },
+              { icon: '🩺', title: 'Manajemen Rotasi Klinis', desc: 'Sistematisasi rotasi stase Fakultas Kedokteran dan Kedokteran Hewan' },
+              { icon: '🎓', title: 'E-Monitoring Akademik', desc: 'Pemantauan progress kelompok koas dan pembimbing secara terpadu' },
+              { icon: '📚', title: 'Transparansi Informasi', desc: 'Akses jadwal stase dan info klinis bagi seluruh civitas akademika' },
             ].map((feature, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className={`flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-700 ${mounted ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}
                 style={{ transitionDelay: `${(i + 1) * 200}ms` }}
               >
@@ -115,12 +115,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-white relative">
         {/* Subtle background */}
         <div className="absolute inset-0 bg-mesh opacity-30" />
-        
+
         <div className={`w-full max-w-md relative z-10 transition-all duration-700 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`} style={{ transitionDelay: '300ms' }}>
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <img className="h-16 object-cover ..." src="src\assets\logo_undana.png" />
+              <img className="h-16 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
             <h1 className="text-2xl font-bold text-primary-900">E-Scheduling FKKH</h1>
           </div>

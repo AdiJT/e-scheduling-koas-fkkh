@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import logoUndana from '../assets/logo_undana.png';
 
 interface NavItem {
   id: string;
@@ -92,26 +93,28 @@ export default function Sidebar({
         `}
       >
         {/* Logo Section */}
-        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+        <div className={`p-4 border-b border-white/10 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-14 h-14 rounded-xl  flex items-center justify-center text-lg font-bold flex-shrink-0">
-                <img className="h-14 object-cover ..." src="src\assets\logo_undana.png" />
+            <div className={`${collapsed ? 'w-10 h-10' : 'w-12 h-12'} transition-all duration-300 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+              <img className="w-full h-full object-contain" src={logoUndana} alt="Logo Undana" />
             </div>
             {!collapsed && (
               <div className="animate-fade-in overflow-hidden whitespace-nowrap">
-                <h1 className="text-lg font-bold tracking-tight">E-Scheduling</h1>
-                <p className="text-xs text-blue-300/70">FKKH UNDANA</p>
+                <h1 className="text-base font-bold tracking-tight text-white leading-tight">E-Scheduling</h1>
+                <p className="text-[10px] text-blue-300/80 font-semibold">FKKH UNDANA</p>
               </div>
             )}
           </div>
           
           {/* Mobile Close Button */}
-          <button 
-            className="md:hidden text-white/70 hover:text-white p-1"
-            onClick={() => setMobileOpen(false)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          {!collapsed && (
+            <button 
+              className="md:hidden text-white/70 hover:text-white p-1 ml-auto"
+              onClick={() => setMobileOpen(false)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
         </div>
 
         {/* Toggle Button (Desktop only) */}
