@@ -21,10 +21,8 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <Routes>
-                    {/* Public */}
                     <Route path="/login" element={<LoginPage />} />
 
-                    {/* Protected - Main Pages */}
                     <Route path="/dashboard" element={
                         <ProtectedRoute><DashboardPage /></ProtectedRoute>
                     } />
@@ -44,7 +42,6 @@ function App() {
                         <ProtectedRoute><JadwalPage /></ProtectedRoute>
                     } />
 
-                    {/* Protected - Form Pages */}
                     <Route path="/mahasiswa/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahMahasiswaPage /></ProtectedRoute>
                     } />
@@ -67,7 +64,6 @@ function App() {
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola', 'dosen']}><DetailStasePage /></ProtectedRoute>
                     } />
 
-                    {/* Default */}
                     <Route path="/" element={<Navigate to="/login" replace />} />
                 </Routes>
             </AuthProvider>

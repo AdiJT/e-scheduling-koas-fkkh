@@ -41,13 +41,13 @@ public class StaseController : ControllerBase
             stase.Nama,
             stase.Waktu,
             jenis = stase.Jenis.Humanize(),
-            daftarJadwal = stase.DaftarJadwal?.Select(j => new 
-            { 
-                j.Id, 
-                j.TanggalMulai, 
-                tanggalSelesai = j.TanggalSelesai(_hariLiburService), 
-                idKelompok = j.Kelompok?.Id, 
-                namaKelompok = j.Kelompok?.Nama 
+            daftarJadwal = stase.DaftarJadwal?.Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                idKelompok = j.Kelompok?.Id,
+                namaKelompok = j.Kelompok?.Nama
             }) ?? []
         });
     }
@@ -84,7 +84,7 @@ public class StaseController : ControllerBase
                 new Dictionary<string, string>
                 {
                     ["jenis"] = $"Jenis '{create.Jenis}' tidak valid. " +
-                    $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
+                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
                 }
             );
 
@@ -118,7 +118,7 @@ public class StaseController : ControllerBase
                 stase.Nama,
                 stase.Waktu,
                 jenis = stase.Jenis.Humanize(),
-                daftarJadwal = new string[] { }
+                daftarJadwal = Array.Empty<string>()
             });
     }
 
@@ -137,9 +137,10 @@ public class StaseController : ControllerBase
 
         if (!Enum.TryParse<JenisStase>(update.Jenis, out var jenis))
             return HelpersFunctions.BadRequest(
-                new Dictionary<string, string> { 
+                new Dictionary<string, string>
+                {
                     ["jenis"] = $"Jenis '{update.Jenis}' tidak valid. " +
-                    $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}" 
+                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
                 }
             );
 
