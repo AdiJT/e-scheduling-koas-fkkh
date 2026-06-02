@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -84,7 +84,7 @@ internal class UserRepository : IUserRepository
     public async Task<User?> GetByName(string name) => await _appDbContext.User
         .Include(x => x.Mahasiswa)
         .Include(x => x.Pembimbing)
-        .FirstOrDefaultAsync(x => x.Name == name);
+        .FirstOrDefaultAsync(x => x.Name.ToLower() == name.ToLower());
 
     public async Task<bool> IsExist(string name, int? id = null) => await _appDbContext.User
         .AnyAsync(x => x.Id != id && x.Name == name);
