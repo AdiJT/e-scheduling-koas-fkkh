@@ -1,4 +1,5 @@
 ﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Auth;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 
@@ -8,6 +9,7 @@ public class Pembimbing : Entity<int>
     public required string Nama { get; set; }
 
     public List<Kelompok> DaftarKelompok { get; set; } = [];
+    public User User { get; set; }
 }
 
 public interface IPembimbingRepository
@@ -15,7 +17,7 @@ public interface IPembimbingRepository
     Task<Pembimbing?> Get(int id);
     Task<Pembimbing?> Get(string nip);
     Task<List<Pembimbing>> GetAll();
-    Task<bool> IsExist(string nip);
+    Task<bool> IsExist(string nip, int? id = null);
 
     void Add(Pembimbing pembimbing);
     void Update(Pembimbing pembimbing);

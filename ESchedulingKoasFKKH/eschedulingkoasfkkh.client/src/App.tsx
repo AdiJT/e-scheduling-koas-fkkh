@@ -1,10 +1,74 @@
-import StasePage from './StasePage'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import MahasiswaPage from './pages/MahasiswaPage';
+import DosenPage from './pages/DosenPage';
+import StasePage from './pages/StasePage';
+import KelompokPage from './pages/KelompokPage';
+import JadwalPage from './pages/JadwalPage';
+import TambahMahasiswaPage from './pages/TambahMahasiswaPage';
+import TambahDosenPage from './pages/TambahDosenPage';
+import TambahStasePage from './pages/TambahStasePage';
+import TambahKelompokPage from './pages/TambahKelompokPage';
+import DetailKelompokPage from './pages/DetailKelompokPage';
+import TambahJadwalPage from './pages/TambahJadwalPage';
+import DetailStasePage from './pages/DetailStasePage';
 
 function App() {
     return (
-        <StasePage />
-    )
+        <BrowserRouter>
+            <AuthProvider>
+                <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+
+                    <Route path="/dashboard" element={
+                        <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                    } />
+                    <Route path="/mahasiswa" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><MahasiswaPage /></ProtectedRoute>
+                    } />
+                    <Route path="/dosen" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><DosenPage /></ProtectedRoute>
+                    } />
+                    <Route path="/stase" element={
+                        <ProtectedRoute><StasePage /></ProtectedRoute>
+                    } />
+                    <Route path="/kelompok" element={
+                        <ProtectedRoute><KelompokPage /></ProtectedRoute>
+                    } />
+                    <Route path="/jadwal" element={
+                        <ProtectedRoute><JadwalPage /></ProtectedRoute>
+                    } />
+
+                    <Route path="/mahasiswa/tambah" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahMahasiswaPage /></ProtectedRoute>
+                    } />
+                    <Route path="/dosen/tambah" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahDosenPage /></ProtectedRoute>
+                    } />
+                    <Route path="/stase/tambah" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahStasePage /></ProtectedRoute>
+                    } />
+                    <Route path="/kelompok/tambah" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahKelompokPage /></ProtectedRoute>
+                    } />
+                    <Route path="/kelompok/:id" element={
+                        <ProtectedRoute><DetailKelompokPage /></ProtectedRoute>
+                    } />
+                    <Route path="/jadwal/tambah" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahJadwalPage /></ProtectedRoute>
+                    } />
+                    <Route path="/stase/:id" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola', 'dosen']}><DetailStasePage /></ProtectedRoute>
+                    } />
+
+                    <Route path="/" element={<Navigate to="/login" replace />} />
+                </Routes>
+            </AuthProvider>
+        </BrowserRouter>
+    );
 }
 
-export default App
+export default App;

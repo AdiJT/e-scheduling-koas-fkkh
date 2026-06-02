@@ -1,137 +1,179 @@
-using ESchedulingKoasFKKH.Server.Controllers.Dtos;
+using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Contracts;
+using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
+using ESchedulingKoasFKKH.Server.Helpers;
+using ESchedulingKoasFKKH.Server.Models.StaseModels;
+using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/stase")]
+[Authorize]
 public class StaseController : ControllerBase
 {
-    // ══════════════════════════════════════════════════════════════
-    // 🔶 Data dummy sementara (in-memory)
-    //    Nanti diganti dengan IStaseRepository + IUnitOfWork
-    //    saat infrastructure sudah tersedia dari teman Anda.
-    // ══════════════════════════════════════════════════════════════
-    private static readonly List<StaseItem> _staseList =
-    [
-        new() { Id = 1, Nama = "Bedah", Waktu = 4, Jenis = "Terpisah" },
-        new() { Id = 2, Nama = "Penyakit Dalam", Waktu = 4, Jenis = "Terpisah" },
-        new() { Id = 3, Nama = "Radiologi", Waktu = 2, Jenis = "Bersamaan" },
-        new() { Id = 4, Nama = "Reproduksi", Waktu = 4, Jenis = "Terpisah" },
-        new() { Id = 5, Nama = "Kesmavet", Waktu = 2, Jenis = "Bersamaan" },
-    ];
-    private static int _nextId = 6;
+    private readonly IStaseRepository _staseRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IHariLiburService _hariLiburService;
 
-    // ────────────────────────────────────────────
-    // GET /api/stase → Ambil semua stase
-    // ────────────────────────────────────────────
-    [HttpGet]
-    public IActionResult GetAll()
+    public StaseController(
+        IStaseRepository staseRepository,
+        IUnitOfWork unitOfWork,
+        IHariLiburService hariLiburService)
     {
-        var response = _staseList.Select(s => new StaseResponse(
-            s.Id, s.Nama, s.Waktu, s.Jenis
-        )).ToList();
-
-        return Ok(response);
+        _staseRepository = staseRepository;
+        _unitOfWork = unitOfWork;
+        _hariLiburService = hariLiburService;
     }
 
-    // ────────────────────────────────────────────
-    // GET /api/stase/{id} → Ambil stase berdasarkan ID
-    // ────────────────────────────────────────────
-    [HttpGet("{id}")]
-    public IActionResult GetById(int id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id)
     {
-        var stase = _staseList.FirstOrDefault(s => s.Id == id);
+        var stase = await _staseRepository.Get(id);
+        if (stase is null) return NotFound();
 
-        if (stase is null)
-            return NotFound(new { message = $"Stase dengan ID {id} tidak ditemukan" });
-
-        return Ok(new StaseResponse(stase.Id, stase.Nama, stase.Waktu, stase.Jenis));
-    }
-
-    // ────────────────────────────────────────────
-    // POST /api/stase → Tambah stase baru
-    // ────────────────────────────────────────────
-    [HttpPost]
-    public IActionResult Create([FromBody] CreateStaseRequest request)
-    {
-        // Validasi sederhana
-        if (string.IsNullOrWhiteSpace(request.Nama))
-            return BadRequest(new { message = "Nama stase tidak boleh kosong" });
-
-        if (request.Waktu <= 0)
-            return BadRequest(new { message = "Waktu harus lebih dari 0 minggu" });
-
-        if (request.Jenis != "Terpisah" && request.Jenis != "Bersamaan")
-            return BadRequest(new { message = "Jenis harus 'Terpisah' atau 'Bersamaan'" });
-
-        var newStase = new StaseItem
+        return Ok(new
         {
-            Id = _nextId++,
-            Nama = request.Nama,
-            Waktu = request.Waktu,
-            Jenis = request.Jenis
+            stase.Id,
+            stase.Nama,
+            stase.Waktu,
+            jenis = stase.Jenis.Humanize(),
+            daftarJadwal = stase.DaftarJadwal?.Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                idKelompok = j.Kelompok?.Id,
+                namaKelompok = j.Kelompok?.Nama
+            }) ?? []
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        return Ok((await _staseRepository.GetAll()).Select(x => new
+        {
+            x.Id,
+            x.Nama,
+            x.Waktu,
+            jenis = x.Jenis.Humanize(),
+            daftarJadwal = x.DaftarJadwal?.Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                idKelompok = j.Kelompok?.Id,
+                namaKelompok = j.Kelompok?.Nama
+            }) ?? []
+        }));
+    }
+
+    [HttpPost]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Create(CreateStase create)
+    {
+        if (await _staseRepository.IsExist(create.Nama))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{create.Nama}' sudah digunakan" });
+
+        if (!Enum.TryParse<JenisStase>(create.Jenis, out var jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Jenis '{create.Jenis}' tidak valid. " +
+                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
+                }
+            );
+
+        var daftarStase = await _staseRepository.GetAll();
+        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Jenis == jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
+                }
+            );
+
+        var stase = new Stase
+        {
+            Nama = create.Nama,
+            Waktu = create.Waktu,
+            Jenis = jenis,
         };
 
-        _staseList.Add(newStase);
+        _staseRepository.Add(stase);
 
-        var response = new StaseResponse(newStase.Id, newStase.Nama, newStase.Waktu, newStase.Jenis);
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        // CreatedAtAction → return HTTP 201 + header Location: /api/stase/{id}
-        return CreatedAtAction(nameof(GetById), new { id = newStase.Id }, response);
+        return CreatedAtAction(
+            nameof(Get),
+            new { id = stase.Id },
+            new
+            {
+                stase.Id,
+                stase.Nama,
+                stase.Waktu,
+                jenis = stase.Jenis.Humanize(),
+                daftarJadwal = Array.Empty<string>()
+            });
     }
 
-    // ────────────────────────────────────────────
-    // PUT /api/stase/{id} → Update stase
-    // ────────────────────────────────────────────
-    [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] UpdateStaseRequest request)
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Update(int id, UpdateStase update)
     {
-        var stase = _staseList.FirstOrDefault(s => s.Id == id);
+        if (update.Id != id)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["id"] = "Id pada body tidak sesuai dengan id pada url" });
 
-        if (stase is null)
-            return NotFound(new { message = $"Stase dengan ID {id} tidak ditemukan" });
+        var stase = await _staseRepository.Get(id);
+        if (stase is null) return NotFound();
 
-        if (string.IsNullOrWhiteSpace(request.Nama))
-            return BadRequest(new { message = "Nama stase tidak boleh kosong" });
+        if (await _staseRepository.IsExist(update.Nama, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{update.Nama}' sudah digunakan" });
 
-        if (request.Waktu <= 0)
-            return BadRequest(new { message = "Waktu harus lebih dari 0 minggu" });
+        if (!Enum.TryParse<JenisStase>(update.Jenis, out var jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Jenis '{update.Jenis}' tidak valid. " +
+                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
+                }
+            );
 
-        // Update data
-        stase.Nama = request.Nama;
-        stase.Waktu = request.Waktu;
-        stase.Jenis = request.Jenis;
+        var daftarStase = await _staseRepository.GetAll();
+        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Id != id && x.Jenis == jenis))
+            return HelpersFunctions.BadRequest(
+                new Dictionary<string, string>
+                {
+                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
+                }
+            );
 
-        return Ok(new StaseResponse(stase.Id, stase.Nama, stase.Waktu, stase.Jenis));
+        stase.Nama = update.Nama;
+        stase.Waktu = update.Waktu;
+        stase.Jenis = jenis;
+
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+
+        return NoContent();
     }
 
-    // ────────────────────────────────────────────
-    // DELETE /api/stase/{id} → Hapus stase
-    // ────────────────────────────────────────────
-    [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Delete(int id)
     {
-        var stase = _staseList.FirstOrDefault(s => s.Id == id);
+        var stase = await _staseRepository.Get(id);
+        if (stase is null) return NotFound();
 
-        if (stase is null)
-            return NotFound(new { message = $"Stase dengan ID {id} tidak ditemukan" });
+        _staseRepository.Delete(stase);
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        _staseList.Remove(stase);
-
-        return NoContent(); // HTTP 204 - berhasil dihapus, tanpa body
+        return NoContent();
     }
-}
-
-/// <summary>
-/// Model internal sementara sebagai pengganti Entity dari Domain.
-/// Nanti saat infrastructure ready, class ini bisa dihapus
-/// dan diganti dengan Entity Stase dari Domain layer.
-/// </summary>
-internal class StaseItem
-{
-    public int Id { get; set; }
-    public string Nama { get; set; } = "";
-    public int Waktu { get; set; }
-    public string Jenis { get; set; } = "";
 }

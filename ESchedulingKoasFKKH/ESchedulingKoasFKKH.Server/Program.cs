@@ -1,10 +1,40 @@
+using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Infrastructure;
+using ESchedulingKoasFKKH.Server.Configurations;
+using ESchedulingKoasFKKH.Server.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using NSwag;
+using NSwag.Generation.Processors.Security;
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Configuration
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.ConfigureOptions<JwtBearerOptionsSetup>();
+
 // Add services to the container.
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApiDocument(o =>
+{
+    o.AddSecurity("bearer", new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.Http,
+        Scheme = JwtBearerDefaults.AuthenticationScheme,
+        BearerFormat = "JWT",
+        Description = "Type into the textbox: {your JWT token}."
+    });
+
+    o.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
+});
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o => o.IncludeErrorDetails = true);
+
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 
 var app = builder.Build();
 
@@ -14,11 +44,13 @@ app.MapStaticAssets();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseOpenApi();
+    app.UseSwaggerUi();
 }
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
