@@ -73,18 +73,19 @@ export default function LoginPage() {
 
         <div className={`relative z-10 max-w-lg text-center transition-all duration-1000 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           {/* Logo */}
-          <div className="mb-8 inline-flex">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center shadow-glow-blue animate-bounce-gentle">
-              <span className="text-4xl font-black text-white">ES</span>
+          <div className="mb-6 inline-flex">
+          {/*Update Logo*/}
+            <div className="w-50 rounded-3xl flex items-center justify-center animate-bounce-gentle">
+                <img className="h-40 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
           </div>
 
           <h1 className="text-5xl font-black text-white mb-4 leading-tight">
             E-Scheduling
-            <span className="block text-gradient text-3xl font-bold mt-2">KOAS PPDH</span>
+            <span className="block text-gradient text-3xl font-bold mt-2">FKKH UNDANA</span>
           </h1>
           <p className="text-blue-200/70 text-lg leading-relaxed mb-10">
-            Sistem Penjadwalan Koas Otomatis untuk program Pendidikan Profesi Dokter Hewan
+            Sistem Penjadwalan FKKH Universitas Nusa Cendana
           </p>
 
           {/* Feature highlights */}
@@ -118,8 +119,8 @@ export default function LoginPage() {
         <div className={`w-full max-w-md relative z-10 transition-all duration-700 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`} style={{ transitionDelay: '300ms' }}>
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-900 to-blue-800 flex items-center justify-center mx-auto mb-4 shadow-glow-blue">
-              <span className="text-2xl font-black text-white">ES</span>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-2">
+               <img className="h-16 object-cover ..." src="src\assets\logo_undana.png" />
             </div>
             <h1 className="text-2xl font-bold text-primary-900">E-Scheduling KOAS</h1>
           </div>
