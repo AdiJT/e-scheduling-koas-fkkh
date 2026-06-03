@@ -14,13 +14,16 @@ namespace ESchedulingKoasFKKH.Server.Controllers;
 public class TahunAjaranController : ControllerBase
 {
     private readonly ITahunAjaranRepository _tahunAjaranRepository;
+    private readonly IMahasiswaRepository _mahasiswaRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public TahunAjaranController(
         ITahunAjaranRepository tahunAjaranRepository,
+        IMahasiswaRepository mahasiswaRepository,
         IUnitOfWork unitOfWork)
     {
         _tahunAjaranRepository = tahunAjaranRepository;
+        _mahasiswaRepository = mahasiswaRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -114,10 +117,21 @@ public class TahunAjaranController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, bool konfirmasiHapus = false)
     {
         var tahunAjaran = await _tahunAjaranRepository.Get(id);
         if (tahunAjaran is null) return NotFound();
+
+        var jumlahMahasiswa = (await _mahasiswaRepository.GetAll())
+            .Count(x => x.TahunAjaran?.Id == id);
+
+        if (jumlahMahasiswa > 0 && !konfirmasiHapus)
+            return HelpersFunctions.Conflict(
+                new Dictionary<string, string>
+                {
+                    ["tahunAjaran"] = $"Tahun ajaran {tahunAjaran.Tahun} semester {tahunAjaran.Semester} sudah dipakai oleh {jumlahMahasiswa} mahasiswa."
+                },
+                "Jika tetap dihapus, tahun ajaran pada semua mahasiswa terkait akan dikosongkan atau null.");
 
         _tahunAjaranRepository.Delete(tahunAjaran);
 
