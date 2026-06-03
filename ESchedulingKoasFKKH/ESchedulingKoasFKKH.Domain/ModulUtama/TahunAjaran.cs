@@ -12,7 +12,7 @@ public class TahunAjaran : Entity<int>
 
 public enum Semester
 {
-    Genap, Ganjil
+    Ganjil = 1, Genap = 2
 }
 
 public interface ITahunAjaranRepository

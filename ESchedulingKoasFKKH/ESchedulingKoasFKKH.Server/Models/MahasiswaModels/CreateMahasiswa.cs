@@ -9,4 +9,7 @@ public class CreateMahasiswa
 
     [Required]
     public string Nama { get; set; } = string.Empty;
+
+    [Required]
+    public int IdTahun { get; set; }
 }
