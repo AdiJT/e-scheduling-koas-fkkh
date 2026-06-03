@@ -9,7 +9,7 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
 {
     public void Configure(EntityTypeBuilder<TahunAjaran> builder)
     {
-        builder.HasMany(x => x.DaftarSiswa).WithOne(y => y.TahunAjaran);
+        builder.HasMany(x => x.DaftarSiswa).WithOne(y => y.TahunAjaran).OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(x => new { x.Tahun, x.Semester }).IsUnique();
 
         builder.HasData(

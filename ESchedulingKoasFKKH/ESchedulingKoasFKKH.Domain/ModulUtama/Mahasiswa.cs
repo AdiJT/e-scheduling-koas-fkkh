@@ -10,7 +10,7 @@ public class Mahasiswa : Entity<int>
 
     public Kelompok? Kelompok { get; set; }
     public User User { get; set; }
-    public TahunAjaran TahunAjaran { get; set; }
+    public TahunAjaran? TahunAjaran { get; set; }
 }
 
 public interface IMahasiswaRepository
