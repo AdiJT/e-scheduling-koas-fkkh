@@ -22,4 +22,4 @@ Setelah melakukan clone repository, jalankan:
 
 - **DBMS:** PostgreSQL
 - **Username:** `postgres`
-- **Password:** `user`
+- **Password:** `admin123`
