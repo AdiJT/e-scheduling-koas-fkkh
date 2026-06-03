@@ -31,6 +31,7 @@ public static class DepedencyInjection
         services.AddScoped<IKelompokRepository, KelompokRepository>();
         services.AddScoped<IJadwalRepository, JadwalRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITahunAjaranRepository, TahunAjaranRepository>();
 
         services.AddScoped<IHariLiburService, HariLiburService>();
 

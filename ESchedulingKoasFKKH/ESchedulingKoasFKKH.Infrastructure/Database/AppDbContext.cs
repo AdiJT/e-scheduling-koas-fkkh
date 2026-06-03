@@ -42,4 +42,5 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<Kelompok> Kelompok { get; set; }
     public DbSet<Jadwal> Jadwal { get; set; }
     public DbSet<User> User { get; set; }
+    public DbSet<TahunAjaran> TahunAjaran { get; set; }
 }

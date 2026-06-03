@@ -18,26 +18,26 @@ internal class MahasiswaConfiguration : IEntityTypeConfiguration<Mahasiswa>
         builder.HasOne(x => x.User).WithOne(y => y.Mahasiswa).HasForeignKey<Mahasiswa>("UserId");
 
         builder.HasData(
-            new { Id = 1, NIM = "2201001", Nama = "Ahmad Fauzi", UserId = 3, },
-            new { Id = 2, NIM = "2201002", Nama = "Siti Nurhaliza", UserId = 4, },
-            new { Id = 3, NIM = "2201003", Nama = "Muhammad Rizky", UserId = 5, },
-            new { Id = 4, NIM = "2201004", Nama = "Dewi Anggraini", UserId = 6, },
-            new { Id = 5, NIM = "2201005", Nama = "Budi Santoso", UserId = 7, },
-            new { Id = 6, NIM = "2201006", Nama = "Putri Rahayu", UserId = 8, },
-            new { Id = 7, NIM = "2201007", Nama = "Andi Pratama", UserId = 9, },
-            new { Id = 8, NIM = "2201008", Nama = "Rina Wati", UserId = 10, },
-            new { Id = 9, NIM = "2201009", Nama = "Fajar Nugroho", UserId = 11, },
-            new { Id = 10, NIM = "2201010", Nama = "Lestari Dewi", UserId = 12, },
-            new { Id = 11, NIM = "2201011", Nama = "Hendra Gunawan", UserId = 13, },
-            new { Id = 12, NIM = "2201012", Nama = "Indah Permata", UserId = 14, },
-            new { Id = 13, NIM = "2201013", Nama = "Yoga Aditya", UserId = 15, },
-            new { Id = 14, NIM = "2201014", Nama = "Nadia Safitri", UserId = 16, },
-            new { Id = 15, NIM = "2201015", Nama = "Rizal Ramadhan", UserId = 17, },
-            new { Id = 16, NIM = "2201016", Nama = "Fitri Handayani", UserId = 18, },
-            new { Id = 17, NIM = "2201017", Nama = "Dimas Ardiansyah", UserId = 19, },
-            new { Id = 18, NIM = "2201018", Nama = "Sari Mulyani", UserId = 20, },
-            new { Id = 19, NIM = "2201019", Nama = "Agus Setiawan", UserId = 21, },
-            new { Id = 20, NIM = "2201020", Nama = "Maya Puspita", UserId = 22, }
+            new { Id = 1, NIM = "2201001", Nama = "Ahmad Fauzi", UserId = 3, TahunAjaranId = 3 },
+            new { Id = 2, NIM = "2201002", Nama = "Siti Nurhaliza", UserId = 4, TahunAjaranId = 3 },
+            new { Id = 3, NIM = "2201003", Nama = "Muhammad Rizky", UserId = 5, TahunAjaranId = 3 },
+            new { Id = 4, NIM = "2201004", Nama = "Dewi Anggraini", UserId = 6, TahunAjaranId = 3 },
+            new { Id = 5, NIM = "2201005", Nama = "Budi Santoso", UserId = 7, TahunAjaranId = 3 },
+            new { Id = 6, NIM = "2201006", Nama = "Putri Rahayu", UserId = 8, TahunAjaranId = 3 },
+            new { Id = 7, NIM = "2201007", Nama = "Andi Pratama", UserId = 9, TahunAjaranId = 3 },
+            new { Id = 8, NIM = "2201008", Nama = "Rina Wati", UserId = 10, TahunAjaranId = 3 },
+            new { Id = 9, NIM = "2201009", Nama = "Fajar Nugroho", UserId = 11, TahunAjaranId = 3 },
+            new { Id = 10, NIM = "2201010", Nama = "Lestari Dewi", UserId = 12, TahunAjaranId = 3 },
+            new { Id = 11, NIM = "2201011", Nama = "Hendra Gunawan", UserId = 13, TahunAjaranId = 3 },
+            new { Id = 12, NIM = "2201012", Nama = "Indah Permata", UserId = 14, TahunAjaranId = 3 },
+            new { Id = 13, NIM = "2201013", Nama = "Yoga Aditya", UserId = 15, TahunAjaranId = 3 },
+            new { Id = 14, NIM = "2201014", Nama = "Nadia Safitri", UserId = 16, TahunAjaranId = 3 },
+            new { Id = 15, NIM = "2201015", Nama = "Rizal Ramadhan", UserId = 17, TahunAjaranId = 3 },
+            new { Id = 16, NIM = "2201016", Nama = "Fitri Handayani", UserId = 18, TahunAjaranId = 3 },
+            new { Id = 17, NIM = "2201017", Nama = "Dimas Ardiansyah", UserId = 19, TahunAjaranId = 3 },
+            new { Id = 18, NIM = "2201018", Nama = "Sari Mulyani", UserId = 20, TahunAjaranId = 3 },
+            new { Id = 19, NIM = "2201019", Nama = "Agus Setiawan", UserId = 21, TahunAjaranId = 3 },
+            new { Id = 20, NIM = "2201020", Nama = "Maya Puspita", UserId = 22, TahunAjaranId = 3 }
         );
     }
 }
@@ -59,18 +59,21 @@ internal class MahasiswaRepository : IMahasiswaRepository
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
+        .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Mahasiswa?> Get(string nim) => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
+        .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.NIM == nim);
 
     public async Task<List<Mahasiswa>> GetAll() => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
         .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
+        .Include(x => x.TahunAjaran)
         .ToListAsync();
 
     public async Task<bool> IsExist(string nim, int? id = null) => await _appDbContext.Mahasiswa
