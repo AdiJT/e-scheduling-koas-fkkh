@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import TahunAjaranPage from './pages/TahunAjaranPage';
 import MahasiswaPage from './pages/MahasiswaPage';
 import DosenPage from './pages/DosenPage';
 import StasePage from './pages/StasePage';
@@ -25,6 +26,9 @@ function App() {
 
                     <Route path="/dashboard" element={
                         <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                    } />
+                    <Route path="/tahun-ajaran" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TahunAjaranPage /></ProtectedRoute>
                     } />
                     <Route path="/mahasiswa" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><MahasiswaPage /></ProtectedRoute>

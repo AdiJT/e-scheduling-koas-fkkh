@@ -54,6 +54,64 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
 }
 
 // ============================================================
+// TAHUN AJARAN API
+// ============================================================
+export interface TahunAjaran {
+    id: number;
+    tahun: number;
+    semester: string;
+}
+
+export interface CreateTahunAjaran {
+    tahun: number;
+    semester: string;
+}
+
+export interface UpdateTahunAjaran {
+    id: number;
+    tahun: number;
+    semester: string;
+}
+
+export const tahunAjaranApi = {
+    getAll: async (): Promise<TahunAjaran[]> => {
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran`);
+        return handleResponse<TahunAjaran[]>(res);
+    },
+
+    get: async (id: number): Promise<TahunAjaran> => {
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran/${id}`);
+        return handleResponse<TahunAjaran>(res);
+    },
+
+    create: async (data: CreateTahunAjaran): Promise<TahunAjaran> => {
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return handleResponse<TahunAjaran>(res);
+    },
+
+    update: async (id: number, data: UpdateTahunAjaran): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return handleResponse<void>(res);
+    },
+
+    delete: async (id: number, konfirmasiHapus = false): Promise<void> => {
+        const query = konfirmasiHapus ? '?konfirmasiHapus=true' : '';
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran/${id}${query}`, {
+            method: 'DELETE',
+        });
+        return handleResponse<void>(res);
+    },
+};
+
+// ============================================================
 // MAHASISWA API
 // ============================================================
 export interface Mahasiswa {

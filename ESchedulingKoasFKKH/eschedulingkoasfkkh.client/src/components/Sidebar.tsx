@@ -11,6 +11,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
+  { id: 'tahun-ajaran', label: 'Tahun Ajaran', icon: 'TA', path: '/tahun-ajaran' },
   { id: 'mahasiswa', label: 'Mahasiswa', icon: '👨‍🎓', path: '/mahasiswa' },
   { id: 'dosen', label: 'Dosen', icon: '👨‍🏫', path: '/dosen' },
   { id: 'stase', label: 'Stase', icon: '🏥', path: '/stase' },

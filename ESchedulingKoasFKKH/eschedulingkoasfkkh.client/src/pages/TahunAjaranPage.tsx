@@ -1,0 +1,428 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
+import { tahunAjaranApi, type TahunAjaran } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+const semesterOptions = ['Ganjil', 'Genap'];
+
+export default function TahunAjaranPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManage = ['admin', 'administrator'].includes(user?.role?.toLowerCase() || '');
+  const [data, setData] = useState<TahunAjaran[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await tahunAjaranApi.getAll();
+      setData(result);
+    } catch {
+      setError('Gagal memuat data tahun ajaran. Pastikan server backend sedang berjalan.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const filteredData = data.filter(item => {
+    const label = `${item.tahun} ${item.semester}`.toLowerCase();
+    return label.includes(searchTerm.toLowerCase());
+  });
+
+  const openCreateModal = () => {
+    setFormMode('create');
+    setForm({ id: 0, tahun: new Date().getFullYear().toString(), semester: '' });
+    setFormErrors({});
+    setShowFormModal(true);
+  };
+
+  const openEditModal = (tahunAjaran: TahunAjaran) => {
+    setFormMode('edit');
+    setForm({
+      id: tahunAjaran.id,
+      tahun: tahunAjaran.tahun.toString(),
+      semester: tahunAjaran.semester,
+    });
+    setFormErrors({});
+    setShowFormModal(true);
+  };
+
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setFormErrors({});
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (formErrors[e.target.name]) {
+      setFormErrors({ ...formErrors, [e.target.name]: '' });
+    }
+  };
+
+  const saveForm = async () => {
+    try {
+      setSaving(true);
+      setFormErrors({});
+
+      const payload = {
+        tahun: parseInt(form.tahun) || 0,
+        semester: form.semester,
+      };
+
+      if (formMode === 'create') {
+        await tahunAjaranApi.create(payload);
+      } else {
+        await tahunAjaranApi.update(form.id, {
+          id: form.id,
+          ...payload,
+        });
+      }
+
+      setShowFormModal(false);
+      await fetchData();
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; errors?: Record<string, string>; message?: string };
+      if (apiErr?.status === 400 && apiErr?.errors) {
+        setFormErrors(apiErr.errors);
+      } else {
+        setError(apiErr?.message || 'Gagal menyimpan data tahun ajaran.');
+        setShowFormModal(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDeleteModal = (id: number) => {
+    setSelectedId(id);
+    setDeleteConfirmed(false);
+    setDeleteWarning(null);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSelectedId(null);
+    setDeleteConfirmed(false);
+    setDeleteWarning(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedId) return;
+
+    try {
+      setDeleting(true);
+      await tahunAjaranApi.delete(selectedId, deleteConfirmed);
+      setData(prev => prev.filter(item => item.id !== selectedId));
+      closeDeleteModal();
+    } catch (err: unknown) {
+      const apiErr = err as {
+        status?: number;
+        errors?: Record<string, string>;
+        message?: string;
+        requiresConfirmation?: boolean;
+      };
+
+      if (apiErr?.status === 409 && apiErr?.requiresConfirmation) {
+        setDeleteWarning(apiErr.message || Object.values(apiErr.errors || {})[0] || 'Data masih dipakai.');
+        setDeleteConfirmed(true);
+      } else {
+        setError(apiErr?.message || 'Gagal menghapus tahun ajaran.');
+        closeDeleteModal();
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const selectedTahunAjaran = data.find(item => item.id === selectedId);
+
+  const getSemesterClass = (semester: string) => {
+    return semester === 'Ganjil'
+      ? 'bg-blue-100 text-blue-700 border-blue-200'
+      : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  };
+
+  return (
+    <Layout>
+      <div className="mb-6 animate-fade-in-down">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">&lt;</button>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shadow-md">TA</div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-900">Kelola Tahun Ajaran</h1>
+            <p className="text-sm text-slate-500">Atur tahun dan semester untuk data mahasiswa KOAS</p>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-red-500 text-lg">!</span>
+          <p className="text-sm text-red-700 flex-1">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">x</button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Cari berdasarkan tahun atau semester..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+              id="search-tahun-ajaran"
+            />
+          </div>
+
+          <button
+            onClick={fetchData}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2"
+          >
+            Refresh
+          </button>
+
+          {canManage && (
+            <button
+              onClick={openCreateModal}
+              className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md transition-all duration-300 active:scale-95 text-sm flex items-center justify-center gap-2 whitespace-nowrap"
+              id="btn-tambah-tahun-ajaran"
+            >
+              <span>+</span> Tambah Tahun Ajaran
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!loading && data.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shadow-md">TA</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.length}</p>
+              <p className="text-xs text-slate-500">Total Tahun Ajaran</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-md">GJ</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Ganjil').length}</p>
+              <p className="text-xs text-slate-500">Semester Ganjil</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold shadow-md">GN</div>
+            <div>
+              <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Genap').length}</p>
+              <p className="text-xs text-slate-500">Semester Genap</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        {loading ? (
+          <div className="p-16 text-center">
+            <div className="w-12 h-12 border-4 border-cyan-200 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-slate-500 text-sm">Memuat data tahun ajaran dari server...</p>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="p-16 text-center">
+            <span className="text-5xl block mb-4 text-slate-300">TA</span>
+            <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
+            <p className="text-sm text-slate-400 mt-1">
+              {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan menambah tahun ajaran baru'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-xs text-slate-500 font-medium">
+                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> tahun ajaran
+              </p>
+            </div>
+            <div className="overflow-x-auto pb-4">
+              <table className="w-full min-w-max" id="table-tahun-ajaran">
+                <thead>
+                  <tr className="bg-gradient-to-r from-sky-700 to-cyan-700 text-white">
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tahun</th>
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Semester</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Label</th>
+                    {canManage && (
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredData.map((tahunAjaran, index) => (
+                    <tr key={tahunAjaran.id} className="hover:bg-cyan-50/30 transition-colors duration-150 group">
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <span className="text-sm font-bold text-primary-900">{tahunAjaran.tahun}</span>
+                      </td>
+                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getSemesterClass(tahunAjaran.semester)}`}>
+                          {tahunAjaran.semester}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <span className="text-sm font-medium text-slate-700">
+                          {tahunAjaran.tahun} - {tahunAjaran.semester}
+                        </span>
+                      </td>
+                      {canManage && (
+                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              onClick={() => openEditModal(tahunAjaran)}
+                              className="px-3 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all duration-200 text-xs font-semibold"
+                              title="Edit"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(tahunAjaran.id)}
+                              className="px-3 py-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-all duration-200 text-xs font-semibold"
+                              title="Hapus"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {showFormModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-sky-50 to-cyan-50">
+              <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-to-b from-sky-500 to-cyan-500 rounded-full" />
+                {formMode === 'create' ? 'Tambah Tahun Ajaran' : 'Edit Tahun Ajaran'}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun <span className="text-red-500">*</span></label>
+                <input
+                  name="tahun"
+                  type="number"
+                  min="1"
+                  value={form.tahun}
+                  onChange={handleFormChange}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all ${formErrors.tahun ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                  placeholder="Contoh: 2026"
+                />
+                {formErrors.tahun && <p className="text-xs text-red-500 mt-1">{formErrors.tahun}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Semester <span className="text-red-500">*</span></label>
+                <select
+                  name="semester"
+                  value={form.semester}
+                  onChange={handleFormChange}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.semester ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                >
+                  <option value="">Pilih semester</option>
+                  {semesterOptions.map(semester => (
+                    <option key={semester} value={semester}>{semester}</option>
+                  ))}
+                </select>
+                {formErrors.semester && <p className="text-xs text-red-500 mt-1">{formErrors.semester}</p>}
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <button
+                onClick={closeFormModal}
+                disabled={saving}
+                className="px-5 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={saveForm}
+                disabled={saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md transition-all text-sm disabled:opacity-70 flex items-center gap-2"
+              >
+                {saving ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                ) : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl text-red-600">!</span>
+              </div>
+              <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Tahun Ajaran?</h3>
+              {selectedTahunAjaran && (
+                <p className="text-sm text-slate-600 font-medium mb-1">
+                  {selectedTahunAjaran.tahun} - {selectedTahunAjaran.semester}
+                </p>
+              )}
+              <p className="text-sm text-slate-500">
+                {deleteWarning || 'Data yang dihapus tidak dapat dikembalikan'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={closeDeleteModal}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all duration-200 text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md transition-all duration-200 text-sm disabled:opacity-70 flex items-center justify-center gap-2"
+                id="btn-confirm-delete-tahun-ajaran"
+              >
+                {deleting ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
+                ) : deleteConfirmed ? 'Tetap Hapus' : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}
