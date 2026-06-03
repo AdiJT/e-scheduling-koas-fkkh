@@ -11,5 +11,6 @@ public class CreateMahasiswa
     public string Nama { get; set; } = string.Empty;
 
     [Required]
-    public int IdTahun { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Tahun ajaran wajib dipilih")]
+    public int IdTahunAjaran { get; set; }
 }

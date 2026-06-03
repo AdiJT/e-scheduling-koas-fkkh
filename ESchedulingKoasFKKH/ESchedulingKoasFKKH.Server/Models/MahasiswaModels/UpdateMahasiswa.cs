@@ -12,4 +12,8 @@ public class UpdateMahasiswa
 
     [Required]
     public string Nama { get; set; } = string.Empty;
+
+    [Required]
+    [Range(1, int.MaxValue, ErrorMessage = "Tahun ajaran wajib dipilih")]
+    public int IdTahunAjaran { get; set; }
 }
