@@ -329,7 +329,7 @@ export default function DetailKelompokPage() {
                     </td>
                     {!isAdmin && !isMahasiswa && !isDosen && (
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                        <div className="flex items-center justify-center">
                           <button
                             onClick={() => { setRemoveMemberId(mhs.id); setShowRemoveMember(true); }}
                             className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"

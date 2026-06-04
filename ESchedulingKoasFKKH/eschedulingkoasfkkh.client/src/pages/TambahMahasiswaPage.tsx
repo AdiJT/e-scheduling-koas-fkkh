@@ -1,17 +1,33 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { mahasiswaApi } from '../services/api';
+import { mahasiswaApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { MahasiswaIcon, SaveIcon, InfoIcon } from '../components/Icons';
 
 export default function TambahMahasiswaPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nim: '', nama: '' });
+  const [form, setForm] = useState({ nim: '', nama: '', idTahunAjaran: '' });
+  const [tahunAjarans, setTahunAjarans] = useState<TahunAjaran[]>([]);
+  const [isLoadingTahun, setIsLoadingTahun] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    const fetchTahunAjaran = async () => {
+      try {
+        const data = await tahunAjaranApi.getAll();
+        setTahunAjarans(data);
+      } catch (err) {
+        console.error("Failed to load academic years:", err);
+      } finally {
+        setIsLoadingTahun(false);
+      }
+    };
+    fetchTahunAjaran();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     // Clear error on field change
     if (errors[e.target.name]) {
@@ -24,8 +40,18 @@ export default function TambahMahasiswaPage() {
     setIsSubmitting(true);
     setErrors({});
 
+    if (!form.idTahunAjaran) {
+      setErrors({ idTahunAjaran: 'Tahun ajaran wajib dipilih' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      await mahasiswaApi.create({ nim: form.nim, nama: form.nama });
+      await mahasiswaApi.create({ 
+        nim: form.nim, 
+        nama: form.nama, 
+        idTahunAjaran: Number(form.idTahunAjaran) 
+      });
       setShowSuccess(true);
       setTimeout(() => navigate('/mahasiswa'), 1500);
     } catch (err: unknown) {
@@ -108,6 +134,27 @@ export default function TambahMahasiswaPage() {
                 />
                 {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-red-500">*</span></label>
+              <select
+                name="idTahunAjaran"
+                value={form.idTahunAjaran}
+                onChange={handleChange}
+                required
+                disabled={isLoadingTahun}
+                className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer
+                  ${errors.idTahunAjaran ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+              >
+                <option value="">{isLoadingTahun ? 'Memuat tahun ajaran...' : 'Pilih tahun ajaran'}</option>
+                {tahunAjarans.map((ta) => (
+                  <option key={ta.id} value={ta.id}>
+                    {ta.tahun} - {ta.semester}
+                  </option>
+                ))}
+              </select>
+              {errors.idTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.idTahunAjaran}</p>}
             </div>
           </div>
           <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">

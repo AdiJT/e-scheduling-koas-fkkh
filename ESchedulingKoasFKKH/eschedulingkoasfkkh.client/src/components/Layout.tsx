@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import logoUndana from '../assets/logo_undana.png';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,8 +24,8 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between bg-primary-900 text-white p-4 print:hidden sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-sm font-bold shadow-glow-blue flex-shrink-0">
-              ES
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img className="w-full h-full object-contain" src={logoUndana} alt="Logo Undana" />
             </div>
             <h1 className="text-sm font-bold tracking-tight">E-Scheduling</h1>
         </div>

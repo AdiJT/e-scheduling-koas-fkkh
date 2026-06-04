@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { mahasiswaApi, type Mahasiswa } from '../services/api';
+import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon } from '../components/Icons';
 
@@ -11,6 +11,8 @@ export default function MahasiswaPage() {
   const { user } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const [data, setData] = useState<Mahasiswa[]>([]);
+  const [tahunAjarans, setTahunAjarans] = useState<TahunAjaran[]>([]);
+  const [filterTahunAjaran, setFilterTahunAjaran] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,9 +20,21 @@ export default function MahasiswaPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Edit inline state
+  // Pagination & Sorting state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [sortColumn, setSortColumn] = useState<string>('nama');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterTahunAjaran]);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ nim: '', nama: '' });
+  const [editForm, setEditForm] = useState({ nim: '', nama: '', idTahunAjaran: 0 });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -28,8 +42,12 @@ export default function MahasiswaPage() {
     try {
       setLoading(true);
       setError(null);
-      const result = await mahasiswaApi.getAll();
-      setData(result);
+      const [mhsResult, taResult] = await Promise.all([
+        mahasiswaApi.getAll(),
+        tahunAjaranApi.getAll()
+      ]);
+      setData(mhsResult);
+      setTahunAjarans(taResult);
     } catch {
       setError('Gagal memuat data mahasiswa. Pastikan server backend sedang berjalan.');
     } finally {
@@ -44,8 +62,52 @@ export default function MahasiswaPage() {
   const filteredData = data.filter(mhs => {
     const matchSearch = mhs.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mhs.nim.includes(searchTerm);
-    return matchSearch;
+    const matchTahunAjaran = filterTahunAjaran === 'all' || mhs.idTahunAjaran?.toString() === filterTahunAjaran;
+    return matchSearch && matchTahunAjaran;
   });
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    if (sortColumn === 'nim') {
+      aVal = a.nim || '';
+      bVal = b.nim || '';
+    } else if (sortColumn === 'nama') {
+      aVal = a.nama || '';
+      bVal = b.nama || '';
+    } else if (sortColumn === 'tahunAjaran') {
+      aVal = a.tahunAjaran ? `${a.tahunAjaran.tahun} - ${a.tahunAjaran.semester}` : '';
+      bVal = b.tahunAjaran ? `${b.tahunAjaran.tahun} - ${b.tahunAjaran.semester}` : '';
+    } else if (sortColumn === 'idKelompok') {
+      aVal = a.idKelompok || 0;
+      bVal = b.idKelompok || 0;
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalItems = sortedData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span className="text-slate-300 ml-1">⇅</span>;
+    return sortDirection === 'asc' ? <span className="text-white ml-1">▲</span> : <span className="text-white ml-1">▼</span>;
+  };
 
   // === DELETE ===
   const handleDelete = (id: number) => {
@@ -68,17 +130,19 @@ export default function MahasiswaPage() {
     }
   };
 
-  // === EDIT INLINE ===
+  // === EDIT MODAL ===
   const startEdit = (mhs: Mahasiswa) => {
     setEditingId(mhs.id);
-    setEditForm({ nim: mhs.nim, nama: mhs.nama });
+    setEditForm({ nim: mhs.nim, nama: mhs.nama, idTahunAjaran: mhs.idTahunAjaran || 0 });
     setEditErrors({});
+    setShowEditModal(true);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ nim: '', nama: '' });
+    setEditForm({ nim: '', nama: '', idTahunAjaran: 0 });
     setEditErrors({});
+    setShowEditModal(false);
   };
 
   const saveEdit = async () => {
@@ -90,14 +154,24 @@ export default function MahasiswaPage() {
         id: editingId,
         nim: editForm.nim,
         nama: editForm.nama,
+        idTahunAjaran: editForm.idTahunAjaran,
       });
       // Update local state
       setData(prev =>
         prev.map(m =>
-          m.id === editingId ? { ...m, nim: editForm.nim, nama: editForm.nama } : m
+          m.id === editingId
+            ? {
+                ...m,
+                nim: editForm.nim,
+                nama: editForm.nama,
+                idTahunAjaran: editForm.idTahunAjaran,
+                tahunAjaran: tahunAjarans.find(ta => ta.id === editForm.idTahunAjaran),
+              }
+            : m
         )
       );
       setEditingId(null);
+      setShowEditModal(false);
     } catch (err: unknown) {
       const apiErr = err as { status?: number; errors?: Record<string, string> };
       if (apiErr?.status === 400 && apiErr?.errors) {
@@ -159,6 +233,22 @@ export default function MahasiswaPage() {
             />
           </div>
 
+          {/* Filter Tahun Ajaran */}
+          <select
+            value={filterTahunAjaran}
+            onChange={(e) => setFilterTahunAjaran(e.target.value)}
+            className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+              focus:outline-none focus:border-blue-400 focus:bg-white transition-all cursor-pointer"
+            id="filter-tahun-ajaran"
+          >
+            <option value="all">Semua Tahun Ajaran</option>
+            {tahunAjarans.map(ta => (
+              <option key={ta.id} value={ta.id.toString()}>
+                {ta.tahun} - {ta.semester}
+              </option>
+            ))}
+          </select>
+
           {/* Refresh Button */}
           <button
             onClick={fetchData}
@@ -203,66 +293,84 @@ export default function MahasiswaPage() {
         ) : (
           <>
             {/* Table Header Info */}
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-slate-500 font-medium">
-                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> mahasiswa
+            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-xs text-slate-500 font-medium">                
+                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Mahasiswa
               </p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="pr-6 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-400 cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-xs text-slate-500 font-medium">data</span>
+              </div>
             </div>
             <div className="overflow-x-auto pb-4">
               <table className="w-full min-w-max" id="table-mahasiswa">
                 <thead>
                   <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIM</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Mahasiswa</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Kelompok</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                    <th
+                      onClick={() => handleSort('nim')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                    >
+                      NIM {renderSortIndicator('nim')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('nama')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                    >
+                      Nama Mahasiswa {renderSortIndicator('nama')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('tahunAjaran')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                    >
+                      Tahun Ajaran {renderSortIndicator('tahunAjaran')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('idKelompok')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                    >
+                      Kelompok {renderSortIndicator('idKelompok')}
+                    </th>
                     {!isPengelola && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((mhs, index) => (
+                  {paginatedData.map((mhs, index) => (
                     <tr key={mhs.id} className="hover:bg-blue-50/30 transition-colors duration-150 group">
-                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
 
                       {/* NIM */}
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        {editingId === mhs.id ? (
-                          <div>
-                            <input
-                              value={editForm.nim}
-                              onChange={(e) => setEditForm({ ...editForm, nim: e.target.value })}
-                              className={`px-3 py-1.5 bg-slate-50 border-2 rounded-lg text-sm font-mono w-32
-                                focus:outline-none focus:border-blue-500 transition-all
-                                ${editErrors.nim ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                            />
-                            {editErrors.nim && (
-                              <p className="text-xs text-red-500 mt-1">{editErrors.nim}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm font-mono text-slate-600">{mhs.nim}</span>
-                        )}
+                        <span className="text-sm font-mono text-slate-600">{mhs.nim}</span>
                       </td>
 
                       {/* Nama */}
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        {editingId === mhs.id ? (
-                          <input
-                            value={editForm.nama}
-                            onChange={(e) => setEditForm({ ...editForm, nama: e.target.value })}
-                            className="px-3 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm w-full
-                              focus:outline-none focus:border-blue-500 transition-all"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                              {mhs.nama.charAt(0)}
-                            </div>
-                            <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                            {mhs.nama.charAt(0)}
                           </div>
-                        )}
+                          <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
+                        </div>
+                      </td>
+
+                      {/* Tahun Ajaran */}
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <span className="text-sm font-medium text-slate-700">
+                          {mhs.tahunAjaran ? `${mhs.tahunAjaran.tahun} - ${mhs.tahunAjaran.semester}` : 'Belum ditentukan'}
+                        </span>
                       </td>
 
                       {/* Kelompok */}
@@ -282,46 +390,20 @@ export default function MahasiswaPage() {
                       {!isPengelola && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
-                            {editingId === mhs.id ? (
-                              <>
-                                <button
-                                  onClick={saveEdit}
-                                  disabled={saving}
-                                  className="px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium
-                                    transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
-                                >
-                                  {saving ? (
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  ) : '✓'} Simpan
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-medium
-                                    transition-all duration-200"
-                                >
-                                  ✕ Batal
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => startEdit(mhs)}
-                                  className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm
-                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Edit"
-                                >
-                                  <EditIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(mhs.id)}
-                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm
-                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Hapus"
-                                >
-                                  <DeleteIcon className="w-5 h-5" />
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={() => startEdit(mhs)}
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                              title="Edit"
+                            >
+                              <EditIcon className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(mhs.id)}
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                              title="Hapus"
+                            >
+                              <DeleteIcon className="w-5 h-5" />
+                            </button>
                           </div>
                         </td>
                       )}
@@ -330,9 +412,149 @@ export default function MahasiswaPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-xs font-medium text-slate-500">
+                  Memiliki Total <span className="text-primary-900 font-bold">{totalItems}</span> Data
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Sebelumnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const page = i + 1;
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow-sm ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Berikutnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* Edit Mahasiswa Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full" />
+                Edit Data Mahasiswa
+              </h3>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* NIM */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">NIM <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editForm.nim}
+                  onChange={(e) => setEditForm({ ...editForm, nim: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-500 focus:bg-white transition-all ${
+                    editErrors.nim ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                  }`}
+                  placeholder="Masukkan NIM..."
+                />
+                {editErrors.nim && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.nim}</p>
+                )}
+              </div>
+
+              {/* Nama */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editForm.nama}
+                  onChange={(e) => setEditForm({ ...editForm, nama: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all ${
+                    editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                  }`}
+                  placeholder="Masukkan nama lengkap..."
+                />
+                {editErrors.nama && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>
+                )}
+              </div>
+
+              {/* Tahun Ajaran */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-red-500">*</span></label>
+                <select
+                  value={editForm.idTahunAjaran}
+                  onChange={(e) => setEditForm({ ...editForm, idTahunAjaran: Number(e.target.value) })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
+                >
+                  <option value={0} disabled>Pilih Tahun Ajaran</option>
+                  {tahunAjarans.map(ta => (
+                    <option key={ta.id} value={ta.id}>
+                      {ta.tahun} - {ta.semester}
+                    </option>
+                  ))}
+                </select>
+                {editErrors.idTahunAjaran && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.idTahunAjaran}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={saving}
+                className="px-5 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transition-all text-sm disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                ) : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

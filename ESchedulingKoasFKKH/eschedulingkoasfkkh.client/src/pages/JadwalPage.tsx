@@ -71,6 +71,18 @@ export default function JadwalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Pagination & Sorting state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [sortColumn, setSortColumn] = useState<string>('namaKelompok');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus]);
+
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -167,6 +179,49 @@ export default function JadwalPage() {
     }
     return matchStatus;
   });
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    if (sortColumn === 'namaKelompok') {
+      aVal = a.namaKelompok || '';
+      bVal = b.namaKelompok || '';
+    } else if (sortColumn === 'namaStase') {
+      aVal = a.namaStase || '';
+      bVal = b.namaStase || '';
+    } else if (sortColumn === 'periode') {
+      aVal = a.tanggalMulai || '';
+      bVal = b.tanggalMulai || '';
+    } else if (sortColumn === 'status') {
+      aVal = a.status || '';
+      bVal = b.status || '';
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalItems = sortedData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span className="text-slate-300 ml-1">⇅</span>;
+    return sortDirection === 'asc' ? <span className="text-white ml-1">▲</span> : <span className="text-white ml-1">▼</span>;
+  };
 
   // Stats
   const countBerlangsung = dataWithStatus.filter(j => j.status === 'Berlangsung').length;
@@ -553,11 +608,25 @@ export default function JadwalPage() {
             </div>
           ) : (
             <>
-              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between print:hidden">
+              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 print:hidden">
                 <p className="text-xs text-slate-500 font-medium">
-                  Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> jadwal
+                  Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Jadwal
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                      className="pr-6 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-400 cursor-pointer"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span className="text-xs text-slate-500 font-medium">data</span>
+                  </div>
                   {!isPengelola && !isMahasiswa && !isDosen && (
                     <button 
                       onClick={() => setShowDeleteAllModal(true)}
@@ -567,29 +636,49 @@ export default function JadwalPage() {
                     </button>
                   )}
                   <button 
-                  onClick={() => window.print()}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
-                >
-                  <PrintIcon className="w-4 h-4" /> Cetak PDF
-                </button>
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
+                  >
+                    <PrintIcon className="w-4 h-4" /> Cetak PDF
+                  </button>
                 </div>
               </div>
               <div className="overflow-x-auto pb-4">
                 <table className="w-full min-w-max" id="table-jadwal">
                   <thead>
                     <tr className="bg-gradient-to-r from-rose-600 to-red-700 text-white">
-                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">No</th>
-                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Kelompok</th>
-                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Stase</th>
-                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap">Periode</th>
-                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black whitespace-nowrap">Status</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap w-16">No</th>
+                      <th
+                        onClick={() => handleSort('namaKelompok')}
+                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                      >
+                        Kelompok {renderSortIndicator('namaKelompok')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('namaStase')}
+                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                      >
+                        Stase {renderSortIndicator('namaStase')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('periode')}
+                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                      >
+                        Periode {renderSortIndicator('periode')}
+                      </th>
+                      <th
+                        onClick={() => handleSort('status')}
+                        className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                      >
+                        Status {renderSortIndicator('status')}
+                      </th>
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:hidden whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredData.map((j, i) => (
+                    {paginatedData.map((j, i) => (
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
-                        <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{i + 1}</td>
+                        <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + i + 1}</td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <button 
                             onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
@@ -629,14 +718,14 @@ export default function JadwalPage() {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
-                              className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                              className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm"
                               title="Lihat Detail Kelompok"
                             >
                               <KelompokIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleDetail(j.id)}
-                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm print:opacity-100"
                               title="Detail"
                             >
                               <DetailIcon className="w-5 h-5" />
@@ -644,7 +733,7 @@ export default function JadwalPage() {
                             {!isPengelola && !isMahasiswa && !isDosen && (
                               <button
                                 onClick={() => handleOpenEdit(j)}
-                                className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
+                                className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm print:opacity-100"
                                 title="Edit"
                               >
                                 <EditIcon className="w-5 h-5" />
@@ -653,7 +742,7 @@ export default function JadwalPage() {
                             {!isPengelola && !isMahasiswa && !isDosen && (
                               <button
                                 onClick={() => handleDelete(j.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
+                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm print:opacity-100"
                                 title="Hapus"
                               >
                                 <DeleteIcon className="w-5 h-5" />
@@ -666,9 +755,58 @@ export default function JadwalPage() {
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
-        </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3 print:hidden">
+                  <span className="text-xs font-medium text-slate-500">
+                    Memiliki Total <span className="text-primary-900 font-bold">{totalItems}</span> Data
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      title="Sebelumnya"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const page = i + 1;
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow-sm ${
+                              currentPage === page
+                                ? 'bg-rose-600 text-white shadow-md shadow-rose-500/20'
+                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      title="Berikutnya"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+          </>
+        )}
+      </div>
       )}
 
       {/* Edit Modal */}

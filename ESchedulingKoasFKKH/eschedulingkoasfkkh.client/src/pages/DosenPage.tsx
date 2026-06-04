@@ -18,7 +18,19 @@ export default function DosenPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Edit inline state
+  // Pagination & Sorting state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [sortColumn, setSortColumn] = useState<string>('nama');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Reset pagination on search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ nip: '', nama: '' });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
@@ -47,6 +59,46 @@ export default function DosenPage() {
     return matchSearch;
   });
 
+  const sortedData = [...filteredData].sort((a, b) => {
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    if (sortColumn === 'nip') {
+      aVal = a.nip || '';
+      bVal = b.nip || '';
+    } else if (sortColumn === 'nama') {
+      aVal = a.nama || '';
+      bVal = b.nama || '';
+    } else if (sortColumn === 'kelompok') {
+      aVal = a.daftarKelompok ? a.daftarKelompok.join(', ') : '';
+      bVal = b.daftarKelompok ? b.daftarKelompok.join(', ') : '';
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalItems = sortedData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span className="text-slate-300 ml-1">⇅</span>;
+    return sortDirection === 'asc' ? <span className="text-white ml-1">▲</span> : <span className="text-white ml-1">▼</span>;
+  };
+
   // === DELETE ===
   const handleDelete = (id: number) => {
     setSelectedId(id);
@@ -68,17 +120,19 @@ export default function DosenPage() {
     }
   };
 
-  // === EDIT INLINE ===
+  // === EDIT MODAL ===
   const startEdit = (dsn: Pembimbing) => {
     setEditingId(dsn.id);
     setEditForm({ nip: dsn.nip, nama: dsn.nama });
     setEditErrors({});
+    setShowEditModal(true);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({ nip: '', nama: '' });
     setEditErrors({});
+    setShowEditModal(false);
   };
 
   const saveEdit = async () => {
@@ -98,6 +152,7 @@ export default function DosenPage() {
         )
       );
       setEditingId(null);
+      setShowEditModal(false);
     } catch (err: unknown) {
       const apiErr = err as { status?: number; errors?: Record<string, string> };
       if (apiErr?.status === 400 && apiErr?.errors) {
@@ -203,66 +258,71 @@ export default function DosenPage() {
         ) : (
           <>
             {/* Table Header Info */}
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-xs text-slate-500 font-medium">
-                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> dosen
+                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Dosen
               </p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="pr-6 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-green-400 cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-xs text-slate-500 font-medium">data</span>
+              </div>
             </div>
             <div className="overflow-x-auto pb-4">
               <table className="w-full min-w-max" id="table-dosen">
                 <thead>
                   <tr className="bg-gradient-to-r from-emerald-600 to-green-700 text-white">
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">NIP</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Nama Dosen</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Kelompok</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                    <th
+                      onClick={() => handleSort('nip')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-emerald-700/50"
+                    >
+                      NIP {renderSortIndicator('nip')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('nama')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-emerald-700/50"
+                    >
+                      Nama Dosen {renderSortIndicator('nama')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('kelompok')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-emerald-700/50"
+                    >
+                      Kelompok {renderSortIndicator('kelompok')}
+                    </th>
                     {!isPengelola && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((dsn, index) => (
+                  {paginatedData.map((dsn, index) => (
                     <tr key={dsn.id} className="hover:bg-green-50/30 transition-colors duration-150 group">
-                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
 
                       {/* NIP */}
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        {editingId === dsn.id ? (
-                          <div>
-                            <input
-                              value={editForm.nip}
-                              onChange={(e) => setEditForm({ ...editForm, nip: e.target.value })}
-                              className={`px-3 py-1.5 bg-slate-50 border-2 rounded-lg text-sm font-mono w-36
-                                focus:outline-none focus:border-green-500 transition-all
-                                ${editErrors.nip ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                            />
-                            {editErrors.nip && (
-                              <p className="text-xs text-red-500 mt-1">{editErrors.nip}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm font-mono text-slate-600">{dsn.nip}</span>
-                        )}
+                        <span className="text-sm font-mono text-slate-600">{dsn.nip}</span>
                       </td>
 
                       {/* Nama */}
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        {editingId === dsn.id ? (
-                          <input
-                            value={editForm.nama}
-                            onChange={(e) => setEditForm({ ...editForm, nama: e.target.value })}
-                            className="px-3 py-1.5 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm w-full
-                              focus:outline-none focus:border-green-500 transition-all"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                              {dsn.nama.charAt(0)}
-                            </div>
-                            <span className="text-sm font-medium text-primary-900">{dsn.nama}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                            {dsn.nama.charAt(0)}
                           </div>
-                        )}
+                          <span className="text-sm font-medium text-primary-900">{dsn.nama}</span>
+                        </div>
                       </td>
 
                       {/* Kelompok */}
@@ -286,46 +346,20 @@ export default function DosenPage() {
                       {!isPengelola && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
-                            {editingId === dsn.id ? (
-                              <>
-                                <button
-                                  onClick={saveEdit}
-                                  disabled={saving}
-                                  className="px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xs font-medium
-                                    transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
-                                >
-                                  {saving ? (
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  ) : '✓'} Simpan
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-medium
-                                    transition-all duration-200"
-                                >
-                                  ✕ Batal
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => startEdit(dsn)}
-                                  className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm
-                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Edit"
-                                >
-                                  <EditIcon className="w-5 h-5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(dsn.id)}
-                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm
-                                    opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                  title="Hapus"
-                                >
-                                  <DeleteIcon className="w-5 h-5" />
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={() => startEdit(dsn)}
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                              title="Edit"
+                            >
+                              <EditIcon className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(dsn.id)}
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                              title="Hapus"
+                            >
+                              <DeleteIcon className="w-5 h-5" />
+                            </button>
                           </div>
                         </td>
                       )}
@@ -334,9 +368,129 @@ export default function DosenPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-xs font-medium text-slate-500">
+                  Memiliki Toral <span className="text-primary-900 font-bold">{totalItems}</span> Data
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Sebelumnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const page = i + 1;
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow-sm ${
+                            currentPage === page
+                              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Berikutnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* Edit Dosen Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-green-50">
+              <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" />
+                Edit Data Dosen
+              </h3>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* NIP */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">NIP <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editForm.nip}
+                  onChange={(e) => setEditForm({ ...editForm, nip: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm font-mono focus:outline-none focus:border-emerald-500 focus:bg-white transition-all ${
+                    editErrors.nip ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                  }`}
+                  placeholder="Masukkan NIP..."
+                />
+                {editErrors.nip && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.nip}</p>
+                )}
+              </div>
+
+              {/* Nama */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={editForm.nama}
+                  onChange={(e) => setEditForm({ ...editForm, nama: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-emerald-500 focus:bg-white transition-all ${
+                    editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                  }`}
+                  placeholder="Masukkan nama lengkap..."
+                />
+                {editErrors.nama && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={saving}
+                className="px-5 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-md transition-all text-sm disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                ) : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

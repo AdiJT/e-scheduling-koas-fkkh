@@ -17,6 +17,17 @@ export default function TahunAjaranPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination & Sorting state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [sortColumn, setSortColumn] = useState<string>('tahun');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Reset pagination on search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const [showFormModal, setShowFormModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '' });
@@ -50,6 +61,46 @@ export default function TahunAjaranPage() {
     const label = `${item.tahun} ${item.semester}`.toLowerCase();
     return label.includes(searchTerm.toLowerCase());
   });
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    let aVal: string | number = '';
+    let bVal: string | number = '';
+
+    if (sortColumn === 'tahun') {
+      aVal = a.tahun || 0;
+      bVal = b.tahun || 0;
+    } else if (sortColumn === 'semester') {
+      aVal = a.semester || '';
+      bVal = b.semester || '';
+    } else if (sortColumn === 'label') {
+      aVal = `${a.tahun} - ${a.semester}`;
+      bVal = `${b.tahun} - ${b.semester}`;
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalItems = sortedData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return <span className="text-slate-300 ml-1">⇅</span>;
+    return sortDirection === 'asc' ? <span className="text-white ml-1">▲</span> : <span className="text-white ml-1">▼</span>;
+  };
 
   const openCreateModal = () => {
     setFormMode('create');
@@ -274,28 +325,58 @@ export default function TahunAjaranPage() {
           </div>
         ) : (
           <>
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+            {/* Table Header Info */}
+            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-xs text-slate-500 font-medium">
-                Menampilkan <span className="text-primary-900 font-bold">{filteredData.length}</span> dari <span className="text-primary-900 font-bold">{data.length}</span> tahun ajaran
+                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Tahun Ajaran
               </p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="pr-6 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-xs text-slate-500 font-medium">data</span>
+              </div>
             </div>
             <div className="overflow-x-auto pb-4">
               <table className="w-full min-w-max" id="table-tahun-ajaran">
                 <thead>
                   <tr className="bg-gradient-to-r from-sky-700 to-cyan-700 text-white">
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">No</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tahun</th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Semester</th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Label</th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                    <th
+                      onClick={() => handleSort('tahun')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-sky-800/50"
+                    >
+                      Tahun {renderSortIndicator('tahun')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('semester')}
+                      className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-sky-800/50"
+                    >
+                      Semester {renderSortIndicator('semester')}
+                    </th>
+                    <th
+                      onClick={() => handleSort('label')}
+                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-sky-800/50"
+                    >
+                      Label {renderSortIndicator('label')}
+                    </th>
                     {canManage && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((tahunAjaran, index) => (
+                  {paginatedData.map((tahunAjaran, index) => (
                     <tr key={tahunAjaran.id} className="hover:bg-cyan-50/30 transition-colors duration-150 group">
-                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
+                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         <span className="text-sm font-bold text-primary-900">{tahunAjaran.tahun}</span>
                       </td>
@@ -316,7 +397,7 @@ export default function TahunAjaranPage() {
                       </td>
                       {canManage && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                          <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => openEditModal(tahunAjaran)}
                               className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200"
@@ -339,6 +420,55 @@ export default function TahunAjaranPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-xs font-medium text-slate-500">
+                  Memiliki Total <span className="text-primary-900 font-bold">{totalItems}</span> Data
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Sebelumnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const page = i + 1;
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow-sm ${
+                            currentPage === page
+                              ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                    title="Berikutnya"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

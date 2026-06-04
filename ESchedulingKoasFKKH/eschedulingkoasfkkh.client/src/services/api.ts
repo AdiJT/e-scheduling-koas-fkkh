@@ -119,17 +119,25 @@ export interface Mahasiswa {
     nim: string;
     nama: string;
     idKelompok: number | null;
+    idTahunAjaran?: number | null;
+    tahunAjaran?: {
+        id: number;
+        tahun: number;
+        semester: string;
+    } | null;
 }
 
 export interface CreateMahasiswa {
     nim: string;
     nama: string;
+    idTahunAjaran: number;
 }
 
 export interface UpdateMahasiswa {
     id: number;
     nim: string;
     nama: string;
+    idTahunAjaran: number;
 }
 
 export const mahasiswaApi = {

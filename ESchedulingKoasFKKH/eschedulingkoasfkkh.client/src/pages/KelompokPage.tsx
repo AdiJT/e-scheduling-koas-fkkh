@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, pembimbingApi, type Kelompok, type Pembimbing } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
+import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
 
 const colors = [
   'from-blue-500 to-blue-600', 'from-emerald-500 to-green-600', 'from-purple-500 to-purple-600',
@@ -137,7 +137,7 @@ export default function KelompokPage() {
       {/* Error Alert */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
-          <span className="text-red-500 text-lg">⚠️</span>
+          <InfoIcon className="text-red-500 w-5 h-5" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
         </div>
@@ -229,11 +229,20 @@ export default function KelompokPage() {
                         <h3 className="text-lg font-bold text-primary-900 mb-1">{kel.nama}</h3>
                       )}
 
-                      <div className="space-y-1.5 mb-4 text-xs text-slate-500">
-                        <p>👨‍🏫 Pembimbing: {pembimbingNama || <span className="text-slate-400 italic">Belum ditentukan</span>}</p>
-                        <p>👥 {kel.daftarMahasiswa.length} Anggota</p>
-                        <p className="flex justify-between">
-                          <span>📅 {kel.daftarJadwal.length} Jadwal</span>
+                      <div className="space-y-2 mb-4 text-xs text-slate-500">
+                        <p className="flex items-center gap-1.5">
+                          <DosenIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>Pembimbing: {pembimbingNama || <span className="text-slate-400 italic">Belum ditentukan</span>}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <MahasiswaIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>{kel.daftarMahasiswa.length} Anggota</span>
+                        </p>
+                        <p className="flex justify-between items-center gap-1.5">
+                          <span className="flex items-center gap-1.5">
+                            <JadwalIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span>{kel.daftarJadwal.length} Jadwal</span>
+                          </span>
                           {currentStase ? (
                             <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold border border-green-100">
                               Sedang Stase: {currentStase}
@@ -251,9 +260,14 @@ export default function KelompokPage() {
                             <button
                               onClick={saveEdit}
                               disabled={saving}
-                              className="flex-1 py-2 bg-green-50 hover:bg-green-100 text-green-600 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+                              className="flex-1 py-2 bg-green-50 hover:bg-green-100 text-green-600 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
-                              {saving ? <div className="w-3 h-3 border-2 border-green-400/30 border-t-green-500 rounded-full animate-spin" /> : '✓'} Simpan
+                              {saving ? (
+                                <div className="w-3 h-3 border-2 border-green-400/30 border-t-green-500 rounded-full animate-spin" />
+                              ) : (
+                                <SaveIcon className="w-3.5 h-3.5" />
+                              )}
+                              Simpan
                             </button>
                             <button onClick={cancelEdit} className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-all">
                               ✕ Batal
@@ -291,7 +305,9 @@ export default function KelompokPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><span className="text-3xl">⚠️</span></div>
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <InfoIcon className="w-8 h-8 text-red-600" />
+              </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Kelompok?</h3>
               {selectedKelompok && (
                 <p className="text-sm text-slate-600 font-medium mb-1">{selectedKelompok.nama}</p>
