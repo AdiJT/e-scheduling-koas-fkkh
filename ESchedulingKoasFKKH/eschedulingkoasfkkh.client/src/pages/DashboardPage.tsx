@@ -4,6 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
+import {
+  MahasiswaIcon,
+  DosenIcon,
+  StaseIcon,
+  KelompokIcon,
+  JadwalIcon,
+} from '../components/Icons';
 import { mahasiswaApi, pembimbingApi, staseApi, kelompokApi, jadwalApi, type Jadwal } from '../services/api';
 import { getHolidays } from '../utils/holidays';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
@@ -78,6 +85,28 @@ interface Stats {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const getMenuIcon = (id: string) => {
+    const props = { className: "w-6 h-6 text-white" };
+    switch (id) {
+      case 'mahasiswa': return <MahasiswaIcon {...props} />;
+      case 'dosen': return <DosenIcon {...props} />;
+      case 'stase': return <StaseIcon {...props} />;
+      case 'kelompok': return <KelompokIcon {...props} />;
+      case 'jadwal': return <JadwalIcon {...props} />;
+      default: return null;
+    }
+  };
+
+  const getStatIcon = (label: string) => {
+    const props = { className: "w-6 h-6 text-white" };
+    if (label.includes('Mahasiswa')) return <MahasiswaIcon {...props} />;
+    if (label.includes('Dosen')) return <DosenIcon {...props} />;
+    if (label.includes('Stase')) return <StaseIcon {...props} />;
+    if (label.includes('Kelompok')) return <KelompokIcon {...props} />;
+    return null;
+  };
+
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
@@ -189,7 +218,7 @@ export default function DashboardPage() {
             <p className="text-slate-500">Berikut ringkasan sistem E-Scheduling KOAS hari ini</p>
           </div>
           <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white rounded-2xl shadow-soft border border-slate-100">
-            <span className="text-lg">📅</span>
+            <JadwalIcon className="w-5 h-5 text-slate-500" />
             <span className="text-sm font-medium text-slate-600">
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
@@ -207,8 +236,8 @@ export default function DashboardPage() {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-xl shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                  {stat.icon}
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  {getStatIcon(stat.label)}
                 </div>
               </div>
               <p className="text-3xl font-bold text-primary-900 mb-1">
@@ -245,8 +274,8 @@ export default function DashboardPage() {
               style={{ animationDelay: `${(index + 4) * 80}ms` }}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl`} />
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center text-2xl mb-4 shadow-md group-hover:scale-110 group-hover:${item.shadowColor} transition-all duration-300`}>
-                {item.icon}
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-4 shadow-md group-hover:scale-110 group-hover:${item.shadowColor} transition-all duration-300`}>
+                {getMenuIcon(item.id)}
               </div>
               <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">
                 {isMahasiswa || isDosen ? (
@@ -321,7 +350,7 @@ export default function DashboardPage() {
           {/* Upcoming Schedule */}
           <div className="bg-gradient-to-br from-primary-900 to-blue-800 rounded-2xl shadow-dark p-5 text-white">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <span className="text-lg">📋</span>
+              <JadwalIcon className="w-5 h-5 text-white" />
               Jadwal Mendatang
             </h3>
             <div className="space-y-3">

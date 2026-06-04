@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { kelompokApi, pembimbingApi, mahasiswaApi, type Kelompok, type Pembimbing, type Mahasiswa } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
+import { KelompokIcon, RefreshIcon, DosenIcon, MahasiswaIcon, DeleteIcon, JadwalIcon, InfoIcon, SaveIcon } from '../components/Icons';
 
 export default function DetailKelompokPage() {
   const navigate = useNavigate();
@@ -171,7 +172,9 @@ export default function DetailKelompokPage() {
     return (
       <Layout>
         <div className="p-16 text-center">
-          <span className="text-5xl block mb-4">⚠️</span>
+          <div className="flex justify-center mb-4 text-red-500">
+            <InfoIcon className="w-16 h-16" />
+          </div>
           <p className="text-slate-600 font-medium">{error}</p>
           <button onClick={() => navigate('/kelompok')} className="mt-4 px-4 py-2 bg-slate-500 text-white rounded-xl text-sm mr-2">Kembali</button>
           <button onClick={() => fetchData()} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm">Coba Lagi</button>
@@ -184,7 +187,9 @@ export default function DetailKelompokPage() {
     return (
       <Layout>
         <div className="p-16 text-center">
-          <span className="text-5xl block mb-4">❌</span>
+          <div className="flex justify-center mb-4 text-red-500">
+            <InfoIcon className="w-16 h-16" />
+          </div>
           <p className="text-slate-600 font-medium">Kelompok tidak ditemukan</p>
           <button onClick={() => navigate('/kelompok')} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm">Kembali</button>
         </div>
@@ -198,7 +203,9 @@ export default function DetailKelompokPage() {
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3 mb-1">
           <button onClick={() => navigate('/kelompok')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all duration-200">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-2xl shadow-md">👥</div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md">
+            <KelompokIcon className="w-6 h-6" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">Detail {kelompok.nama}</h1>
             <p className="text-sm text-slate-500">Kelola pembimbing dan anggota kelompok</p>
@@ -209,7 +216,7 @@ export default function DetailKelompokPage() {
       {/* Error */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
-          <span className="text-red-500 text-lg">⚠️</span>
+          <InfoIcon className="text-red-500 w-5 h-5" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
         </div>
@@ -224,9 +231,15 @@ export default function DetailKelompokPage() {
           {!isAdmin && !isMahasiswa && !isDosen && (
             <button
               onClick={() => { setShowPembimbingModal(true); setSelectedPembimbingId(''); }}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1.5"
             >
-              {kelompok.idPembimbing ? '🔄 Ganti Pembimbing' : '+ Pilih Pembimbing'}
+              {kelompok.idPembimbing ? (
+                <>
+                  <RefreshIcon className="w-3.5 h-3.5" /> Ganti Pembimbing
+                </>
+              ) : (
+                <>+ Pilih Pembimbing</>
+              )}
             </button>
           )}
         </div>
@@ -256,7 +269,9 @@ export default function DetailKelompokPage() {
           </div>
         ) : (
           <div className="p-10 text-center">
-            <span className="text-4xl block mb-3">👨‍🏫</span>
+            <div className="flex justify-center mb-3 text-slate-300">
+              <DosenIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-500 text-sm">Belum ada pembimbing yang ditentukan</p>
           </div>
         )}
@@ -281,7 +296,9 @@ export default function DetailKelompokPage() {
 
         {kelompok.daftarMahasiswa.length === 0 ? (
           <div className="p-10 text-center">
-            <span className="text-4xl block mb-3">👨‍🎓</span>
+            <div className="flex justify-center mb-3 text-slate-300">
+              <MahasiswaIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-500 text-sm">Belum ada anggota dalam kelompok ini</p>
           </div>
         ) : (
@@ -318,7 +335,7 @@ export default function DetailKelompokPage() {
                             className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
                             title="Keluarkan dari kelompok"
                           >
-                            🗑️
+                            <DeleteIcon className="w-5 h-5" />
                           </button>
                         </div>
                       </td>
@@ -348,7 +365,9 @@ export default function DetailKelompokPage() {
 
         {kelompok.daftarJadwal.length === 0 ? (
           <div className="p-10 text-center">
-            <span className="text-4xl block mb-3">📅</span>
+            <div className="flex justify-center mb-3 text-slate-300">
+              <JadwalIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-500 text-sm">Belum ada jadwal untuk kelompok ini</p>
           </div>
         ) : (
@@ -451,7 +470,9 @@ export default function DetailKelompokPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><span className="text-3xl">⚠️</span></div>
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <InfoIcon className="w-8 h-8 text-red-600" />
+              </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Keluarkan Anggota?</h3>
               {removingMember && <p className="text-sm text-slate-600 font-medium mb-1">{removingMember.nama} ({removingMember.nim})</p>}
               <p className="text-sm text-slate-500">Mahasiswa akan dikeluarkan dari kelompok ini</p>
@@ -495,7 +516,14 @@ export default function DetailKelompokPage() {
                 disabled={!selectedPembimbingId || actionLoading}
                 className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {actionLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '✓'} Simpan
+                {actionLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <SaveIcon className="w-4 h-4" />
+                    Simpan
+                  </>
+                )}
               </button>
             </div>
           </div>

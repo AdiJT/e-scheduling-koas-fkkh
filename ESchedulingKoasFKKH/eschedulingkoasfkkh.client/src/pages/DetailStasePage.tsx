@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import { staseApi, jadwalApi, type Stase, type Jadwal } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
+import { StaseIcon, KelompokIcon, JadwalIcon, InfoIcon, PrintIcon, StaseTerpisahIcon, StaseBersamaanIcon } from '../components/Icons';
 
 export default function DetailStasePage() {
   const navigate = useNavigate();
@@ -71,7 +72,9 @@ export default function DetailStasePage() {
     return (
       <Layout>
         <div className="p-16 text-center">
-          <span className="text-5xl block mb-4">{error?.includes('tidak ditemukan') ? '❌' : '⚠️'}</span>
+          <div className="flex justify-center mb-4 text-red-500">
+            <InfoIcon className="w-16 h-16" />
+          </div>
           <p className="text-slate-600 font-medium">{error || 'Stase tidak ditemukan'}</p>
           <button onClick={() => navigate('/stase')} className="mt-4 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm">Kembali ke Daftar Stase</button>
         </div>
@@ -85,7 +88,9 @@ export default function DetailStasePage() {
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3 mb-1">
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all duration-200">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl shadow-md">🏥</div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+            <StaseIcon className="w-6 h-6" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">Detail Stase: {stase.nama}</h1>
             <p className="text-sm text-slate-500">Informasi lengkap dan jadwal kelompok pada stase ini</p>
@@ -96,21 +101,31 @@ export default function DetailStasePage() {
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 animate-fade-in-up">
         <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">⏱️</div>
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <JadwalIcon className="w-6 h-6" />
+          </div>
           <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Durasi</p>
             <p className="text-lg font-bold text-primary-900">{stase.waktu} Minggu</p>
           </div>
         </div>
         <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">⚙️</div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+            {stase.jenis === 'Terpisah' ? (
+              <StaseTerpisahIcon className="w-6 h-6 text-amber-500" />
+            ) : (
+              <StaseBersamaanIcon className="w-6 h-6 text-blue-500" />
+            )}
+          </div>
           <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Jenis</p>
             <p className="text-lg font-bold text-primary-900">{stase.jenis}</p>
           </div>
         </div>
         <div className="bg-white p-5 rounded-2xl shadow-card border border-slate-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">👥</div>
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <KelompokIcon className="w-6 h-6" />
+          </div>
           <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Kelompok</p>
             <p className="text-lg font-bold text-primary-900">{displayedJadwal.length} Terjadwal</p>
@@ -130,14 +145,16 @@ export default function DetailStasePage() {
               onClick={() => window.print()}
               className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
             >
-              🖨️ Cetak PDF
+              <PrintIcon className="w-4 h-4" /> Cetak PDF
             </button>
           </div>
         </div>
 
         {displayedJadwal.length === 0 ? (
           <div className="p-16 text-center">
-            <span className="text-5xl block mb-4">📅</span>
+            <div className="flex justify-center mb-4 text-slate-300">
+              <JadwalIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
               {isDosen ? 'Tidak ada kelompok bimbingan Anda yang terdaftar pada stase ini.' : 'Belum ada jadwal yang disusun untuk stase ini.'}

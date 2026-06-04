@@ -1,23 +1,80 @@
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logoUndana from '../assets/logo_undana.png';
+import {
+  DashboardIcon,
+  TahunAjaranIcon,
+  MahasiswaIcon,
+  DosenIcon,
+  StaseIcon,
+  KelompokIcon,
+  JadwalIcon,
+  LogoutIcon,
+} from './Icons';
 
 interface NavItem {
   id: string;
   label: string;
-  icon: string;
+  icon: (props: React.SVGProps<SVGSVGElement>) => React.ReactElement;
   path: string;
 }
 
-const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-  { id: 'tahun-ajaran', label: 'Tahun Ajaran', icon: 'TA', path: '/tahun-ajaran' },
-  { id: 'mahasiswa', label: 'Mahasiswa', icon: '👨‍🎓', path: '/mahasiswa' },
-  { id: 'dosen', label: 'Dosen', icon: '👨‍🏫', path: '/dosen' },
-  { id: 'stase', label: 'Stase', icon: '🏥', path: '/stase' },
-  { id: 'kelompok', label: 'Kelompok', icon: '👥', path: '/kelompok' },
-  { id: 'jadwal', label: 'Jadwal', icon: '📅', path: '/jadwal' },
-];
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
+  if (isMahasiswaOrDosen) {
+    return [
+      {
+        title: 'Menu Utama',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' }
+        ]
+      },
+      {
+        title: 'Akademik',
+        items: [
+          { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' }
+        ]
+      },
+      {
+        title: 'Penjadwalan',
+        items: [
+          { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
+          { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' }
+        ]
+      }
+    ];
+  }
+
+  return [
+    {
+      title: 'Menu Utama',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon, path: '/dashboard' }
+      ]
+    },
+    {
+      title: 'Data Master',
+      items: [
+        { id: 'tahun-ajaran', label: 'Tahun Ajaran', icon: TahunAjaranIcon, path: '/tahun-ajaran' },
+        { id: 'mahasiswa', label: 'Mahasiswa', icon: MahasiswaIcon, path: '/mahasiswa' },
+        { id: 'dosen', label: 'Dosen', icon: DosenIcon, path: '/dosen' },
+        { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' }
+      ]
+    },
+    {
+      title: 'Penjadwalan',
+      items: [
+        { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
+        { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' }
+      ]
+    }
+  ];
+};
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -45,7 +102,7 @@ export default function Sidebar({
 
   const handleNavClick = (path: string) => {
     navigate(path);
-    setMobileOpen(false); // Close mobile menu after navigation
+    setMobileOpen(false);
   };
 
   const getInitials = (name: string) => {
@@ -59,13 +116,9 @@ export default function Sidebar({
 
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const isDosen = user?.role?.toLowerCase() === 'dosen';
-  
-  const filteredNavItems = navItems.filter(item => {
-    if (isMahasiswa || isDosen) {
-      return ['dashboard', 'stase', 'kelompok', 'jadwal'].includes(item.id);
-    }
-    return true;
-  });
+  const isMahasiswaOrDosen = isMahasiswa || isDosen;
+
+  const activeSections = navSections(isMahasiswaOrDosen);
 
   const getRoleDisplay = () => {
     const role = user?.role?.toLowerCase();
@@ -78,7 +131,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile Overlay */}
       {mobileOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -86,14 +138,12 @@ export default function Sidebar({
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-screen z-50 transition-all duration-300 ease-in-out flex flex-col bg-primary-900 text-white shadow-dark
           ${collapsed ? 'w-20' : 'w-64'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        {/* Logo Section */}
         <div className={`p-4 border-b border-white/10 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
             <div className={`${collapsed ? 'w-10 h-10' : 'w-12 h-12'} transition-all duration-300 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden`}>
@@ -107,7 +157,6 @@ export default function Sidebar({
             )}
           </div>
           
-          {/* Mobile Close Button */}
           {!collapsed && (
             <button 
               className="md:hidden text-white/70 hover:text-white p-1 ml-auto"
@@ -118,7 +167,6 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Toggle Button (Desktop only) */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-primary-800 border-2 border-primary-600 text-white/60 hover:text-white hover:bg-primary-700 items-center justify-center text-xs transition-all shadow-lg z-50"
@@ -127,39 +175,44 @@ export default function Sidebar({
           {collapsed ? '→' : '←'}
         </button>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {!collapsed && (
-            <p className="text-xs font-semibold text-blue-300/50 uppercase tracking-wider px-3 mb-3">
-              Menu Utama
-            </p>
-          )}
-          {filteredNavItems.map((item) => (
-            <button
-              key={item.id}
-              id={`nav-${item.id}`}
-              onClick={() => handleNavClick(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
-                ${isActive(item.path)
-                  ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/10 text-white shadow-glow-blue/20 border border-blue-400/20'
-                  : 'text-blue-100/60 hover:text-white hover:bg-white/5'
-                }`}
-              title={collapsed ? item.label : undefined}
-            >
-              <span className={`text-xl flex-shrink-0 transition-transform duration-200 ${isActive(item.path) ? 'scale-110' : 'group-hover:scale-110'}`}>
-                {item.icon}
-              </span>
+        <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+          {activeSections.map((section) => (
+            <div key={section.title} className="space-y-1">
               {!collapsed && (
-                <span className="animate-fade-in truncate">{item.label}</span>
+                <p className="text-[10px] font-bold text-blue-300/40 uppercase tracking-wider px-3 mb-2">
+                  {section.title}
+                </p>
               )}
-              {!collapsed && isActive(item.path) && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse-slow" />
-              )}
-            </button>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    id={`nav-${item.id}`}
+                    onClick={() => handleNavClick(item.path)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+                      ${isActive(item.path)
+                        ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/10 text-white shadow-glow-blue/20 border border-blue-400/20'
+                        : 'text-blue-100/60 hover:text-white hover:bg-white/5'
+                      }`}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <span className={`flex-shrink-0 transition-transform duration-200 ${isActive(item.path) ? 'scale-110' : 'group-hover:scale-110'}`}>
+                      <Icon className="w-5 h-5" />
+                    </span>
+                    {!collapsed && (
+                      <span className="animate-fade-in truncate">{item.label}</span>
+                    )}
+                    {!collapsed && isActive(item.path) && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse-slow" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           ))}
         </nav>
 
-        {/* User Section */}
         <div className="p-3 border-t border-white/10">
           <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center' : ''}`}>
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xs font-bold shadow-md flex-shrink-0">
@@ -180,7 +233,9 @@ export default function Sidebar({
             className={`mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-300/70 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 ${collapsed ? 'justify-center' : ''}`}
             title="Logout"
           >
-            <span className="text-lg">🚪</span>
+            <span className="text-lg">
+              <LogoutIcon className="w-5 h-5" />
+            </span>
             {!collapsed && <span className="animate-fade-in">Logout</span>}
           </button>
         </div>

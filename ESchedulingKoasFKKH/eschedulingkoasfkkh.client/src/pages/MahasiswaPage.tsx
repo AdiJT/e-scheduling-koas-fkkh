@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { mahasiswaApi, type Mahasiswa } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon } from '../components/Icons';
 
 export default function MahasiswaPage() {
   const navigate = useNavigate();
@@ -122,8 +123,8 @@ export default function MahasiswaPage() {
           >
             ←
           </button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-md">
-            👨‍🎓
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+            <MahasiswaIcon className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">Kelola Mahasiswa</h1>
@@ -146,7 +147,7 @@ export default function MahasiswaPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Cari mahasiswa berdasarkan nama atau NIM..."
@@ -161,11 +162,10 @@ export default function MahasiswaPage() {
           {/* Refresh Button */}
           <button
             onClick={fetchData}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 
-              text-slate-600 font-medium rounded-xl transition-all duration-200 text-sm flex items-center gap-2"
+            className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
             title="Muat ulang data"
           >
-            🔄 Refresh
+            <RefreshIcon className="w-5 h-5" />
           </button>
 
           {/* Add Button */}
@@ -192,7 +192,9 @@ export default function MahasiswaPage() {
           </div>
         ) : filteredData.length === 0 ? (
           <div className="p-16 text-center">
-            <span className="text-5xl block mb-4">📋</span>
+            <div className="flex justify-center mb-4 text-slate-300">
+              <MahasiswaIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
               {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan menambah mahasiswa baru'}
@@ -308,7 +310,7 @@ export default function MahasiswaPage() {
                                     opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                   title="Edit"
                                 >
-                                  ✏️
+                                  <EditIcon className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(mhs.id)}
@@ -316,7 +318,7 @@ export default function MahasiswaPage() {
                                     opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                   title="Hapus"
                                 >
-                                  🗑️
+                                  <DeleteIcon className="w-5 h-5" />
                                 </button>
                               </>
                             )}

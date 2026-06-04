@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { TahunAjaranIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, SemesterGanjilIcon, SemesterGenapIcon } from '../components/Icons';
 
 const semesterOptions = ['Ganjil', 'Genap'];
 
@@ -168,8 +169,12 @@ export default function TahunAjaranPage() {
     <Layout>
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">&lt;</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shadow-md">TA</div>
+          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">
+            ←
+          </button>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-md">
+            <TahunAjaranIcon className="w-6 h-6" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">Kelola Tahun Ajaran</h1>
             <p className="text-sm text-slate-500">Atur tahun dan semester untuk data mahasiswa KOAS</p>
@@ -188,21 +193,23 @@ export default function TahunAjaranPage() {
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Cari berdasarkan tahun atau semester..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
               id="search-tahun-ajaran"
             />
           </div>
 
           <button
             onClick={fetchData}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2"
+            className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
+            title="Muat ulang data"
           >
-            Refresh
+            <RefreshIcon className="w-5 h-5" />
           </button>
 
           {canManage && (
@@ -220,21 +227,27 @@ export default function TahunAjaranPage() {
       {!loading && data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shadow-md">TA</div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-md">
+              <TahunAjaranIcon className="w-6 h-6" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-primary-900">{data.length}</p>
               <p className="text-xs text-slate-500">Total Tahun Ajaran</p>
             </div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-md">GJ</div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-md">
+              <SemesterGanjilIcon className="w-6 h-6" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Ganjil').length}</p>
               <p className="text-xs text-slate-500">Semester Ganjil</p>
             </div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold shadow-md">GN</div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white shadow-md">
+              <SemesterGenapIcon className="w-6 h-6" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Genap').length}</p>
               <p className="text-xs text-slate-500">Semester Genap</p>
@@ -251,7 +264,9 @@ export default function TahunAjaranPage() {
           </div>
         ) : filteredData.length === 0 ? (
           <div className="p-16 text-center">
-            <span className="text-5xl block mb-4 text-slate-300">TA</span>
+            <div className="flex justify-center mb-4 text-slate-300">
+              <TahunAjaranIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
               {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan menambah tahun ajaran baru'}
@@ -285,7 +300,12 @@ export default function TahunAjaranPage() {
                         <span className="text-sm font-bold text-primary-900">{tahunAjaran.tahun}</span>
                       </td>
                       <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getSemesterClass(tahunAjaran.semester)}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getSemesterClass(tahunAjaran.semester)}`}>
+                          {tahunAjaran.semester === 'Ganjil' ? (
+                            <SemesterGanjilIcon className="w-3.5 h-3.5" />
+                          ) : (
+                            <SemesterGenapIcon className="w-3.5 h-3.5" />
+                          )}
                           {tahunAjaran.semester}
                         </span>
                       </td>
@@ -299,17 +319,17 @@ export default function TahunAjaranPage() {
                           <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                             <button
                               onClick={() => openEditModal(tahunAjaran)}
-                              className="px-3 py-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all duration-200 text-xs font-semibold"
+                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200"
                               title="Edit"
                             >
-                              Edit
+                              <EditIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => openDeleteModal(tahunAjaran.id)}
-                              className="px-3 py-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-all duration-200 text-xs font-semibold"
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200"
                               title="Hapus"
                             >
-                              Hapus
+                              <DeleteIcon className="w-5 h-5" />
                             </button>
                           </div>
                         </td>

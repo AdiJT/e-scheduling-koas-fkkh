@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon } from '../components/Icons';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -91,16 +92,16 @@ export default function LoginPage() {
           {/* Feature highlights */}
           <div className="space-y-4 text-left">
             {[
-              { icon: '🩺', title: 'Manajemen Rotasi Klinis', desc: 'Sistematisasi rotasi stase Fakultas Kedokteran dan Kedokteran Hewan' },
-              { icon: '🎓', title: 'E-Monitoring Akademik', desc: 'Pemantauan progress kelompok koas dan pembimbing secara terpadu' },
-              { icon: '📚', title: 'Transparansi Informasi', desc: 'Akses jadwal stase dan info klinis bagi seluruh civitas akademika' },
+              { icon: <StethoscopeIcon className="w-6 h-6 text-blue-300" />, title: 'Manajemen Rotasi Klinis', desc: 'Sistematisasi rotasi stase Fakultas Kedokteran dan Kedokteran Hewan' },
+              { icon: <MahasiswaIcon className="w-6 h-6 text-blue-300" />, title: 'E-Monitoring Akademik', desc: 'Pemantauan progress kelompok koas dan pembimbing secara terpadu' },
+              { icon: <BookIcon className="w-6 h-6 text-blue-300" />, title: 'Transparansi Informasi', desc: 'Akses jadwal stase dan info klinis bagi seluruh civitas akademika' },
             ].map((feature, i) => (
               <div
                 key={i}
                 className={`flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm transition-all duration-700 ${mounted ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}
                 style={{ transitionDelay: `${(i + 1) * 200}ms` }}
               >
-                <span className="text-2xl mt-0.5">{feature.icon}</span>
+                <span className="mt-0.5 flex items-center justify-center shrink-0">{feature.icon}</span>
                 <div>
                   <h3 className="text-white font-semibold text-sm">{feature.title}</h3>
                   <p className="text-blue-200/50 text-xs mt-0.5">{feature.desc}</p>
@@ -136,7 +137,7 @@ export default function LoginPage() {
             {/* Error Message */}
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm flex items-center gap-3 animate-scale-in shadow-sm">
-                <span className="text-lg">⚠️</span>
+                <InfoIcon className="w-5 h-5 text-red-500" />
                 <span>{error}</span>
               </div>
             )}
@@ -148,7 +149,7 @@ export default function LoginPage() {
               </label>
               <div className="relative group">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                  👤
+                  <UserIcon className="w-5 h-5" />
                 </span>
                 <input
                   type="text"
@@ -170,7 +171,7 @@ export default function LoginPage() {
               </label>
               <div className="relative group">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                  🔒
+                  <LockIcon className="w-5 h-5" />
                 </span>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -188,7 +189,7 @@ export default function LoginPage() {
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                   id="toggle-password"
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                 </button>
               </div>
             </div>

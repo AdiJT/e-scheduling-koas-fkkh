@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import { jadwalApi, type GenerateJadwalResult, type Jadwal } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { useAuth } from '../contexts/AuthContext';
+import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -143,12 +144,11 @@ export default function JadwalPage() {
     }
   };
 
-  const statusIcon = (status: string) => {
+  const renderStatusDot = (status: string) => {
     switch (status) {
-      case 'Berlangsung': return '🟢';
-      case 'Akan Datang': return '🔵';
-      case 'Selesai': return '⚪';
-      default: return '⚪';
+      case 'Berlangsung': return <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />;
+      case 'Akan Datang': return <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />;
+      default: return <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />;
     }
   };
 
@@ -340,7 +340,9 @@ export default function JadwalPage() {
       <div className="mb-6 animate-fade-in-down print:mb-4">
         <div className="flex items-center gap-3 print:hidden">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-2xl shadow-md">📅</div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shadow-md">
+            <JadwalIcon className="w-6 h-6" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Jadwal Stase' : 'Kelola Jadwal'}</h1>
             <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat jadwal stase KOAS Anda' : 'Kelola jadwal stase KOAS'}</p>
@@ -355,7 +357,7 @@ export default function JadwalPage() {
       {/* Error Alert */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
-          <span className="text-red-500 text-lg">⚠️</span>
+          <InfoIcon className="text-red-500 w-5 h-5" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
         </div>
@@ -385,16 +387,20 @@ export default function JadwalPage() {
             <button onClick={() => navigate('/jadwal/tambah')}
               className="p-4 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-blue transition-all flex items-center gap-4 group"
               id="btn-tambah-jadwal">
-              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                <EditIcon className="w-6 h-6" />
+              </div>
               <div className="text-left">
                 <p className="font-bold text-sm">Tambah Jadwal</p>
                 <p className="text-xs text-blue-200/60">Buat jadwal stase baru</p>
               </div>
             </button>
-        <button onClick={openGenerateModal} disabled={isGenerating}
-          className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
-          id="btn-generate-jadwal">
-              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">AI</div>
+            <button onClick={openGenerateModal} disabled={isGenerating}
+              className="p-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white rounded-2xl shadow-elevated hover:shadow-glow-red transition-all flex items-center gap-4 group disabled:opacity-70"
+              id="btn-generate-jadwal">
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                <SparklesIcon className="w-6 h-6" />
+              </div>
               <div className="text-left">
                 <p className="font-bold text-sm">{isGenerating ? 'Memproses...' : 'Generate Otomatis'}</p>
                 <p className="text-xs text-red-100/80">Susun semua jadwal yang belum ada</p>
@@ -405,7 +411,9 @@ export default function JadwalPage() {
         {!isPengelola && !isMahasiswa && !isDosen && (
           <button onClick={fetchData}
             className="p-4 bg-white border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 text-slate-600 hover:text-blue-600 rounded-2xl shadow-soft hover:shadow-card transition-all flex items-center gap-4 group">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-2xl transition-all">🔄</div>
+            <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-all">
+              <RefreshIcon className="w-6 h-6 text-slate-500 group-hover:text-blue-600" />
+            </div>
             <div className="text-left">
               <p className="font-bold text-sm">Refresh Data</p>
               <p className="text-xs text-slate-400">Muat ulang data dari server</p>
@@ -418,19 +426,29 @@ export default function JadwalPage() {
       {!loading && data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 animate-fade-in-up print:hidden">
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-lg shadow-md">📊</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shadow-md">
+              <JadwalIcon className="w-5 h-5" />
+            </div>
             <div><p className="text-xl font-bold text-primary-900">{data.length}</p><p className="text-xs text-slate-500">Total</p></div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center text-lg shadow-md">🟢</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center text-white shadow-md">
+              <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+            </div>
             <div><p className="text-xl font-bold text-primary-900">{countBerlangsung}</p><p className="text-xs text-slate-500">Berlangsung</p></div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-lg shadow-md">🔵</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-md">
+              <span className="w-2.5 h-2.5 rounded-full bg-white" />
+            </div>
             <div><p className="text-xl font-bold text-primary-900">{countAkanDatang}</p><p className="text-xs text-slate-500">Akan Datang</p></div>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-lg shadow-md">⚪</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white shadow-md">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
             <div><p className="text-xl font-bold text-primary-900">{countSelesai}</p><p className="text-xs text-slate-500">Selesai</p></div>
           </div>
         </div>
@@ -442,19 +460,19 @@ export default function JadwalPage() {
         <div className="flex bg-slate-100 p-1 rounded-xl w-max">
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
               viewMode === 'calendar' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📅 Tampilan Kalender
+            <JadwalIcon className="w-4 h-4" /> Tampilan Kalender
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
               viewMode === 'table' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📋 Tampilan Tabel
+            <ListIcon className="w-4 h-4" /> Tampilan Tabel
           </button>
         </div>
 
@@ -525,7 +543,9 @@ export default function JadwalPage() {
             </div>
           ) : filteredData.length === 0 ? (
             <div className="p-16 text-center print:hidden">
-              <span className="text-5xl block mb-4">📅</span>
+              <div className="flex justify-center mb-4 text-slate-300">
+                <JadwalIcon className="w-16 h-16" />
+              </div>
               <p className="text-slate-600 font-medium">Tidak ada jadwal ditemukan</p>
               <p className="text-sm text-slate-400 mt-1">
                 {isMahasiswa || isDosen ? 'Kamu belum memiliki jadwal stase' : 'Mulai dengan menambah jadwal baru'}
@@ -543,14 +563,14 @@ export default function JadwalPage() {
                       onClick={() => setShowDeleteAllModal(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
                     >
-                      🗑️ Hapus Semua
+                      <DeleteIcon className="w-4 h-4" /> Hapus Semua
                     </button>
                   )}
                   <button 
                   onClick={() => window.print()}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md"
                 >
-                  🖨️ Cetak PDF
+                  <PrintIcon className="w-4 h-4" /> Cetak PDF
                 </button>
                 </div>
               </div>
@@ -602,7 +622,7 @@ export default function JadwalPage() {
                         </td>
                         <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor(j.status)}`}>
-                            {statusIcon(j.status)} {j.status}
+                            {renderStatusDot(j.status)} {j.status}
                           </span>
                         </td>
                         <td className="px-4 md:px-5 py-3.5 print:hidden whitespace-nowrap">
@@ -612,14 +632,14 @@ export default function JadwalPage() {
                               className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100"
                               title="Lihat Detail Kelompok"
                             >
-                              👥
+                              <KelompokIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleDetail(j.id)}
                               className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                               title="Detail"
                             >
-                              👁️
+                              <DetailIcon className="w-5 h-5" />
                             </button>
                             {!isPengelola && !isMahasiswa && !isDosen && (
                               <button
@@ -627,7 +647,7 @@ export default function JadwalPage() {
                                 className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                                 title="Edit"
                               >
-                               ✏️
+                                <EditIcon className="w-5 h-5" />
                               </button>
                             )}
                             {!isPengelola && !isMahasiswa && !isDosen && (
@@ -636,7 +656,7 @@ export default function JadwalPage() {
                                 className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 print:opacity-100"
                                 title="Hapus"
                               >
-                                🗑️
+                                <DeleteIcon className="w-5 h-5" />
                               </button>
                             )}
                           </div>
@@ -767,7 +787,7 @@ export default function JadwalPage() {
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">⚠️</span>
+                <InfoIcon className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Jadwal?</h3>
               {selectedJadwal && (
@@ -805,7 +825,9 @@ export default function JadwalPage() {
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
             <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">ℹ️</div>
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <InfoIcon className="w-5 h-5" />
+                </div>
                 <h3 className="text-lg font-bold text-primary-900">Detail Jadwal</h3>
               </div>
               <button onClick={() => setShowDetailModal(false)} className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors">✕</button>
@@ -838,7 +860,7 @@ export default function JadwalPage() {
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-xs text-slate-500 mb-2">Status</p>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusColor(detailJadwal.status)}`}>
-                  {statusIcon(detailJadwal.status)} {detailJadwal.status}
+                  {renderStatusDot(detailJadwal.status)} {detailJadwal.status}
                 </span>
               </div>
             </div>
@@ -918,8 +940,8 @@ export default function JadwalPage() {
       {showHolidayModal && selectedHoliday && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">🌴</span>
+            <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-600">
+              <JadwalIcon className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold text-primary-900 mb-1">{selectedHoliday.title}</h3>
             <p className="text-sm text-slate-500 font-medium mb-6">
@@ -940,7 +962,7 @@ export default function JadwalPage() {
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">⚠️</span>
+                <InfoIcon className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Semua Jadwal?</h3>
               <p className="text-sm text-slate-500">Anda yakin ingin menghapus <strong>seluruh jadwal</strong>? Data yang dihapus tidak dapat dikembalikan.</p>

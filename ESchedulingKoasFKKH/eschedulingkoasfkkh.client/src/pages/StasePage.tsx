@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { staseApi, type Stase } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { StaseIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, SaveIcon, JadwalIcon as ClockIcon, StaseTerpisahIcon, StaseBersamaanIcon } from '../components/Icons';
 
 export default function StasePage() {
   const navigate = useNavigate();
@@ -114,11 +115,11 @@ export default function StasePage() {
   const getJenisColor = (jenis: string) => {
     return jenis === 'Terpisah'
       ? 'bg-amber-100 text-amber-700 border-amber-200'
-      : 'bg-pink-100 text-pink-700 border-pink-200';
+      : 'bg-blue-100 text-blue-700 border-blue-200';
   };
 
-  const getJenisIcon = (jenis: string) => {
-    return jenis === 'Terpisah' ? '🔶' : '🔷';
+  const renderJenisIcon = (jenis: string, className = "w-4 h-4") => {
+    return jenis === 'Terpisah' ? <StaseTerpisahIcon className={className} /> : <StaseBersamaanIcon className={className} />;
   };
 
   return (
@@ -127,7 +128,9 @@ export default function StasePage() {
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl shadow-md">🏥</div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+            <StaseIcon className="w-6 h-6" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
             <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
@@ -138,7 +141,7 @@ export default function StasePage() {
       {/* Error Alert */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
-          <span className="text-red-500 text-lg">⚠️</span>
+          <InfoIcon className="text-red-500 w-5 h-5" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
         </div>
@@ -148,7 +151,7 @@ export default function StasePage() {
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Cari stase..."
@@ -177,10 +180,10 @@ export default function StasePage() {
           {/* Refresh */}
           <button
             onClick={fetchData}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100
-              text-slate-600 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+            className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
+            title="Muat ulang data"
           >
-            🔄 Refresh
+            <RefreshIcon className="w-5 h-5" />
           </button>
 
           {/* Add Button */}
@@ -191,7 +194,7 @@ export default function StasePage() {
                 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2"
               id="btn-tambah-stase"
             >
-              + Tambah Stase
+              <span>+</span> Tambah Stase
             </button>
           )}
         </div>
@@ -201,7 +204,9 @@ export default function StasePage() {
       {!loading && data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xl shadow-md">📊</div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+              <StaseIcon className="w-6 h-6" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-primary-900">{data.length}</p>
               <p className="text-xs text-slate-500">Total Stase</p>
@@ -210,14 +215,18 @@ export default function StasePage() {
           {!isMahasiswa && !isDosen && (
             <>
               <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-xl shadow-md">🔶</div>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
+                  <StaseTerpisahIcon className="w-6 h-6" />
+                </div>
                 <div>
                   <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Terpisah').length}</p>
                   <p className="text-xs text-slate-500">Stase Terpisah</p>
                 </div>
               </div>
               <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-xl shadow-md">🔷</div>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-md">
+                  <StaseBersamaanIcon className="w-6 h-6" />
+                </div>
                 <div>
                   <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
                   <p className="text-xs text-slate-500">Stase Bersamaan</p>
@@ -237,7 +246,9 @@ export default function StasePage() {
           </div>
         ) : filteredData.length === 0 ? (
           <div className="p-16 text-center">
-            <span className="text-5xl block mb-4">🏥</span>
+            <div className="flex justify-center mb-4 text-slate-300">
+              <StaseIcon className="w-16 h-16" />
+            </div>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
               {searchTerm ? 'Coba ubah kata kunci pencarian' : 'Mulai dengan menambah stase baru'}
@@ -286,14 +297,14 @@ export default function StasePage() {
                       </td>
                       <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 whitespace-nowrap">
-                          ⏱️ {stase.waktu} Minggu
+                          <ClockIcon className="w-3.5 h-3.5" /> {stase.waktu} Minggu
                         </span>
                       </td>
                       {!isMahasiswa && !isDosen && (
                         <>
                           <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
-                              {getJenisIcon(stase.jenis)} {stase.jenis}
+                              {renderJenisIcon(stase.jenis, "w-3.5 h-3.5")} {stase.jenis}
                             </span>
                           </td>
                           <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
@@ -316,10 +327,10 @@ export default function StasePage() {
                           <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                             <button
                               onClick={() => navigate(`/stase/${stase.id}`)}
-                              className="p-2 rounded-lg text-purple-600 hover:bg-purple-100 transition-all duration-200 text-sm"
+                              className="p-2 rounded-lg text-purple-600 hover:bg-purple-100 transition-all duration-200"
                               title="Detail"
                             >
-                              👁️
+                              <DetailIcon className="w-5 h-5" />
                             </button>
                             {!isPengelola && !isDosen && (
                               <>
@@ -328,14 +339,14 @@ export default function StasePage() {
                                   className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
                                   title="Edit"
                                 >
-                                  ✏️
+                                  <EditIcon className="w-5 h-5" />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(stase.id)}
                                   className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
                                   title="Hapus"
                                 >
-                                  🗑️
+                                  <DeleteIcon className="w-5 h-5" />
                                 </button>
                               </>
                             )}
@@ -415,7 +426,12 @@ export default function StasePage() {
               >
                 {saving ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
-                ) : '💾 Simpan'}
+                ) : (
+                  <>
+                    <SaveIcon className="w-4 h-4" />
+                    Simpan
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -428,7 +444,7 @@ export default function StasePage() {
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-sm mx-4 animate-scale-in">
             <div className="text-center mb-5">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">⚠️</span>
+                <InfoIcon className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Stase?</h3>
               {selectedStase && (

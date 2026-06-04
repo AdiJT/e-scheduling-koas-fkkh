@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi } from '../services/api';
+import { KelompokIcon, SaveIcon, InfoIcon } from '../components/Icons';
 
 export default function TambahKelompokPage() {
   const navigate = useNavigate();
@@ -37,7 +38,9 @@ export default function TambahKelompokPage() {
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/kelompok')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-2xl shadow-md">👥</div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md">
+            <KelompokIcon className="w-6 h-6" />
+          </div>
           <div><h1 className="text-2xl font-bold text-primary-900">Buat Kelompok</h1><p className="text-sm text-slate-500">Buat kelompok baru</p></div>
         </div>
       </div>
@@ -80,7 +83,10 @@ export default function TambahKelompokPage() {
             {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
             
             <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-orange-800 mb-2">ℹ️ Informasi</h4>
+              <h4 className="text-sm font-semibold text-orange-800 mb-2 flex items-center gap-1.5">
+                <InfoIcon className="w-4 h-4" />
+                <span>Informasi</span>
+              </h4>
               <p className="text-xs text-orange-700 leading-relaxed">
                 Hanya Pengelola yang dapat menambahkan mahasiswa dan pembimbing ke dalam kelompok ini setelah kelompok berhasil dibuat. Penambahan dilakukan pada halaman detail kelompok.
               </p>
@@ -91,7 +97,7 @@ export default function TambahKelompokPage() {
             <button type="button" onClick={() => navigate('/kelompok')} className="px-6 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm">Batal</button>
             <button type="submit" disabled={isSubmitting}
               className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm disabled:opacity-70 flex items-center gap-2" id="btn-submit-kelompok">
-              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</> : '💾 Simpan Kelompok'}
+              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</> : <><SaveIcon className="w-5 h-5" /> Simpan Kelompok</>}
             </button>
           </div>
         </form>
