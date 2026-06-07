@@ -11,6 +11,7 @@ import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import Tooltip from '../components/Tooltip';
 
 const locales = {
   'id': idLocale,
@@ -693,13 +694,14 @@ export default function JadwalPage() {
                               {j.namaStase}
                             </span>
                           ) : (
-                            <button
-                              onClick={() => navigate(`/stase/${j.idStase}`)}
-                              className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100"
-                              title="Lihat Detail Stase"
-                            >
-                              {j.namaStase}
-                            </button>
+                            <Tooltip content="Lihat Detail Stase" position="bottom">
+                              <button
+                                onClick={() => navigate(`/stase/${j.idStase}`)}
+                                className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100"
+                              >
+                                {j.namaStase}
+                              </button>
+                            </Tooltip>
                           )}
                         </td>
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
@@ -716,37 +718,41 @@ export default function JadwalPage() {
                         </td>
                         <td className="px-4 md:px-5 py-3.5 print:hidden whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
-                              className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm"
-                              title="Lihat Detail Kelompok"
-                            >
-                              <KelompokIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDetail(j.id)}
-                              className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm print:opacity-100"
-                              title="Detail"
-                            >
-                              <DetailIcon className="w-5 h-5" />
-                            </button>
-                            {!isPengelola && !isMahasiswa && !isDosen && (
+                            <Tooltip content="Lihat Detail Kelompok" position="bottom">
                               <button
-                                onClick={() => handleOpenEdit(j)}
-                                className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm print:opacity-100"
-                                title="Edit"
+                                onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
+                                className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-all duration-200 text-sm"
                               >
-                                <EditIcon className="w-5 h-5" />
+                                <KelompokIcon className="w-5 h-5" />
                               </button>
+                            </Tooltip>
+                            <Tooltip content="Detail" position="bottom">
+                              <button
+                                onClick={() => handleDetail(j.id)}
+                                className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm print:opacity-100"
+                              >
+                                <DetailIcon className="w-5 h-5" />
+                              </button>
+                            </Tooltip>
+                            {!isPengelola && !isMahasiswa && !isDosen && (
+                              <Tooltip content="Edit" position="bottom">
+                                <button
+                                  onClick={() => handleOpenEdit(j)}
+                                  className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm print:opacity-100"
+                                >
+                                  <EditIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
                             )}
                             {!isPengelola && !isMahasiswa && !isDosen && (
-                              <button
-                                onClick={() => handleDelete(j.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm print:opacity-100"
-                                title="Hapus"
-                              >
-                                <DeleteIcon className="w-5 h-5" />
-                              </button>
+                              <Tooltip content="Hapus" position="bottom">
+                                <button
+                                  onClick={() => handleDelete(j.id)}
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm print:opacity-100"
+                                >
+                                  <DeleteIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
                             )}
                           </div>
                         </td>
@@ -763,16 +769,17 @@ export default function JadwalPage() {
                     Memiliki Total <span className="text-primary-900 font-bold">{totalItems}</span> Data
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
-                      title="Sebelumnya"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
+                    <Tooltip content="Sebelumnya" position="top">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    </Tooltip>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }).map((_, i) => {
                         const page = i + 1;
@@ -791,16 +798,17 @@ export default function JadwalPage() {
                         );
                       })}
                     </div>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
-                      title="Berikutnya"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                    <Tooltip content="Berikutnya" position="top">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               )}

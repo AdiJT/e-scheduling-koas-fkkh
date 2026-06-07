@@ -282,7 +282,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="text-center text-xs text-slate-400 mt-6">
-            © 2026 E-Scheduling FKKH UNDANA. All rights reserved.
+            © 2026 Universitas Nusa Cendana. All rights reserved.
           </p>
         </div>
       </div>
