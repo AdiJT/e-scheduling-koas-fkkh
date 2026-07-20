@@ -47,6 +47,9 @@ public class StaseController : ControllerBase
             stase.Nama,
             stase.Waktu,
             jenis = stase.Jenis.Humanize(),
+            idKoordinator = stase.Koordinator?.Id,
+            namaKoordinator = stase.Koordinator?.Nama,
+            nipKoordinator = stase.Koordinator?.NIP,
             daftarJadwal = stase.DaftarJadwal?.Select(j => new
             {
                 j.Id,
@@ -87,6 +90,9 @@ public class StaseController : ControllerBase
             x.Nama,
             x.Waktu,
             jenis = x.Jenis.Humanize(),
+            idKoordinator = x.Koordinator?.Id,
+            namaKoordinator = x.Koordinator?.Nama,
+            nipKoordinator = x.Koordinator?.NIP,
             daftarJadwal = x.DaftarJadwal?.Select(j => new
             {
                 j.Id,
@@ -348,6 +354,32 @@ public class StaseController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id:int}/koordinator")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> PilihKoordinator(int id, [FromBody] PilihKoordinatorStaseRequest request)
+    {
+        var stase = await _staseRepository.Get(id);
+        if (stase is null) return NotFound();
+
+        if (request.IdKoordinator.HasValue)
+        {
+            var pembimbing = await _pembimbingRepository.Get(request.IdKoordinator.Value);
+            if (pembimbing is null)
+                return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idKoordinator"] = $"Dosen dengan id '{request.IdKoordinator.Value}' tidak ditemukan" });
+
+            stase.Koordinator = pembimbing;
+        }
+        else
+        {
+            stase.Koordinator = null;
+        }
+
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+
+        return NoContent();
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
@@ -361,6 +393,11 @@ public class StaseController : ControllerBase
 
         return NoContent();
     }
+}
+
+public class PilihKoordinatorStaseRequest
+{
+    public int? IdKoordinator { get; set; }
 }
 
 public class PilihPembimbingSubStaseRequest

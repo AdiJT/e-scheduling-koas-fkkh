@@ -36,6 +36,10 @@ export default function DetailStasePage() {
   const [showManageDosen, setShowManageDosen] = useState(false);
   const [selectedDosenIds, setSelectedDosenIds] = useState<number[]>([]);
 
+  // Manage Koordinator Stase Modal State
+  const [showManageKoordinator, setShowManageKoordinator] = useState(false);
+  const [selectedKoordinatorId, setSelectedKoordinatorId] = useState<number | ''>('');
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -50,6 +54,7 @@ export default function DetailStasePage() {
       setStase(staseData);
       setPembimbingList(pembimbings);
       setSelectedDosenIds(staseData.daftarPembimbing?.map(p => p.id) || []);
+      setSelectedKoordinatorId(staseData.idKoordinator || '');
       
       // Filter schedules for this stase
       const filteredJadwal = allJadwal.filter((j) => j.idStase === staseId);
@@ -166,6 +171,20 @@ export default function DetailStasePage() {
     }
   };
 
+  const handleSaveKoordinator = async () => {
+    try {
+      setActionLoading(true);
+      await staseApi.pilihKoordinatorStase(staseId, selectedKoordinatorId !== '' ? Number(selectedKoordinatorId) : null);
+      setShowManageKoordinator(false);
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to save Koordinator Stase:", err);
+      alert("Gagal menyimpan Koordinator Stase.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Role-based filtering for Dosen: only show groups they supervise
   const displayedJadwal = jadwalList.filter((j) => {
     if (isDosen) {
@@ -215,6 +234,35 @@ export default function DetailStasePage() {
             <p className="text-sm text-slate-500">Informasi lengkap{isKodil ? ', sub-stase rotasi,' : ''} dan jadwal kelompok pada stase ini</p>
           </div>
         </div>
+      </div>
+
+      {/* Koordinator Stase Banner */}
+      <div className="mb-6 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 rounded-2xl p-5 text-white shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md text-white flex items-center justify-center font-bold text-xl shadow-inner border border-white/30">
+            👑
+          </div>
+          <div>
+            <span className="text-[11px] font-bold tracking-wider uppercase bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 text-purple-100">
+              Koordinator Stase
+            </span>
+            <h2 className="text-xl font-extrabold text-white mt-1">
+              {stase.namaKoordinator ? stase.namaKoordinator : 'Belum Ditunjuk'}
+            </h2>
+            {stase.nipKoordinator && (
+              <p className="text-xs text-purple-200 font-mono mt-0.5">NIP: {stase.nipKoordinator}</p>
+            )}
+          </div>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => { setSelectedKoordinatorId(stase.idKoordinator || ''); setShowManageKoordinator(true); }}
+            className="px-4 py-2 bg-white text-purple-900 hover:bg-purple-50 text-xs font-bold rounded-xl shadow-md transition-all self-start md:self-auto flex items-center gap-1.5 shrink-0"
+          >
+            <EditIcon className="w-4 h-4 text-purple-700" />
+            {stase.idKoordinator ? 'Ubah Koordinator' : 'Pilih Koordinator Stase'}
+          </button>
+        )}
       </div>
 
       {/* Info Cards */}
@@ -667,6 +715,49 @@ export default function DetailStasePage() {
                 className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {actionLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Kelola Koordinator Stase */}
+      {showManageKoordinator && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
+            <h3 className="text-lg font-bold text-primary-900 mb-2 flex items-center gap-2">
+              <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-indigo-500 rounded-full" />
+              Pilih Koordinator Stase {stase.nama}
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Pilih 1 Dosen Pembimbing sebagai Koordinator Stase <strong>{stase.nama}</strong> dari Dosen yang terdaftar.
+            </p>
+
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Koordinator Stase</label>
+                <select
+                  value={selectedKoordinatorId}
+                  onChange={(e) => setSelectedKoordinatorId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  <option value="">-- Tanpa Koordinator Stase --</option>
+                  {(stase.daftarPembimbing && stase.daftarPembimbing.length > 0 ? stase.daftarPembimbing : pembimbingList).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nama} (NIP: {p.nip})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowManageKoordinator(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm">Batal</button>
+              <button
+                onClick={handleSaveKoordinator}
+                disabled={actionLoading}
+                className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {actionLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><SaveIcon className="w-4 h-4" /> Simpan Koordinator</>}
               </button>
             </div>
           </div>

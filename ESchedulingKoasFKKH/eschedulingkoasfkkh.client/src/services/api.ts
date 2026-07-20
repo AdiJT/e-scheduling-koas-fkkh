@@ -253,6 +253,9 @@ export interface Stase {
     nama: string;
     waktu: number;
     jenis: string; // "Terpisah" or "Bersamaan"
+    idKoordinator?: number | null;
+    namaKoordinator?: string | null;
+    nipKoordinator?: string | null;
     daftarJadwal: {
         id: number;
         tanggalMulai: string;
@@ -313,6 +316,15 @@ export const staseApi = {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idPembimbingList }),
+        });
+        return handleResponse<void>(res);
+    },
+
+    pilihKoordinatorStase: async (staseId: number, idKoordinator: number | null): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/${staseId}/koordinator`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idKoordinator }),
         });
         return handleResponse<void>(res);
     },

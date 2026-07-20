@@ -349,6 +349,7 @@ export default function StasePage() {
                     >
                       Waktu {renderSortIndicator('waktu')}
                     </th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Koordinator Stase</th>
                     {!isMahasiswa && !isDosen && (
                       <>
                         <th
@@ -381,6 +382,16 @@ export default function StasePage() {
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 whitespace-nowrap">
                           <ClockIcon className="w-3.5 h-3.5" /> {stase.waktu} Minggu
                         </span>
+                      </td>
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        {stase.namaKoordinator ? (
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 w-fit">
+                            <span>👑</span>
+                            <span>{stase.namaKoordinator}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic font-mono">- Belum ditunjuk -</span>
+                        )}
                       </td>
                       {!isMahasiswa && !isDosen && (
                         <>

@@ -284,7 +284,7 @@ public class JadwalController : ControllerBase
         if (blockingErrors.Count > 0)
             return HelpersFunctions.BadRequest(blockingErrors);
 
-        var warnings = ValidasiEditJadwalPeringatan(jadwal, kelompok, stase, update.TanggalMulai);
+        var warnings = ValidasiEditJadwalPeringatan(jadwal, kelompok, stase, update);
         if (warnings.Count > 0 && !update.KonfirmasiOverride)
             return HelpersFunctions.Conflict(
                 warnings,
@@ -427,9 +427,10 @@ public class JadwalController : ControllerBase
         return errors;
     }
 
-    private Dictionary<string, string> ValidasiEditJadwalPeringatan(Jadwal jadwal, Kelompok kelompok, Stase stase, DateOnly tanggalMulaiBaru)
+    private Dictionary<string, string> ValidasiEditJadwalPeringatan(Jadwal jadwal, Kelompok kelompok, Stase stase, UpdateJadwal update)
     {
         var warnings = new Dictionary<string, string>();
+        var tanggalMulaiBaru = update.TanggalMulai;
         var tanggalSelesaiBaru = HitungTanggalSelesai(tanggalMulaiBaru, stase);
 
         if (_hariLiburService.HariLibur(tanggalMulaiBaru))
@@ -450,6 +451,28 @@ public class JadwalController : ControllerBase
             warnings["tabrakanKelompok"] =
                 $"Kelompok '{kelompok.Nama}' sudah memiliki stase '{tabrakanKelompok.Stase.Nama}' pada " +
                 $"{tabrakanKelompok.TanggalMulai:M/d/yyyy} - {tabrakanKelompok.TanggalSelesai(_hariLiburService):M/d/yyyy}.";
+        }
+
+        // Check Peringatan (Warning) Bentrok Dosen Pembimbing Stase Utama
+        int? targetPembimbingId = update.IdPembimbing ?? jadwal.Pembimbing?.Id;
+        if (targetPembimbingId.HasValue)
+        {
+            var targetPemb = _pembimbingRepository.Get(targetPembimbingId.Value).Result;
+            if (targetPemb is not null)
+            {
+                var allJadwal = _jadwalRepository.GetAll().Result;
+                var tabrakanDosen = allJadwal
+                    .Where(x => x.Id != jadwal.Id)
+                    .FirstOrDefault(x =>
+                        ApakahBertabrakan(tanggalMulaiBaru, tanggalSelesaiBaru, x.TanggalMulai, x.TanggalSelesai(_hariLiburService)) &&
+                        (x.Pembimbing?.Id == targetPembimbingId.Value || x.DaftarJadwalSubStase.Any(s => s.Pembimbing?.Id == targetPembimbingId.Value)));
+
+                if (tabrakanDosen is not null)
+                {
+                    warnings["tabrakanDosen"] =
+                        $"Peringatan Bentrok: Dosen '{targetPemb.Nama}' memiliki jadwal bimbingan lain di kelompok '{tabrakanDosen.Kelompok.Nama}' pada stase '{tabrakanDosen.Stase.Nama}' ({tabrakanDosen.TanggalMulai:M/d/yyyy} - {tabrakanDosen.TanggalSelesai(_hariLiburService):M/d/yyyy}).";
+                }
+            }
         }
 
         if (IsUjian(stase))

@@ -13,6 +13,7 @@ public class Stase : Entity<int>
     public List<Jadwal> DaftarJadwal { get; set; } = [];
     public List<SubStase> DaftarSubStase { get; set; } = [];
     public List<Pembimbing> DaftarPembimbing { get; set; } = [];
+    public Pembimbing? Koordinator { get; set; }
 }
 
 public enum JenisStase

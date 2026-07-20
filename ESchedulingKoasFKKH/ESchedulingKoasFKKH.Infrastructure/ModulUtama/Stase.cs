@@ -12,6 +12,7 @@ internal class StaseConfiguration : IEntityTypeConfiguration<Stase>
         builder.HasMany(x => x.DaftarJadwal).WithOne(y => y.Stase);
         builder.HasMany(x => x.DaftarSubStase).WithOne(y => y.Stase);
         builder.HasMany(x => x.DaftarPembimbing).WithMany(y => y.DaftarStase);
+        builder.HasOne(x => x.Koordinator).WithMany().IsRequired(false);
 
         builder.HasData(
             new Stase { Id = 1, Nama = "KODIL", Waktu = 7, Jenis = JenisStase.Terpisah },
@@ -48,12 +49,14 @@ internal class StaseRepository : IStaseRepository
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok)
         .Include(x => x.DaftarSubStase).ThenInclude(y => y.DaftarDefaultPembimbing)
         .Include(x => x.DaftarPembimbing)
+        .Include(x => x.Koordinator)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<Stase>> GetAll() => await _appDbContext.Stase
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok)
         .Include(x => x.DaftarSubStase).ThenInclude(y => y.DaftarDefaultPembimbing)
         .Include(x => x.DaftarPembimbing)
+        .Include(x => x.Koordinator)
         .ToListAsync();
 
     public async Task<bool> IsExist(string nama, int? id = null) => await _appDbContext.Stase
