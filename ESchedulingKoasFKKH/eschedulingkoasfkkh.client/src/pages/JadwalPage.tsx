@@ -3,7 +3,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, type GenerateJadwalResult, type Jadwal } from '../services/api';
+import { jadwalApi, staseApi, pembimbingApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { useAuth } from '../contexts/AuthContext';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
@@ -98,6 +98,12 @@ export default function JadwalPage() {
   const [editWarnings, setEditWarnings] = useState<Record<string, string>>({});
   const [editConfirmed, setEditConfirmed] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
+  const [selectedStase, setSelectedStase] = useState<Stase | null>(null);
+  const [editIdPembimbing, setEditIdPembimbing] = useState<number | ''>('');
+  const [editSubStaseDosen, setEditSubStaseDosen] = useState<Record<number, string>>({});
+  const [loadingEditData, setLoadingEditData] = useState(false);
   
   // Holiday Modal
   const [showHolidayModal, setShowHolidayModal] = useState(false);
@@ -277,13 +283,37 @@ export default function JadwalPage() {
     setShowDeleteModal(true);
   };
 
-  const handleOpenEdit = (jadwal: Jadwal) => {
+  const handleOpenEdit = async (jadwal: Jadwal) => {
     setEditingJadwal(jadwal);
     setEditTanggalMulai(jadwal.tanggalMulai);
     setEditErrors({});
     setEditWarnings({});
     setEditConfirmed(false);
+    setEditIdPembimbing(jadwal.idPembimbing || '');
+
+    // Prefill sub-stase pembimbing map
+    const subDosenMap: Record<number, string> = {};
+    if (jadwal.daftarSubStase) {
+      jadwal.daftarSubStase.forEach(s => {
+        subDosenMap[s.idSubStase] = s.idPembimbing ? s.idPembimbing.toString() : '';
+      });
+    }
+    setEditSubStaseDosen(subDosenMap);
     setShowEditModal(true);
+
+    try {
+      setLoadingEditData(true);
+      const [staseDetail, allPembimbing] = await Promise.all([
+        staseApi.get(jadwal.idStase),
+        pembimbingApi.getAll()
+      ]);
+      setSelectedStase(staseDetail);
+      setPembimbingList(allPembimbing);
+    } catch (err) {
+      console.error("Failed to load stase or pembimbing details for edit modal:", err);
+    } finally {
+      setLoadingEditData(false);
+    }
   };
 
   const handleEditDateChange = (value: string) => {
@@ -323,9 +353,19 @@ export default function JadwalPage() {
       setIsSavingEdit(true);
       setEditErrors({});
 
+      // Format sub-stase pembimbing payload
+      const daftarSubStasePembimbing = selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0
+        ? selectedStase.daftarSubStase.map(sub => ({
+            idSubStase: sub.id,
+            idPembimbing: editSubStaseDosen[sub.id] ? parseInt(editSubStaseDosen[sub.id]) : null
+          }))
+        : undefined;
+
       const updated = await jadwalApi.update(editingJadwal.id, {
         tanggalMulai: editTanggalMulai,
         konfirmasiOverride: editConfirmed,
+        idPembimbing: editIdPembimbing !== '' ? Number(editIdPembimbing) : null,
+        daftarSubStasePembimbing
       });
 
       setData(prev => prev.map(item => item.id === updated.id ? updated : item));
@@ -819,12 +859,13 @@ export default function JadwalPage() {
 
       {/* Edit Modal */}
       {showEditModal && editingJadwal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
-            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-auto animate-scale-in flex flex-col max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4 shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-primary-900">Edit Jadwal</h3>
-                <p className="text-sm text-slate-500">Ubah tanggal mulai untuk jadwal yang dipilih.</p>
+                <p className="text-sm text-slate-500">Ubah tanggal mulai atau dosen pembimbing.</p>
               </div>
               <button
                 onClick={() => {
@@ -834,13 +875,14 @@ export default function JadwalPage() {
                   setEditWarnings({});
                   setEditConfirmed(false);
                 }}
-                className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors"
+                className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors font-bold text-lg"
               >
-                x
+                ✕
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
+            {/* Scrollable Form Content */}
+            <div className="space-y-4 mb-6 overflow-y-auto pr-2 flex-1 max-h-[60vh]">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-xs text-slate-500 mb-1">Kelompok</p>
                 <p className="font-semibold text-slate-800">{editingJadwal.namaKelompok}</p>
@@ -857,9 +899,65 @@ export default function JadwalPage() {
                   type="date"
                   value={editTanggalMulai}
                   onChange={(e) => handleEditDateChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
                 />
               </div>
+
+              {/* Dosen Pembimbing Section */}
+              {loadingEditData ? (
+                <div className="py-4 text-center">
+                  <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">Memuat opsi dosen pembimbing...</p>
+                </div>
+              ) : selectedStase && (
+                <>
+                  {/* Standard Stase Advisor */}
+                  {(!selectedStase.daftarSubStase || selectedStase.daftarSubStase.length === 0) ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Dosen Pembimbing Stase</label>
+                      <select
+                        value={editIdPembimbing}
+                        onChange={(e) => setEditIdPembimbing(e.target.value !== '' ? Number(e.target.value) : '')}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer"
+                      >
+                        <option value="">Pilih Dosen Pembimbing (opsional)</option>
+                        {(selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0
+                          ? pembimbingList.filter(p => selectedStase.daftarPembimbing?.some(sp => sp.id === p.id))
+                          : pembimbingList
+                        ).map(p => (
+                          <option key={p.id} value={p.id}>{p.nama} (NIP: {p.nip || '-'})</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    /* KODIL Sub-stase Advisors */
+                    <div className="space-y-3">
+                      <p className="text-sm font-bold text-slate-700">Dosen Pembimbing Per Sub-Stase</p>
+                      {selectedStase.daftarSubStase.map((sub) => {
+                        const subAvailableDosen = sub.daftarDefaultPembimbing && sub.daftarDefaultPembimbing.length > 0
+                          ? pembimbingList.filter(p => sub.daftarDefaultPembimbing?.some(dp => dp.id === p.id))
+                          : pembimbingList;
+
+                        return (
+                          <div key={sub.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Sub-Stase: {sub.nama}</span>
+                            <select
+                              value={editSubStaseDosen[sub.id] || ''}
+                              onChange={(e) => setEditSubStaseDosen(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                              className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                            >
+                              <option value="">Pilih Pembimbing Sub-Stase (opsional)</option>
+                              {subAvailableDosen.map(p => (
+                                <option key={p.id} value={p.id}>{p.nama}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
 
               {editErrors.general && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
@@ -899,7 +997,8 @@ export default function JadwalPage() {
               )}
             </div>
 
-            <div className="flex gap-3">
+            {/* Footer */}
+            <div className="flex gap-3 pt-4 border-t border-slate-100 shrink-0">
               <button
                 onClick={() => {
                   setShowEditModal(false);
@@ -920,7 +1019,7 @@ export default function JadwalPage() {
               >
                 {isSavingEdit ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
-                ) : Object.keys(editWarnings).length > 0 ? 'Konfirmasi Perubahan' : 'Simpan Perubahan'}
+                ) : Object.keys(editWarnings).length > 0 ? 'Konfirmasi' : 'Simpan'}
               </button>
             </div>
           </div>
