@@ -6,6 +6,8 @@ import { kelompokApi, pembimbingApi, type Kelompok, type Pembimbing } from '../s
 import { useAuth } from '../contexts/AuthContext';
 import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
 
+import Tooltip from '../components/Tooltip';
+
 const colors = [
   'from-blue-500 to-blue-600', 'from-emerald-500 to-green-600', 'from-purple-500 to-purple-600',
   'from-orange-500 to-orange-600', 'from-rose-500 to-red-600', 'from-cyan-500 to-cyan-600',
@@ -151,13 +153,14 @@ export default function KelompokPage() {
             <input type="text" placeholder="Cari kelompok..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 transition-all" id="search-kelompok" />
           </div>
-          <button
-            onClick={fetchData}
-            className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
-            title="Muat ulang data"
-          >
-            <RefreshIcon className="w-5 h-5" />
-          </button>
+          <Tooltip content="Muat ulang data" position="bottom">
+            <button
+              onClick={fetchData}
+              className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
+            >
+              <RefreshIcon className="w-5 h-5" />
+            </button>
+          </Tooltip>
           {!isPengelola && !isMahasiswa && !isDosen && (
             <button onClick={() => navigate('/kelompok/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm flex items-center gap-2" id="btn-tambah-kelompok">
             <span>+</span> Buat Kelompok

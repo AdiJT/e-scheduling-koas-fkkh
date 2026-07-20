@@ -230,13 +230,13 @@ export default function Sidebar({
           <button
             onClick={handleLogout}
             id="btn-logout"
-            className={`mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-300/70 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 ${collapsed ? 'justify-center' : ''}`}
+            className={`mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full text-sm font-bold text-[#ff4b60] bg-[#27141e] hover:bg-[#3b1826] transition-all duration-200 ${collapsed ? 'justify-center px-2' : ''}`}
             title="Logout"
           >
-            <span className="text-lg">
+            <span className="text-lg flex items-center">
               <LogoutIcon className="w-5 h-5" />
             </span>
-            {!collapsed && <span className="animate-fade-in">Logout</span>}
+            {!collapsed && <span className="animate-fade-in">Keluar Akun</span>}
           </button>
         </div>
       </aside>
