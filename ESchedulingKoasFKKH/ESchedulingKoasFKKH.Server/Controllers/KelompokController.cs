@@ -16,17 +16,20 @@ public class KelompokController : ControllerBase
 {
     private readonly IKelompokRepository _kelompokRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
+    private readonly IRiwayatKelompokRepository _riwayatKelompokRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
         IMahasiswaRepository mahasiswaRepository,
+        IRiwayatKelompokRepository riwayatKelompokRepository,
         IUnitOfWork unitOfWork,
         IHariLiburService hariLiburService)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
+        _riwayatKelompokRepository = riwayatKelompokRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
     }
@@ -34,6 +37,7 @@ public class KelompokController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id)
     {
+        await AutoArchiveCompletedSchedulesAsync();
         var kelompok = await _kelompokRepository.Get(id);
         if (kelompok is null) return NotFound();
 
@@ -71,6 +75,7 @@ public class KelompokController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        await AutoArchiveCompletedSchedulesAsync();
         var allKelompok = await _kelompokRepository.GetAll();
 
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen) || User.IsInRole(UserRoles.Mahasiswa))
@@ -231,5 +236,66 @@ public class KelompokController : ControllerBase
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
         return NoContent();
+    }
+
+    private async Task AutoArchiveCompletedSchedulesAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var allKelompoks = await _kelompokRepository.GetAll();
+        var existingRiwayatIds = (await _riwayatKelompokRepository.GetAll()).Select(r => r.IdJadwalAsal).ToHashSet();
+
+        bool dataChanged = false;
+        foreach (var kel in allKelompoks)
+        {
+            foreach (var j in kel.DaftarJadwal)
+            {
+                var tglSelesai = j.TanggalSelesai(_hariLiburService);
+                if (tglSelesai < today && !existingRiwayatIds.Contains(j.Id))
+                {
+                    // Extract Tahun Ajaran from students
+                    string tahunAjaranStr = "N/A";
+                    if (kel.DaftarMahasiswa.Count > 0)
+                    {
+                        var firstStudent = kel.DaftarMahasiswa.First();
+                        if (firstStudent.TahunAjaran is not null)
+                        {
+                            tahunAjaranStr = $"{firstStudent.TahunAjaran.Tahun} - {firstStudent.TahunAjaran.Semester}";
+                        }
+                    }
+
+                    var mhsList = kel.DaftarMahasiswa.Select(m => new { m.NIM, m.Nama }).ToList();
+                    var subStasesList = j.DaftarJadwalSubStase.Select(sub => new
+                    {
+                        namaSubStase = sub.SubStase?.Nama,
+                        namaPembimbing = sub.Pembimbing?.Nama,
+                        nipPembimbing = sub.Pembimbing?.NIP
+                    }).ToList();
+
+                    var riwayat = new RiwayatKelompok
+                    {
+                        IdJadwalAsal = j.Id,
+                        NamaKelompok = kel.Nama,
+                        TahunAjaran = tahunAjaranStr,
+                        NamaStase = j.Stase?.Nama ?? "N/A",
+                        TanggalMulai = j.TanggalMulai,
+                        TanggalSelesai = tglSelesai,
+                        NamaPembimbing = j.Pembimbing?.Nama,
+                        NipPembimbing = j.Pembimbing?.NIP,
+                        DaftarMahasiswaJson = System.Text.Json.JsonSerializer.Serialize(mhsList),
+                        DaftarSubStaseJson = System.Text.Json.JsonSerializer.Serialize(subStasesList),
+                        TanggalDiarsipkan = DateTime.UtcNow
+                    };
+
+                    _riwayatKelompokRepository.Add(riwayat);
+                    existingRiwayatIds.Add(j.Id);
+                    dataChanged = true;
+                }
+            }
+        }
+
+        if (dataChanged)
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

@@ -28,7 +28,7 @@ internal class KelompokRepository : IKelompokRepository
     public void Delete(Kelompok kelompok) => _appDbContext.Kelompok.Remove(kelompok);
 
     public async Task<Kelompok?> Get(int id) => await _appDbContext.Kelompok
-        .Include(x => x.DaftarMahasiswa)
+        .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.DaftarJadwalSubStase).ThenInclude(x => x.SubStase)
@@ -36,7 +36,7 @@ internal class KelompokRepository : IKelompokRepository
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<Kelompok>> GetAll() => await _appDbContext.Kelompok
-        .Include(x => x.DaftarMahasiswa)
+        .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.DaftarJadwalSubStase).ThenInclude(x => x.SubStase)

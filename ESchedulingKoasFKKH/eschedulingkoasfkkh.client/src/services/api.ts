@@ -282,6 +282,21 @@ export interface UpdateStase {
     jenis: string;
 }
 
+export interface RiwayatKelompok {
+    id: number;
+    idJadwalAsal: number;
+    namaKelompok: string;
+    tahunAjaran: string;
+    namaStase: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    namaPembimbing?: string | null;
+    nipPembimbing?: string | null;
+    daftarMahasiswa: { nim: string; nama: string }[];
+    daftarSubStase: { namaSubStase: string; namaPembimbing?: string | null; nipPembimbing?: string | null }[];
+    tanggalDiarsipkan: string;
+}
+
 export const staseApi = {
     getAll: async (): Promise<Stase[]> => {
         const res = await apiFetch(`${BASE_URL}/stase`);
@@ -600,6 +615,19 @@ export const jadwalApi = {
   },
   deleteAll: async (): Promise<void> => {
     const res = await apiFetch(`${BASE_URL}/Jadwal/all`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+export const riwayatKelompokApi = {
+  getAll: async (): Promise<RiwayatKelompok[]> => {
+    const res = await apiFetch(`${BASE_URL}/riwayat-kelompok`);
+    return handleResponse<RiwayatKelompok[]>(res);
+  },
+  delete: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/riwayat-kelompok/${id}`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);

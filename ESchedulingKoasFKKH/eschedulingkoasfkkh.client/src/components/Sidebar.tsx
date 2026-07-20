@@ -11,6 +11,7 @@ import {
   KelompokIcon,
   JadwalIcon,
   LogoutIcon,
+  HistoryIcon,
 } from './Icons';
 
 interface NavItem {
@@ -44,7 +45,8 @@ const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
         title: 'Penjadwalan',
         items: [
           { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
-          { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' }
+          { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
+          { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
         ]
       }
     ];
@@ -70,7 +72,8 @@ const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
       title: 'Penjadwalan',
       items: [
         { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
-        { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' }
+        { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
+        { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
       ]
     }
   ];
