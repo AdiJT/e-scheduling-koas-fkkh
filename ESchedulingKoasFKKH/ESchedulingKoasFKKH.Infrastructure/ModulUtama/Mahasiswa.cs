@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
 using System.Collections.Generic;
@@ -56,22 +56,19 @@ internal class MahasiswaRepository : IMahasiswaRepository
     public void Delete(Mahasiswa mahasiswa) => _appDbContext.Mahasiswa.Remove(mahasiswa);
 
     public async Task<Mahasiswa?> Get(int id) => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
-        .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Mahasiswa?> Get(string nim) => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
-        .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.NIM == nim);
 
     public async Task<List<Mahasiswa>> GetAll() => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal)
-        .Include(x => x.Kelompok).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
         .ToListAsync();

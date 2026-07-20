@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi, pembimbingApi, type Kelompok, type Pembimbing } from '../services/api';
+import { kelompokApi, type Kelompok } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
 
@@ -20,7 +20,6 @@ export default function KelompokPage() {
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [data, setData] = useState<Kelompok[]>([]);
-  const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,12 +37,8 @@ export default function KelompokPage() {
     try {
       setLoading(true);
       setError(null);
-      const [kelompokData, pembimbingData] = await Promise.all([
-        kelompokApi.getAll(),
-        pembimbingApi.getAll(),
-      ]);
+      const kelompokData = await kelompokApi.getAll();
       setData(kelompokData);
-      setPembimbingList(pembimbingData);
     } catch {
       setError('Gagal memuat data kelompok. Pastikan server backend sedang berjalan.');
     } finally {
@@ -58,11 +53,6 @@ export default function KelompokPage() {
   const filteredData = data.filter(k => {
     return k.nama.toLowerCase().includes(searchTerm.toLowerCase());
   });
-
-  const getPembimbingNama = (idPembimbing: number | null) => {
-    if (!idPembimbing) return null;
-    return pembimbingList.find(p => p.id === idPembimbing)?.nama || null;
-  };
 
   // === DELETE ===
   const handleDelete = (id: number) => {
@@ -195,8 +185,6 @@ export default function KelompokPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredData.map((kel, i) => {
-                const pembimbingNama = getPembimbingNama(kel.idPembimbing);
-                
                 // Determine current stase
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -206,6 +194,10 @@ export default function KelompokPage() {
                   return today >= start && today <= end;
                 });
                 const currentStase = currentJadwal?.namaStase;
+                const isKodil = currentStase?.toLowerCase().includes('kodil') || currentJadwal?.idStase === 1;
+                const currentDosen = isKodil
+                  ? (currentJadwal?.daftarSubStase?.length ? `${currentJadwal.daftarSubStase.length} Dosen Spesialis Sub-Stase` : '5 Dosen Spesialis Kodil')
+                  : (currentJadwal?.namaPembimbing || 'Belum diatur');
 
                 return (
                   <div key={kel.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
@@ -234,28 +226,31 @@ export default function KelompokPage() {
 
                       <div className="space-y-2 mb-4 text-xs text-slate-500">
                         <p className="flex items-center gap-1.5">
-                          <DosenIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span>Pembimbing: {pembimbingNama || <span className="text-slate-400 italic">Belum ditentukan</span>}</span>
+                          <MahasiswaIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>{kel.daftarMahasiswa.length} Anggota Mahasiswa</span>
                         </p>
                         <p className="flex items-center gap-1.5">
-                          <MahasiswaIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span>{kel.daftarMahasiswa.length} Anggota</span>
+                          <JadwalIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>{kel.daftarJadwal.length} Stase Terjadwal</span>
                         </p>
-                        <p className="flex justify-between items-center gap-1.5">
-                          <span className="flex items-center gap-1.5">
-                            <JadwalIcon className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span>{kel.daftarJadwal.length} Jadwal</span>
-                          </span>
+                        <div className="pt-2 border-t border-slate-100">
                           {currentStase ? (
-                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold border border-green-100">
-                              Sedang Stase: {currentStase}
-                            </span>
+                            <div className="space-y-1 bg-green-50/70 p-2.5 rounded-xl border border-green-100">
+                              <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                Stase Aktif: <strong>{currentStase}</strong>
+                              </p>
+                              <p className="text-xs text-slate-700 flex items-center gap-1 font-medium">
+                                <DosenIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{currentDosen}</span>
+                              </p>
+                            </div>
                           ) : (
-                            <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[10px] font-medium border border-slate-200">
-                              Tidak ada stase aktif
-                            </span>
+                            <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 text-center">
+                              Tidak ada stase aktif saat ini
+                            </div>
                           )}
-                        </p>
+                        </div>
                       </div>
                       <div className="flex gap-2 pt-3 border-t border-slate-100">
                         {editingId === kel.id ? (
@@ -279,7 +274,7 @@ export default function KelompokPage() {
                         ) : (
                           <>
                             <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1">
-                              <DetailIcon className="w-4 h-4" /> Detail
+                              <DetailIcon className="w-4 h-4" /> Detail & Jadwal Dosen
                             </button>
                             {!isPengelola && !isMahasiswa && !isDosen && (
                               <>

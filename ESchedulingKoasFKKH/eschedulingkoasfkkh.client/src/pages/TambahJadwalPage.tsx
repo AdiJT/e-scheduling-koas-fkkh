@@ -2,50 +2,54 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, kelompokApi, staseApi, pembimbingApi, type Kelompok, type Stase, type Pembimbing } from '../services/api';
-import { calculateEndDate, formatDateDisplay, getHolidaysInRange } from '../utils/holidays';
-import { JadwalIcon, SaveIcon, InfoIcon, DosenIcon } from '../components/Icons';
+import { kelompokApi, staseApi, pembimbingApi, jadwalApi, type Kelompok, type Stase, type Pembimbing } from '../services/api';
+import { calculateEndDate, formatDateDisplay } from '../utils/holidays';
+import { SaveIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
 
 export default function TambahJadwalPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ idKelompok: '', idStase: '', tanggalMulai: '', idPembimbing: '' });
-  const [subStaseDosen, setSubStaseDosen] = useState<Record<number, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Data from API for dropdowns
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
   const [staseList, setStaseList] = useState<Stase[]>([]);
   const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Calculated end date
-  const [endDate, setEndDate] = useState<string>('');
-  const [selectedStase, setSelectedStase] = useState<Stase | null>(null);
+  const [form, setForm] = useState({
+    tanggalMulai: '',
+    idKelompok: '',
+    idStase: '',
+    idPembimbing: '',
+  });
 
-  // Load dropdown data
+  // Single Dosen per Sub-Stase: Record<idSubStase, string (idPembimbing)>
+  const [subStaseDosen, setSubStaseDosen] = useState<Record<number, string>>({});
+  const [selectedStase, setSelectedStase] = useState<Stase | null>(null);
+  const [endDate, setEndDate] = useState<string>('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
-        const [kelompoks, stases, pembimbings] = await Promise.all([
+        setLoadingData(true);
+        const [kelompokData, staseData, pembimbingData] = await Promise.all([
           kelompokApi.getAll(),
           staseApi.getAll(),
           pembimbingApi.getAll(),
         ]);
-        setKelompokList(kelompoks);
-        setStaseList(stases);
-        setPembimbingList(pembimbings);
-      } catch {
-        setErrors({ general: 'Gagal memuat data. Pastikan server backend berjalan.' });
+        setKelompokList(kelompokData);
+        setStaseList(staseData);
+        setPembimbingList(pembimbingData);
+      } catch (err) {
+        console.error("Failed to load initial data for TambahJadwal:", err);
       } finally {
         setLoadingData(false);
       }
     };
-    loadData();
+    fetchData();
   }, []);
 
-  // Calculate end date when stase or start date changes
+  // Calculate end date & set sub-stase default pembimbing when stase or start date changes
   useEffect(() => {
     if (form.tanggalMulai && form.idStase) {
       const stase = staseList.find(s => s.id === parseInt(form.idStase));
@@ -54,11 +58,14 @@ export default function TambahJadwalPage() {
         const calculated = calculateEndDate(form.tanggalMulai, stase.waktu);
         setEndDate(calculated);
 
-        // Pre-fill default pembimbing for sub-stases if available
+        // Pre-fill initial pembimbing for sub-stases if available
         if (stase.daftarSubStase && stase.daftarSubStase.length > 0) {
           const initialSubs: Record<number, string> = {};
           stase.daftarSubStase.forEach(sub => {
-            initialSubs[sub.id] = sub.idDefaultPembimbing ? sub.idDefaultPembimbing.toString() : '';
+            const firstDefaultId = sub.daftarDefaultPembimbing && sub.daftarDefaultPembimbing.length > 0
+              ? sub.daftarDefaultPembimbing[0].id.toString()
+              : (sub.idDefaultPembimbing ? sub.idDefaultPembimbing.toString() : '');
+            initialSubs[sub.id] = firstDefaultId;
           });
           setSubStaseDosen(initialSubs);
         } else {
@@ -120,42 +127,38 @@ export default function TambahJadwalPage() {
     }
   };
 
-  // Get holidays in the range for info display
-  const holidaysInRange = endDate && form.tanggalMulai
-    ? getHolidaysInRange(form.tanggalMulai, endDate)
-    : [];
-
-  // Unique holiday names
-  const uniqueHolidays = [...new Map(holidaysInRange.map(h => [h.date, h])).values()];
-
   return (
     <Layout>
+      {/* Header */}
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/jadwal')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shadow-md">
             <JadwalIcon className="w-6 h-6" />
           </div>
-          <div><h1 className="text-2xl font-bold text-primary-900">Tambah Jadwal</h1><p className="text-sm text-slate-500">Buat jadwal stase baru</p></div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary-900">Tambah Jadwal Baru</h1>
+            <p className="text-sm text-slate-500">Susun jadwal stase untuk kelompok mahasiswa</p>
+          </div>
         </div>
       </div>
 
+      {/* Success Notification */}
       {showSuccess && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-elevated p-8 text-center animate-scale-in">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"><span className="text-4xl">✅</span></div>
-            <h3 className="text-xl font-bold text-primary-900 mb-2">Berhasil!</h3>
-            <p className="text-slate-500">Jadwal berhasil ditambahkan</p>
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 animate-fade-in">
+          <span className="text-xl">✅</span>
+          <div>
+            <p className="font-bold text-sm">Jadwal berhasil disimpan!</p>
+            <p className="text-xs text-emerald-600">Mengalihkan ke halaman kelola jadwal...</p>
           </div>
         </div>
       )}
 
       {/* General Error */}
       {errors.general && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
-          <span className="text-red-500 text-lg">⚠️</span>
-          <p className="text-sm text-red-700 flex-1">{errors.general}</p>
-          <button onClick={() => setErrors({})} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700 animate-fade-in">
+          <InfoIcon className="w-5 h-5 text-red-500 shrink-0" />
+          <p className="text-sm font-medium">{errors.general}</p>
         </div>
       )}
 
@@ -231,64 +234,94 @@ export default function TambahJadwalPage() {
                 </div>
 
                 {/* Dosen Pembimbing untuk Stase Standar */}
-                {selectedStase && (!selectedStase.daftarSubStase || selectedStase.daftarSubStase.length === 0) && (
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                      <DosenIcon className="w-4 h-4 text-emerald-600" />
-                      <span>Dosen Pembimbing Stase</span>
-                    </label>
-                    <select
-                      name="idPembimbing"
-                      value={form.idPembimbing}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer"
-                    >
-                      <option value="">Pilih Dosen Pembimbing (opsional)</option>
-                      {pembimbingList.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.nama} (NIP: {p.nip})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-slate-400 mt-1">Dosen yang akan membimbing kelompok ini khusus pada stase {selectedStase.nama}</p>
-                  </div>
-                )}
+                {selectedStase && (!selectedStase.daftarSubStase || selectedStase.daftarSubStase.length === 0) && (() => {
+                  const staseDosenList = selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0
+                    ? pembimbingList.filter(p => selectedStase.daftarPembimbing?.some(sp => sp.id === p.id))
+                    : pembimbingList;
 
-                {/* Dosen Pembimbing untuk Stase KODIL (Sub-Stase) */}
-                {selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0 && (
-                  <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs">✨</div>
-                      <div>
-                        <h3 className="text-sm font-bold text-purple-950">Dosen Pembimbing Spesialis Sub-Stase {selectedStase.nama}</h3>
-                        <p className="text-xs text-purple-700">Tentukan dosen penanggung jawab untuk tiap sub-stase rotasi Kodil ini</p>
+                  return (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <DosenIcon className="w-4 h-4 text-emerald-600" />
+                          <span>Dosen Pembimbing Stase</span>
+                        </span>
+                        {selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            {staseDosenList.length} Dosen Terdaftar di Stase Ini
+                          </span>
+                        )}
+                      </label>
+                      <select
+                        name="idPembimbing"
+                        value={form.idPembimbing}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer"
+                      >
+                        <option value="">Pilih Dosen Pembimbing (opsional)</option>
+                        {staseDosenList.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.nama} (NIP: {p.nip})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-400 mt-1">Dosen yang akan membimbing kelompok ini khusus pada stase {selectedStase.nama}</p>
+                    </div>
+                  );
+                })()}
+
+                {/* Dosen Pembimbing untuk Stase KODIL (Sub-Stase) - Single Select Dropdown */}
+                {selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0 && (() => {
+                  const staseDosenList = selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0
+                    ? pembimbingList.filter(p => selectedStase.daftarPembimbing?.some(sp => sp.id === p.id))
+                    : pembimbingList;
+
+                  return (
+                    <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs">✨</div>
+                          <div>
+                            <h3 className="text-sm font-bold text-purple-950">Dosen Pembimbing Spesialis Sub-Stase {selectedStase.nama}</h3>
+                            <p className="text-xs text-purple-700">Pilih 1 dosen penanggung jawab untuk tiap sub-stase rotasi kelompok ini</p>
+                          </div>
+                        </div>
+                        {selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                            {staseDosenList.length} Dosen Terdaftar
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        {selectedStase.daftarSubStase.map(sub => {
+                          const subAvailableDosen = sub.daftarDefaultPembimbing && sub.daftarDefaultPembimbing.length > 0
+                            ? pembimbingList.filter(p => sub.daftarDefaultPembimbing?.some(dp => dp.id === p.id))
+                            : staseDosenList;
+
+                          return (
+                            <div key={sub.id} className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
+                                <span className="text-sm font-bold text-slate-800">{sub.nama}</span>
+                              </div>
+                              <select
+                                value={subStaseDosen[sub.id] || ''}
+                                onChange={(e) => handleSubStaseDosenChange(sub.id, e.target.value)}
+                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500 focus:bg-white cursor-pointer min-w-[220px]"
+                              >
+                                <option value="">Pilih Dosen Spesialis</option>
+                                {subAvailableDosen.map(p => (
+                                  <option key={p.id} value={p.id}>{p.nama}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-
-                    <div className="space-y-3 pt-2">
-                      {selectedStase.daftarSubStase.map(sub => (
-                        <div key={sub.id} className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
-                            <span className="text-sm font-bold text-slate-800">{sub.nama}</span>
-                          </div>
-                          <select
-                            value={subStaseDosen[sub.id] || ''}
-                            onChange={(e) => handleSubStaseDosenChange(sub.id, e.target.value)}
-                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500 focus:bg-white cursor-pointer min-w-[220px]"
-                          >
-                            <option value="">Pilih Dosen Spesialis</option>
-                            {pembimbingList.map(p => (
-                              <option key={p.id} value={p.id}>
-                                {p.nama}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Calculated End Date (Read-Only) */}
                 {endDate && (
@@ -315,88 +348,26 @@ export default function TambahJadwalPage() {
             </form>
           </div>
 
-          {/* Side Panel - Holidays Info */}
-          <div className="space-y-4">
-            {/* Schedule Preview */}
-            {selectedStase && form.tanggalMulai && endDate && (
-              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
-                  <h3 className="text-sm font-bold text-primary-900 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
-                    Preview Jadwal
-                  </h3>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Stase</span>
-                    <span className="font-medium text-primary-900">{selectedStase.nama}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Durasi</span>
-                    <span className="font-medium text-purple-600">{selectedStase.waktu} minggu</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Jenis</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      selectedStase.jenis === 'Terpisah' ? 'bg-amber-100 text-amber-700' : 'bg-pink-100 text-pink-700'
-                    }`}>{selectedStase.jenis}</span>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Mulai</span>
-                      <span className="font-medium text-green-600">{formatDateDisplay(form.tanggalMulai)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-1">
-                      <span className="text-slate-500">Selesai</span>
-                      <span className="font-medium text-red-600">{formatDateDisplay(endDate)}</span>
-                    </div>
-                  </div>
-                  {uniqueHolidays.length > 0 && (
-                    <div className="border-t border-slate-100 pt-3">
-                      <p className="text-xs text-orange-600 font-semibold mb-1">
-                        ⚠️ {uniqueHolidays.length} hari libur dalam periode ini
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Holiday List */}
-            {uniqueHolidays.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50">
-                  <h3 className="text-sm font-bold text-primary-900 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" />
-                    🗓️ Hari Libur ({uniqueHolidays.length})
-                  </h3>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {uniqueHolidays.map((h, i) => (
-                    <div key={i} className="px-4 py-2.5 border-b border-slate-50 flex items-center gap-3 text-xs hover:bg-orange-50/50">
-                      <span className="text-orange-500">🔴</span>
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-700">{h.name}</p>
-                        <p className="text-slate-400">{formatDateDisplay(h.date)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-1.5">
-                <InfoIcon className="w-4 h-4" />
-                <span>Keterangan</span>
-              </h4>
-              <div className="space-y-1.5 text-xs text-blue-700">
-                <p>• Tanggal selesai dihitung otomatis (<strong>7 hari per minggu</strong>)</p>
-                <p>• <strong>Sabtu dan Minggu</strong> tetap dihitung sebagai hari kerja</p>
-                <p>• <strong>Hari libur nasional</strong> tidak dihitung sebagai hari kerja</p>
-                <p>• <strong>Ujian Komprehensip</strong> dapat diambil setelah <strong>Seminar</strong></p>
-              </div>
+          {/* Guidelines Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-6">
+              <h3 className="text-base font-bold text-primary-900 mb-3 flex items-center gap-2">
+                <span className="text-lg">💡</span> Petunjuk Penjadwalan
+              </h3>
+              <ul className="text-xs text-slate-600 space-y-2.5 leading-relaxed">
+                <li className="flex gap-2">
+                  <span className="text-orange-500 font-bold">•</span>
+                  <span><strong>Durasi Stase:</strong> Tanggal selesai dihitung otomatis berdasarkan jumlah minggu durasi stase.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-orange-500 font-bold">•</span>
+                  <span><strong>Sub-Stase Kodil:</strong> Setiap kelompok ditugaskan <strong>1 Dosen Spesialis</strong> untuk masing-masing sub-stase rotasi.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-orange-500 font-bold">•</span>
+                  <span><strong>Bentrokan:</strong> Sistem akan memeriksa konflik tanggal dengan jadwal stase terpisah yang sedang berjalan.</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>

@@ -62,9 +62,18 @@ public class StaseController : ControllerBase
                 s.Id,
                 s.Nama,
                 s.Urutan,
-                idDefaultPembimbing = s.DefaultPembimbing?.Id,
-                namaDefaultPembimbing = s.DefaultPembimbing?.Nama,
-                nipDefaultPembimbing = s.DefaultPembimbing?.NIP
+                daftarDefaultPembimbing = s.DaftarDefaultPembimbing?.Select(p => new
+                {
+                    p.Id,
+                    p.NIP,
+                    p.Nama
+                }) ?? []
+            }) ?? [],
+            daftarPembimbing = stase.DaftarPembimbing?.Select(p => new
+            {
+                p.Id,
+                p.NIP,
+                p.Nama
             }) ?? []
         });
     }
@@ -93,9 +102,18 @@ public class StaseController : ControllerBase
                 s.Id,
                 s.Nama,
                 s.Urutan,
-                idDefaultPembimbing = s.DefaultPembimbing?.Id,
-                namaDefaultPembimbing = s.DefaultPembimbing?.Nama,
-                nipDefaultPembimbing = s.DefaultPembimbing?.NIP
+                daftarDefaultPembimbing = s.DaftarDefaultPembimbing?.Select(p => new
+                {
+                    p.Id,
+                    p.NIP,
+                    p.Nama
+                }) ?? []
+            }) ?? [],
+            daftarPembimbing = x.DaftarPembimbing?.Select(p => new
+            {
+                p.Id,
+                p.NIP,
+                p.Nama
             }) ?? []
         }));
     }
@@ -108,28 +126,13 @@ public class StaseController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{create.Nama}' sudah digunakan" });
 
         if (!Enum.TryParse<JenisStase>(create.Jenis, out var jenis))
-            return HelpersFunctions.BadRequest(
-                new Dictionary<string, string>
-                {
-                    ["jenis"] = $"Jenis '{create.Jenis}' tidak valid. " +
-                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
-                }
-            );
-
-        var daftarStase = await _staseRepository.GetAll();
-        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Jenis == jenis))
-            return HelpersFunctions.BadRequest(
-                new Dictionary<string, string>
-                {
-                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
-                }
-            );
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["jenis"] = $"Jenis stase '{create.Jenis}' tidak valid" });
 
         var stase = new Stase
         {
             Nama = create.Nama,
             Waktu = create.Waktu,
-            Jenis = jenis,
+            Jenis = jenis
         };
 
         _staseRepository.Add(stase);
@@ -146,8 +149,34 @@ public class StaseController : ControllerBase
                 stase.Nama,
                 stase.Waktu,
                 jenis = stase.Jenis.Humanize(),
-                daftarJadwal = Array.Empty<string>(),
-                daftarSubStase = Array.Empty<string>()
+                daftarJadwal = stase.DaftarJadwal?.Select(j => new
+                {
+                    j.Id,
+                    j.TanggalMulai,
+                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    idKelompok = j.Kelompok?.Id,
+                    namaKelompok = j.Kelompok?.Nama,
+                    idPembimbing = j.Pembimbing?.Id,
+                    namaPembimbing = j.Pembimbing?.Nama
+                }) ?? [],
+                daftarSubStase = stase.DaftarSubStase?.OrderBy(s => s.Urutan).Select(s => new
+                {
+                    s.Id,
+                    s.Nama,
+                    s.Urutan,
+                    daftarDefaultPembimbing = s.DaftarDefaultPembimbing?.Select(p => new
+                    {
+                        p.Id,
+                        p.NIP,
+                        p.Nama
+                    }) ?? []
+                }) ?? [],
+                daftarPembimbing = stase.DaftarPembimbing?.Select(p => new
+                {
+                    p.Id,
+                    p.NIP,
+                    p.Nama
+                }) ?? []
             });
     }
 
@@ -165,22 +194,7 @@ public class StaseController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama stase '{update.Nama}' sudah digunakan" });
 
         if (!Enum.TryParse<JenisStase>(update.Jenis, out var jenis))
-            return HelpersFunctions.BadRequest(
-                new Dictionary<string, string>
-                {
-                    ["jenis"] = $"Jenis '{update.Jenis}' tidak valid. " +
-                        $"Nilai valid : {string.Join(", ", Enum.GetValues<JenisStase>().Select(x => x.Humanize()))}"
-                }
-            );
-
-        var daftarStase = await _staseRepository.GetAll();
-        if ((jenis == JenisStase.Seminar || jenis == JenisStase.Ujian) && daftarStase.Any(x => x.Id != id && x.Jenis == jenis))
-            return HelpersFunctions.BadRequest(
-                new Dictionary<string, string>
-                {
-                    ["jenis"] = $"Stase dengan Jenis '{jenis}' sudah ada"
-                }
-            );
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["jenis"] = $"Jenis stase '{update.Jenis}' tidak valid" });
 
         stase.Nama = update.Nama;
         stase.Waktu = update.Waktu;
@@ -200,16 +214,17 @@ public class StaseController : ControllerBase
         if (subStase is null)
             return HelpersFunctions.NotFound(new Dictionary<string, string> { ["subStaseId"] = $"Sub-stase dengan id '{subStaseId}' tidak ditemukan" });
 
-        if (request.IdPembimbing.HasValue)
+        subStase.DaftarDefaultPembimbing.Clear();
+        if (request.IdDefaultPembimbingList is not null && request.IdDefaultPembimbingList.Count > 0)
         {
-            var pembimbing = await _pembimbingRepository.Get(request.IdPembimbing.Value);
-            if (pembimbing is null)
-                return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idPembimbing"] = $"Pembimbing dengan id '{request.IdPembimbing}' tidak ditemukan" });
-            subStase.DefaultPembimbing = pembimbing;
-        }
-        else
-        {
-            subStase.DefaultPembimbing = null;
+            foreach (var idPembimbing in request.IdDefaultPembimbingList)
+            {
+                var pembimbing = await _pembimbingRepository.Get(idPembimbing);
+                if (pembimbing is not null)
+                {
+                    subStase.DaftarDefaultPembimbing.Add(pembimbing);
+                }
+            }
         }
 
         var result = await _unitOfWork.SaveChangesAsync();
@@ -231,20 +246,25 @@ public class StaseController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["stase"] = "Hanya Stase KODIL yang diperbolehkan memiliki Sub-Stase." });
         }
 
-        Pembimbing? pembimbingDefault = null;
-        if (request.IdDefaultPembimbing.HasValue)
-        {
-            pembimbingDefault = await _pembimbingRepository.Get(request.IdDefaultPembimbing.Value);
-        }
-
         var existingSubStases = await _subStaseRepository.GetByStase(staseId);
         var subStase = new SubStase
         {
             Nama = request.Nama,
             Urutan = request.Urutan ?? (existingSubStases.Count + 1),
-            Stase = stase,
-            DefaultPembimbing = pembimbingDefault
+            Stase = stase
         };
+
+        if (request.IdDefaultPembimbingList is not null && request.IdDefaultPembimbingList.Count > 0)
+        {
+            foreach (var idPembimbing in request.IdDefaultPembimbingList)
+            {
+                var pembimbing = await _pembimbingRepository.Get(idPembimbing);
+                if (pembimbing is not null)
+                {
+                    subStase.DaftarDefaultPembimbing.Add(pembimbing);
+                }
+            }
+        }
 
         _subStaseRepository.Add(subStase);
         var result = await _unitOfWork.SaveChangesAsync();
@@ -255,8 +275,7 @@ public class StaseController : ControllerBase
             subStase.Id,
             subStase.Nama,
             subStase.Urutan,
-            idDefaultPembimbing = subStase.DefaultPembimbing?.Id,
-            namaDefaultPembimbing = subStase.DefaultPembimbing?.Nama
+            daftarDefaultPembimbing = subStase.DaftarDefaultPembimbing.Select(p => new { p.Id, p.NIP, p.Nama })
         });
     }
 
@@ -270,13 +289,17 @@ public class StaseController : ControllerBase
         subStase.Nama = request.Nama;
         if (request.Urutan.HasValue) subStase.Urutan = request.Urutan.Value;
 
-        if (request.IdDefaultPembimbing.HasValue)
+        subStase.DaftarDefaultPembimbing.Clear();
+        if (request.IdDefaultPembimbingList is not null && request.IdDefaultPembimbingList.Count > 0)
         {
-            subStase.DefaultPembimbing = await _pembimbingRepository.Get(request.IdDefaultPembimbing.Value);
-        }
-        else
-        {
-            subStase.DefaultPembimbing = null;
+            foreach (var idPembimbing in request.IdDefaultPembimbingList)
+            {
+                var pembimbing = await _pembimbingRepository.Get(idPembimbing);
+                if (pembimbing is not null)
+                {
+                    subStase.DaftarDefaultPembimbing.Add(pembimbing);
+                }
+            }
         }
 
         var result = await _unitOfWork.SaveChangesAsync();
@@ -293,6 +316,32 @@ public class StaseController : ControllerBase
         if (subStase is null) return NotFound();
 
         _subStaseRepository.Delete(subStase);
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:int}/pembimbing")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> UpdatePembimbingStase(int id, [FromBody] UpdatePembimbingStaseRequest request)
+    {
+        var stase = await _staseRepository.Get(id);
+        if (stase is null) return NotFound();
+
+        stase.DaftarPembimbing.Clear();
+        if (request.IdPembimbingList is not null && request.IdPembimbingList.Count > 0)
+        {
+            foreach (var idPembimbing in request.IdPembimbingList)
+            {
+                var pembimbing = await _pembimbingRepository.Get(idPembimbing);
+                if (pembimbing is not null)
+                {
+                    stase.DaftarPembimbing.Add(pembimbing);
+                }
+            }
+        }
+
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
@@ -316,19 +365,24 @@ public class StaseController : ControllerBase
 
 public class PilihPembimbingSubStaseRequest
 {
-    public int? IdPembimbing { get; set; }
+    public List<int> IdDefaultPembimbingList { get; set; } = [];
 }
 
 public class CreateSubStaseRequest
 {
     public required string Nama { get; set; }
     public int? Urutan { get; set; }
-    public int? IdDefaultPembimbing { get; set; }
+    public List<int> IdDefaultPembimbingList { get; set; } = [];
 }
 
 public class UpdateSubStaseRequest
 {
     public required string Nama { get; set; }
     public int? Urutan { get; set; }
-    public int? IdDefaultPembimbing { get; set; }
+    public List<int> IdDefaultPembimbingList { get; set; } = [];
+}
+
+public class UpdatePembimbingStaseRequest
+{
+    public List<int> IdPembimbingList { get; set; } = [];
 }

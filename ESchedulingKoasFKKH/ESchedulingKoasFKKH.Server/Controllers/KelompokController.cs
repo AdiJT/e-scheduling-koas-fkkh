@@ -16,25 +16,19 @@ public class KelompokController : ControllerBase
 {
     private readonly IKelompokRepository _kelompokRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
-    private readonly IPembimbingRepository _pembimbingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
-    private readonly IUserRepository _userRepository;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
         IMahasiswaRepository mahasiswaRepository,
-        IPembimbingRepository pembimbingRepository,
         IUnitOfWork unitOfWork,
-        IHariLiburService hariLiburService,
-        IUserRepository userRepository)
+        IHariLiburService hariLiburService)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
-        _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
-        _userRepository = userRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -48,9 +42,6 @@ public class KelompokController : ControllerBase
             {
                 kelompok.Id,
                 kelompok.Nama,
-                idPembimbing = kelompok.Pembimbing?.Id,
-                namaPembimbing = kelompok.Pembimbing?.Nama,
-                nipPembimbing = kelompok.Pembimbing?.NIP,
                 daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
                 daftarJadwal = kelompok.DaftarJadwal.Select(j => new
                 {
@@ -58,7 +49,19 @@ public class KelompokController : ControllerBase
                     j.TanggalMulai,
                     tanggalSelesai = j.TanggalSelesai(_hariLiburService),
                     idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama
+                    namaStase = j.Stase?.Nama,
+                    idPembimbing = j.Pembimbing?.Id,
+                    namaPembimbing = j.Pembimbing?.Nama,
+                    nipPembimbing = j.Pembimbing?.NIP,
+                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
+                    {
+                        idSubStase = sub.SubStase?.Id,
+                        urutan = sub.SubStase?.Urutan,
+                        namaSubStase = sub.SubStase?.Nama,
+                        idPembimbing = sub.Pembimbing?.Id,
+                        namaPembimbing = sub.Pembimbing?.Nama,
+                        nipPembimbing = sub.Pembimbing?.NIP
+                    }).OrderBy(s => s.urutan)
                 })
             });
 
@@ -76,7 +79,6 @@ public class KelompokController : ControllerBase
             {
                 x.Id,
                 x.Nama,
-                idPembimbing = x.Pembimbing?.Id,
                 daftarMahasiswa = x.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
                 daftarJadwal = x.DaftarJadwal.Select(j => new
                 {
@@ -84,7 +86,19 @@ public class KelompokController : ControllerBase
                     j.TanggalMulai,
                     tanggalSelesai = j.TanggalSelesai(_hariLiburService),
                     idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama
+                    namaStase = j.Stase?.Nama,
+                    idPembimbing = j.Pembimbing?.Id,
+                    namaPembimbing = j.Pembimbing?.Nama,
+                    nipPembimbing = j.Pembimbing?.NIP,
+                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
+                    {
+                        idSubStase = sub.SubStase?.Id,
+                        urutan = sub.SubStase?.Urutan,
+                        namaSubStase = sub.SubStase?.Nama,
+                        idPembimbing = sub.Pembimbing?.Id,
+                        namaPembimbing = sub.Pembimbing?.Nama,
+                        nipPembimbing = sub.Pembimbing?.NIP
+                    }).OrderBy(s => s.urutan)
                 })
             }));
         }
@@ -116,7 +130,6 @@ public class KelompokController : ControllerBase
             {
                 kelompok.Id,
                 kelompok.Nama,
-                idPembimbing = kelompok.Pembimbing?.Id,
                 daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
                 daftarJadwal = kelompok.DaftarJadwal.Select(j => new
                 {
@@ -124,7 +137,19 @@ public class KelompokController : ControllerBase
                     j.TanggalMulai,
                     tanggalSelesai = j.TanggalSelesai(_hariLiburService),
                     idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama
+                    namaStase = j.Stase?.Nama,
+                    idPembimbing = j.Pembimbing?.Id,
+                    namaPembimbing = j.Pembimbing?.Nama,
+                    nipPembimbing = j.Pembimbing?.NIP,
+                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
+                    {
+                        idSubStase = sub.SubStase?.Id,
+                        urutan = sub.SubStase?.Urutan,
+                        namaSubStase = sub.SubStase?.Nama,
+                        idPembimbing = sub.Pembimbing?.Id,
+                        namaPembimbing = sub.Pembimbing?.Nama,
+                        nipPembimbing = sub.Pembimbing?.NIP
+                    }).OrderBy(s => s.urutan)
                 })
             });
     }
@@ -201,50 +226,6 @@ public class KelompokController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"Mahasiswa '{mahasiswa.Nama}' bukan anggota kelompok ini" });
 
         mahasiswa.Kelompok = null;
-
-        var result = await _unitOfWork.SaveChangesAsync();
-        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
-
-        return NoContent();
-    }
-
-    [HttpPost("{id:int}/pilih-pembimbing")]
-    [Authorize(Roles = UserRoles.Pengelola)]
-    public async Task<IActionResult> PilihPembimbing(int id, PilihPembimbing pilihPembimbing)
-    {
-        var kelompok = await _kelompokRepository.Get(id);
-        if (kelompok is null) return NotFound();
-
-        if (kelompok.Pembimbing is not null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idPembimbing"] = "Kelompok ini sudah memiliki pembimbing" });
-
-        var pembimbing = await _pembimbingRepository.Get(pilihPembimbing.IdPembimbing);
-        if (pembimbing is null)
-            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idPembimbing"] = $"Pembimbing dengan id '{pilihPembimbing.IdPembimbing}' tidak ditemukan" });
-
-        kelompok.Pembimbing = pembimbing;
-
-        var result = await _unitOfWork.SaveChangesAsync();
-        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
-
-        return NoContent();
-    }
-
-    [HttpPut("{id:int}/ganti-pembimbing")]
-    [Authorize(Roles = UserRoles.Pengelola)]
-    public async Task<IActionResult> GantiPembimbing(int id, GantiPembimbing gantiPembimbing)
-    {
-        var kelompok = await _kelompokRepository.Get(id);
-        if (kelompok is null) return NotFound();
-
-        if (kelompok.Pembimbing is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idPembimbing"] = "Kelompok ini belum memiliki pembimbing, gunakan endpoint pilih-pembimbing" });
-
-        var pembimbing = await _pembimbingRepository.Get(gantiPembimbing.IdPembimbing);
-        if (pembimbing is null)
-            return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idPembimbing"] = $"Pembimbing dengan id '{gantiPembimbing.IdPembimbing}' tidak ditemukan" });
-
-        kelompok.Pembimbing = pembimbing;
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);

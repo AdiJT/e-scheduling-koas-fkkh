@@ -11,7 +11,7 @@ internal class JadwalConfiguration : IEntityTypeConfiguration<Jadwal>
     {
         builder.HasOne(x => x.Stase).WithMany(y => y.DaftarJadwal);
         builder.HasOne(x => x.Kelompok).WithMany(y => y.DaftarJadwal);
-        builder.HasOne(x => x.Pembimbing).WithMany().IsRequired(false);
+        builder.HasOne(x => x.Pembimbing).WithMany(y => y.DaftarJadwal).IsRequired(false);
         builder.HasMany(x => x.DaftarJadwalSubStase).WithOne(y => y.Jadwal);
     }
 }
@@ -31,7 +31,6 @@ internal class JadwalRepository : IJadwalRepository
 
     public async Task<Jadwal?> Get(int id) => await _appDbContext.Jadwal
         .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
-        .Include(x => x.Kelompok).ThenInclude(y => y.Pembimbing)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)
         .Include(x => x.DaftarJadwalSubStase).ThenInclude(y => y.SubStase)
@@ -40,7 +39,6 @@ internal class JadwalRepository : IJadwalRepository
 
     public async Task<List<Jadwal>> GetAll() => await _appDbContext.Jadwal
         .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
-        .Include(x => x.Kelompok).ThenInclude(y => y.Pembimbing)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)
         .Include(x => x.DaftarJadwalSubStase).ThenInclude(y => y.SubStase)

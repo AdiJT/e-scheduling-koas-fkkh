@@ -3,6 +3,7 @@ using System;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ESchedulingKoasFKKH.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720111639_SubStaseMultiDosen")]
+    partial class SubStaseMultiDosen
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,17 +318,12 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.Property<int>("JadwalId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("PembimbingId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("SubStaseId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("JadwalId");
-
-                    b.HasIndex("PembimbingId");
 
                     b.HasIndex("SubStaseId");
 
@@ -873,6 +871,21 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("JadwalSubStasePembimbing", b =>
+                {
+                    b.Property<int>("DaftarPembimbingId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("JadwalSubStaseId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("DaftarPembimbingId", "JadwalSubStaseId");
+
+                    b.HasIndex("JadwalSubStaseId");
+
+                    b.ToTable("JadwalSubStasePembimbing");
+                });
+
             modelBuilder.Entity("PembimbingStase", b =>
                 {
                     b.Property<int>("DaftarPembimbingId")
@@ -936,10 +949,6 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", "Pembimbing")
-                        .WithMany()
-                        .HasForeignKey("PembimbingId");
-
                     b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.SubStase", "SubStase")
                         .WithMany()
                         .HasForeignKey("SubStaseId")
@@ -947,8 +956,6 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Jadwal");
-
-                    b.Navigation("Pembimbing");
 
                     b.Navigation("SubStase");
                 });
@@ -997,6 +1004,21 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Stase");
+                });
+
+            modelBuilder.Entity("JadwalSubStasePembimbing", b =>
+                {
+                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", null)
+                        .WithMany()
+                        .HasForeignKey("DaftarPembimbingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.JadwalSubStase", null)
+                        .WithMany()
+                        .HasForeignKey("JadwalSubStaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PembimbingStase", b =>

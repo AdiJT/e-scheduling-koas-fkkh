@@ -12,17 +12,16 @@ internal class SubStaseConfiguration : IEntityTypeConfiguration<SubStase>
         builder.HasOne(x => x.Stase)
             .WithMany(y => y.DaftarSubStase);
 
-        builder.HasOne(x => x.DefaultPembimbing)
-            .WithMany()
-            .IsRequired(false);
+        builder.HasMany(x => x.DaftarDefaultPembimbing)
+            .WithMany();
 
         // Seeding 5 Sub-Stase khusus untuk Stase KODIL (Id = 1)
         builder.HasData(
-            new { Id = 1, Nama = "Patologi Klinik", Urutan = 1, StaseId = 1, DefaultPembimbingId = (int?)null },
-            new { Id = 2, Nama = "Patologi Veteriner", Urutan = 2, StaseId = 1, DefaultPembimbingId = (int?)null },
-            new { Id = 3, Nama = "Mikrobiologi (Bakteriologi)", Urutan = 3, StaseId = 1, DefaultPembimbingId = (int?)null },
-            new { Id = 4, Nama = "Virologi", Urutan = 4, StaseId = 1, DefaultPembimbingId = (int?)null },
-            new { Id = 5, Nama = "Parasitologi", Urutan = 5, StaseId = 1, DefaultPembimbingId = (int?)null }
+            new { Id = 1, Nama = "Patologi Klinik", Urutan = 1, StaseId = 1 },
+            new { Id = 2, Nama = "Patologi Veteriner", Urutan = 2, StaseId = 1 },
+            new { Id = 3, Nama = "Mikrobiologi (Bakteriologi)", Urutan = 3, StaseId = 1 },
+            new { Id = 4, Nama = "Virologi", Urutan = 4, StaseId = 1 },
+            new { Id = 5, Nama = "Parasitologi", Urutan = 5, StaseId = 1 }
         );
     }
 }
@@ -42,18 +41,18 @@ internal class SubStaseRepository : ISubStaseRepository
 
     public async Task<SubStase?> Get(int id) => await _appDbContext.SubStase
         .Include(x => x.Stase)
-        .Include(x => x.DefaultPembimbing)
+        .Include(x => x.DaftarDefaultPembimbing)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<SubStase>> GetAll() => await _appDbContext.SubStase
         .Include(x => x.Stase)
-        .Include(x => x.DefaultPembimbing)
+        .Include(x => x.DaftarDefaultPembimbing)
         .OrderBy(x => x.Urutan)
         .ToListAsync();
 
     public async Task<List<SubStase>> GetByStase(int staseId) => await _appDbContext.SubStase
         .Where(x => x.Stase.Id == staseId)
-        .Include(x => x.DefaultPembimbing)
+        .Include(x => x.DaftarDefaultPembimbing)
         .OrderBy(x => x.Urutan)
         .ToListAsync();
 

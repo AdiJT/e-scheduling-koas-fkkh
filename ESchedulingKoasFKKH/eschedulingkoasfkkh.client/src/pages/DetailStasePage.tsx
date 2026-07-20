@@ -27,10 +27,14 @@ export default function DetailStasePage() {
   const [showAddSubStase, setShowAddSubStase] = useState(false);
   const [subNama, setSubNama] = useState('');
   const [subUrutan, setSubUrutan] = useState<number | ''>('');
-  const [subIdDosen, setSubIdDosen] = useState<number | ''>('');
+  const [subSelectedDosenIds, setSubSelectedDosenIds] = useState<number[]>([]);
 
   const [editingSubStase, setEditingSubStase] = useState<SubStase | null>(null);
   const [deletingSubStase, setDeletingSubStase] = useState<SubStase | null>(null);
+
+  // Manage Dosen Stase Modal State
+  const [showManageDosen, setShowManageDosen] = useState(false);
+  const [selectedDosenIds, setSelectedDosenIds] = useState<number[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -40,11 +44,12 @@ export default function DetailStasePage() {
       const [staseData, allJadwal, pembimbings] = await Promise.all([
         staseApi.get(staseId),
         jadwalApi.getAll(),
-        isAdmin ? pembimbingApi.getAll() : Promise.resolve([])
+        pembimbingApi.getAll()
       ]);
       
       setStase(staseData);
       setPembimbingList(pembimbings);
+      setSelectedDosenIds(staseData.daftarPembimbing?.map(p => p.id) || []);
       
       // Filter schedules for this stase
       const filteredJadwal = allJadwal.filter((j) => j.idStase === staseId);
@@ -59,19 +64,9 @@ export default function DetailStasePage() {
     } finally {
       setLoading(false);
     }
-  }, [staseId, isAdmin]);
+  }, [staseId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleUpdateDefaultPembimbing = async (subStaseId: number, idPembimbing: number | null) => {
-    try {
-      await staseApi.pilihPembimbingSubStase(subStaseId, idPembimbing);
-      fetchData();
-    } catch (err) {
-      console.error("Failed to update default pembimbing:", err);
-      alert("Gagal memperbarui dosen default.");
-    }
-  };
 
   // SubStase CRUD Handlers
   const handleCreateSubStase = async () => {
@@ -81,12 +76,12 @@ export default function DetailStasePage() {
       await staseApi.createSubStase(staseId, {
         nama: subNama,
         urutan: subUrutan !== '' ? Number(subUrutan) : undefined,
-        idDefaultPembimbing: subIdDosen !== '' ? Number(subIdDosen) : null
+        idDefaultPembimbingList: subSelectedDosenIds
       });
       setShowAddSubStase(false);
       setSubNama('');
       setSubUrutan('');
-      setSubIdDosen('');
+      setSubSelectedDosenIds([]);
       await fetchData();
     } catch (err) {
       console.error("Failed to add sub-stase:", err);
@@ -103,12 +98,12 @@ export default function DetailStasePage() {
       await staseApi.updateSubStase(editingSubStase.id, {
         nama: subNama,
         urutan: subUrutan !== '' ? Number(subUrutan) : undefined,
-        idDefaultPembimbing: subIdDosen !== '' ? Number(subIdDosen) : null
+        idDefaultPembimbingList: subSelectedDosenIds
       });
       setEditingSubStase(null);
       setSubNama('');
       setSubUrutan('');
-      setSubIdDosen('');
+      setSubSelectedDosenIds([]);
       await fetchData();
     } catch (err) {
       console.error("Failed to update sub-stase:", err);
@@ -137,13 +132,44 @@ export default function DetailStasePage() {
     setEditingSubStase(sub);
     setSubNama(sub.nama);
     setSubUrutan(sub.urutan);
-    setSubIdDosen(sub.idDefaultPembimbing || '');
+    setSubSelectedDosenIds(sub.daftarDefaultPembimbing?.map(p => p.id) || (sub.idDefaultPembimbing ? [sub.idDefaultPembimbing] : []));
+  };
+
+  const toggleSubDosenId = (dosenId: number) => {
+    setSubSelectedDosenIds(prev =>
+      prev.includes(dosenId)
+        ? prev.filter(id => id !== dosenId)
+        : [...prev, dosenId]
+    );
+  };
+
+  // Manage Dosen Stase Handlers
+  const handleToggleDosen = (dosenId: number) => {
+    setSelectedDosenIds(prev =>
+      prev.includes(dosenId)
+        ? prev.filter(id => id !== dosenId)
+        : [...prev, dosenId]
+    );
+  };
+
+  const handleSaveManageDosen = async () => {
+    try {
+      setActionLoading(true);
+      await staseApi.updatePembimbingStase(staseId, selectedDosenIds);
+      setShowManageDosen(false);
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to save stase Dosen:", err);
+      alert("Gagal menyimpan daftar dosen stase.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Role-based filtering for Dosen: only show groups they supervise
   const displayedJadwal = jadwalList.filter((j) => {
     if (isDosen) {
-      return j.idPembimbing === user?.profileId || j.daftarSubStase?.some(s => s.idPembimbing === user?.profileId);
+      return j.idPembimbing === user?.profileId || j.daftarSubStase?.some(s => s.idPembimbing === user?.profileId || s.daftarPembimbing?.some(dp => dp.id === user?.profileId));
     }
     return true;
   });
@@ -226,6 +252,52 @@ export default function DetailStasePage() {
         </div>
       </div>
 
+      {/* Dosen Pembimbing Stase Section */}
+      <div className="mb-8 bg-white rounded-2xl shadow-card border border-emerald-100 overflow-hidden animate-fade-in-up">
+        <div className="p-5 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+              <DosenIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-primary-900">Dosen Pembimbing Terdaftar pada Stase Ini</h2>
+              <p className="text-xs text-slate-500">
+                {stase.daftarPembimbing && stase.daftarPembimbing.length > 0
+                  ? `Terdapat ${stase.daftarPembimbing.length} Dosen Pembimbing yang bertugas pada stase ${stase.nama}`
+                  : 'Belum ada dosen yang ditugaskan untuk stase ini (semua dosen akan ditampilkan di opsi jadwal).'}
+              </p>
+            </div>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => { setSelectedDosenIds(stase.daftarPembimbing?.map(p => p.id) || []); setShowManageDosen(true); }}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1.5"
+            >
+              <DosenIcon className="w-4 h-4" /> Kelola Dosen Stase
+            </button>
+          )}
+        </div>
+        {stase.daftarPembimbing && stase.daftarPembimbing.length > 0 ? (
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stase.daftarPembimbing.map((p) => (
+              <div key={p.id} className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                  {p.nama.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-800 text-xs truncate">{p.nama}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">NIP: {p.nip}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center text-slate-400 text-xs">
+            Belum ada Dosen Pembimbing yang dikhususkan untuk stase ini. Klik tombol <strong>Kelola Dosen Stase</strong> untuk memilih dosen.
+          </div>
+        )}
+      </div>
+
       {/* Sub-Stase Section (Khusus Stase KODIL) */}
       {isKodil && (
         <div className="mb-8 bg-white rounded-2xl shadow-card border border-purple-100 overflow-hidden animate-fade-in-up">
@@ -233,7 +305,7 @@ export default function DetailStasePage() {
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm">✨</div>
               <div>
-                <h2 className="text-lg font-bold text-primary-900">Daftar Sub-Stase & Dosen Spesialis Default</h2>
+                <h2 className="text-lg font-bold text-primary-900">Daftar Sub-Stase KODIL & Dosen Spesialis Default (Multi-Dosen)</h2>
                 <p className="text-xs text-slate-500">
                   {stase.daftarSubStase && stase.daftarSubStase.length > 0
                     ? `Stase ini memiliki ${stase.daftarSubStase.length} sub-stase rotasi spesifik`
@@ -243,7 +315,7 @@ export default function DetailStasePage() {
             </div>
             {isAdmin && (
               <button
-                onClick={() => { setSubNama(''); setSubUrutan((stase.daftarSubStase?.length || 0) + 1); setSubIdDosen(''); setShowAddSubStase(true); }}
+                onClick={() => { setSubNama(''); setSubUrutan((stase.daftarSubStase?.length || 0) + 1); setSubSelectedDosenIds([]); setShowAddSubStase(true); }}
                 className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1.5"
               >
                 + Tambah Sub-Stase
@@ -252,56 +324,58 @@ export default function DetailStasePage() {
           </div>
           {stase.daftarSubStase && stase.daftarSubStase.length > 0 ? (
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stase.daftarSubStase.map((sub) => (
-                <div key={sub.id} className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-3 relative group">
-                  <div className="flex items-start justify-between">
-                    <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
-                    <div className="flex items-center gap-1">
-                      {isAdmin && (
-                        <>
-                          <button
-                            onClick={() => openEditSubStaseModal(sub)}
-                            className="p-1 rounded text-amber-600 hover:bg-amber-100 transition-colors"
-                            title="Edit Sub-Stase"
-                          >
-                            <EditIcon className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingSubStase(sub)}
-                            className="p-1 rounded text-red-600 hover:bg-red-100 transition-colors"
-                            title="Hapus Sub-Stase"
-                          >
-                            <DeleteIcon className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 font-semibold rounded-full border border-purple-200">Sub-Stase</span>
+              {stase.daftarSubStase.map((sub) => {
+                const defaultDosenList = sub.daftarDefaultPembimbing || (sub.namaDefaultPembimbing ? [{ id: sub.idDefaultPembimbing!, nip: sub.nipDefaultPembimbing || '', nama: sub.namaDefaultPembimbing }] : []);
+
+                return (
+                  <div key={sub.id} className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 flex flex-col justify-between space-y-3 relative group">
+                    <div className="flex items-start justify-between">
+                      <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
+                      <div className="flex items-center gap-1">
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => openEditSubStaseModal(sub)}
+                              className="p-1 rounded text-amber-600 hover:bg-amber-100 transition-colors"
+                              title="Edit Sub-Stase & Multi-Dosen"
+                            >
+                              <EditIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingSubStase(sub)}
+                              className="p-1 rounded text-red-600 hover:bg-red-100 transition-colors"
+                              title="Hapus Sub-Stase"
+                            >
+                              <DeleteIcon className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        <span className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 font-semibold rounded-full border border-purple-200">Sub-Stase</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm mb-1">{sub.nama}</h3>
+                      <div className="space-y-1.5 mt-2">
+                        <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                          <DosenIcon className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Dosen Spesialis Default ({defaultDosenList.length}):</span>
+                        </p>
+                        {defaultDosenList.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {defaultDosenList.map(p => (
+                              <span key={p.id} className="px-2 py-0.5 bg-purple-100/80 text-purple-900 text-xs font-medium rounded-lg border border-purple-200">
+                                {p.nama}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Belum ada Dosen default</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-sm">{sub.nama}</h3>
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-600">
-                      <DosenIcon className="w-4 h-4 text-emerald-600" />
-                      <span>Dosen Default: <strong>{sub.namaDefaultPembimbing || 'Belum diatur'}</strong></span>
-                    </div>
-                  </div>
-                  {isAdmin && (
-                    <div className="pt-2 border-t border-slate-200/60">
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Quick Set Dosen Default:</label>
-                      <select
-                        value={sub.idDefaultPembimbing || ''}
-                        onChange={(e) => handleUpdateDefaultPembimbing(sub.id, e.target.value ? Number(e.target.value) : null)}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500"
-                      >
-                        <option value="">-- Pilih Dosen Default --</option>
-                        {pembimbingList.map(p => (
-                          <option key={p.id} value={p.id}>{p.nama}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="p-8 text-center text-slate-400 text-sm">
@@ -372,14 +446,20 @@ export default function DetailStasePage() {
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {jadwal.daftarSubStase && jadwal.daftarSubStase.length > 0 ? (
                         <div className="space-y-1">
-                          <span className="text-xs font-bold text-purple-700 block mb-1">Dosen Sub-Stase ({jadwal.daftarSubStase.length}):</span>
-                          {jadwal.daftarSubStase.map(sub => (
-                            <div key={sub.idSubStase} className="text-xs text-slate-700 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                              <span className="font-semibold">{sub.namaSubStase}:</span>
-                              <span>{sub.namaPembimbing || 'Belum diatur'}</span>
-                            </div>
-                          ))}
+                          <span className="text-xs font-bold text-purple-700 block mb-1">Dosen Sub-Stase Kodil:</span>
+                          {jadwal.daftarSubStase.map(sub => {
+                            const subDosenList = sub.daftarPembimbing && sub.daftarPembimbing.length > 0
+                              ? sub.daftarPembimbing.map(p => p.nama).join(', ')
+                              : (sub.namaPembimbing || 'Belum diatur');
+
+                            return (
+                              <div key={sub.idSubStase} className="text-xs text-slate-700 flex items-start gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0 mt-1" />
+                                <span className="font-semibold">{sub.namaSubStase}:</span>
+                                <span>{subDosenList}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span>{jadwal.namaPembimbing || 'Belum diatur'}</span>
@@ -400,6 +480,56 @@ export default function DetailStasePage() {
           </div>
         )}
       </div>
+
+      {/* Modal Kelola Dosen Stase */}
+      {showManageDosen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-lg mx-4 animate-scale-in">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full" />
+                Kelola Dosen Pembimbing Stase {stase.nama}
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Pilih Dosen mana saja yang mengajar atau bertugas pada stase <strong>{stase.nama}</strong>.
+            </p>
+
+            <div className="mb-5 border-2 border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col h-[280px]">
+              <div className="flex-1 overflow-y-auto p-2">
+                {pembimbingList.map(p => (
+                  <label key={p.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-emerald-50/50 cursor-pointer transition-colors border border-transparent hover:border-emerald-100">
+                    <input
+                      type="checkbox"
+                      checked={selectedDosenIds.includes(p.id)}
+                      onChange={() => handleToggleDosen(p.id)}
+                      className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800">{p.nama}</p>
+                      <p className="text-xs text-slate-400 font-mono">NIP: {p.nip}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="p-3 border-t border-slate-200 bg-white text-xs font-semibold text-slate-600 text-center">
+                <span className="text-emerald-600">{selectedDosenIds.length}</span> Dosen dipilih untuk stase ini
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowManageDosen(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm">Batal</button>
+              <button
+                onClick={handleSaveManageDosen}
+                disabled={actionLoading}
+                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {actionLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><SaveIcon className="w-4 h-4" /> Simpan Penugasan</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Tambah Sub-Stase */}
       {showAddSubStase && (
@@ -431,17 +561,20 @@ export default function DetailStasePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default</label>
-                <select
-                  value={subIdDosen}
-                  onChange={(e) => setSubIdDosen(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 cursor-pointer"
-                >
-                  <option value="">-- Tanpa Dosen Default --</option>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default (Multi-Select)</label>
+                <div className="border-2 border-slate-200 rounded-xl max-h-40 overflow-y-auto p-2 bg-slate-50 space-y-1">
                   {pembimbingList.map(p => (
-                    <option key={p.id} value={p.id}>{p.nama}</option>
+                    <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-purple-50 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={subSelectedDosenIds.includes(p.id)}
+                        onChange={() => toggleSubDosenId(p.id)}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                      <span className="font-semibold text-slate-700">{p.nama}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
             </div>
             <div className="flex gap-3">
@@ -486,17 +619,20 @@ export default function DetailStasePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default</label>
-                <select
-                  value={subIdDosen}
-                  onChange={(e) => setSubIdDosen(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 cursor-pointer"
-                >
-                  <option value="">-- Tanpa Dosen Default --</option>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default (Multi-Select)</label>
+                <div className="border-2 border-slate-200 rounded-xl max-h-40 overflow-y-auto p-2 bg-slate-50 space-y-1">
                   {pembimbingList.map(p => (
-                    <option key={p.id} value={p.id}>{p.nama}</option>
+                    <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-amber-50 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={subSelectedDosenIds.includes(p.id)}
+                        onChange={() => toggleSubDosenId(p.id)}
+                        className="w-4 h-4 text-amber-600 rounded"
+                      />
+                      <span className="font-semibold text-slate-700">{p.nama}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
             </div>
             <div className="flex gap-3">

@@ -34,6 +34,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
     private readonly IKelompokRepository _kelompokRepository;
     private readonly IStaseRepository _staseRepository;
     private readonly IJadwalRepository _jadwalRepository;
+    private readonly IPembimbingRepository _pembimbingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
 
@@ -41,12 +42,14 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
         IKelompokRepository kelompokRepository,
         IStaseRepository staseRepository,
         IJadwalRepository jadwalRepository,
+        IPembimbingRepository pembimbingRepository,
         IUnitOfWork unitOfWork,
         IHariLiburService hariLiburService)
     {
         _kelompokRepository = kelompokRepository;
         _staseRepository = staseRepository;
         _jadwalRepository = jadwalRepository;
+        _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
     }
@@ -55,6 +58,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
     {
         var staseList = await _staseRepository.GetAll();
         var kelompokList = await _kelompokRepository.GetAll();
+        var allPembimbing = await _pembimbingRepository.GetAll();
 
         var tanggalMulaiAcuanFinal = GeserKeHariKerja(tanggalMulaiAcuan ?? CultureInfos.DateOnlyNow);
         var result = new GenerateJadwalResult
@@ -72,18 +76,6 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
 
         foreach (var kelompok in kelompokList.OrderBy(x => DapatkanTanggalMulaiKelompok(x, tanggalMulaiAcuanFinal)).ThenBy(x => x.Id))
         {
-            if (kelompok.Pembimbing is null)
-            {
-                result.KelompokDilewati.Add(new GenerateJadwalKelompokSummary
-                {
-                    Id = kelompok.Id,
-                    Nama = kelompok.Nama,
-                    JadwalDibuat = 0,
-                    Pesan = "Kelompok dilewati karena belum memiliki pembimbing.",
-                });
-                continue;
-            }
-
             var staseSudahAda = kelompok.DaftarJadwal
                 .Select(x => x.Stase.Id)
                 .ToHashSet();
@@ -121,20 +113,54 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 var tanggalMulai = kandidat.TanggalMulai;
                 var tanggalSelesai = kandidat.TanggalSelesai;
 
+                // Pilih Pembimbing untuk stase biasa (jika stase tidak memiliki sub-stase)
+                Pembimbing? pembimbingStase = null;
+                if (stase.DaftarSubStase.Count == 0)
+                {
+                    if (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
+                    {
+                        var indexAcak = Random.Shared.Next(stase.DaftarPembimbing.Count);
+                        pembimbingStase = stase.DaftarPembimbing[indexAcak];
+                    }
+                    else if (allPembimbing.Count > 0)
+                    {
+                        var indexAcak = Random.Shared.Next(allPembimbing.Count);
+                        pembimbingStase = allPembimbing[indexAcak];
+                    }
+                }
+
                 var newJadwal = new Jadwal
                 {
                     TanggalMulai = tanggalMulai,
                     Kelompok = kelompok,
                     Stase = stase,
-                    Pembimbing = kelompok.Pembimbing
+                    Pembimbing = pembimbingStase
                 };
+
                 foreach (var sub in stase.DaftarSubStase)
                 {
+                    Pembimbing? pembimbingAcak = null;
+                    if (sub.DaftarDefaultPembimbing is not null && sub.DaftarDefaultPembimbing.Count > 0)
+                    {
+                        var indexAcak = Random.Shared.Next(sub.DaftarDefaultPembimbing.Count);
+                        pembimbingAcak = sub.DaftarDefaultPembimbing[indexAcak];
+                    }
+                    else if (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
+                    {
+                        var indexAcak = Random.Shared.Next(stase.DaftarPembimbing.Count);
+                        pembimbingAcak = stase.DaftarPembimbing[indexAcak];
+                    }
+                    else if (allPembimbing.Count > 0)
+                    {
+                        var indexAcak = Random.Shared.Next(allPembimbing.Count);
+                        pembimbingAcak = allPembimbing[indexAcak];
+                    }
+
                     newJadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
                     {
                         Jadwal = newJadwal,
                         SubStase = sub,
-                        Pembimbing = sub.DefaultPembimbing
+                        Pembimbing = pembimbingAcak
                     });
                 }
                 _jadwalRepository.Add(newJadwal);

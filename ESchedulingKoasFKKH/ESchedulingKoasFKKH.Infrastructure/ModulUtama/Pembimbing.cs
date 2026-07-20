@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,7 +9,7 @@ internal class PembimbingConfiguration : IEntityTypeConfiguration<Pembimbing>
 {
     public void Configure(EntityTypeBuilder<Pembimbing> builder)
     {
-        builder.HasMany(x => x.DaftarKelompok).WithOne(y => y.Pembimbing).IsRequired(false);
+        builder.HasMany(x => x.DaftarJadwal).WithOne(y => y.Pembimbing).IsRequired(false);
         builder.HasOne(x => x.User).WithOne(y => y.Pembimbing).HasForeignKey<Pembimbing>("UserId");
 
         builder.HasData(
@@ -41,20 +41,20 @@ internal class PembimbingRepository : IPembimbingRepository
     public void Delete(Pembimbing pembimbing) => _appDbContext.Pembimbing.Remove(pembimbing);
 
     public async Task<Pembimbing?> Get(int id) => await _appDbContext.Pembimbing
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarMahasiswa)
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarJadwal)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Pembimbing?> Get(string nip) => await _appDbContext.Pembimbing
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarMahasiswa)
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarJadwal)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.NIP == nip);
 
     public async Task<List<Pembimbing>> GetAll() => await _appDbContext.Pembimbing
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarMahasiswa)
-        .Include(x => x.DaftarKelompok).ThenInclude(x => x.DaftarJadwal)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
+        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.User)
         .ToListAsync();
 

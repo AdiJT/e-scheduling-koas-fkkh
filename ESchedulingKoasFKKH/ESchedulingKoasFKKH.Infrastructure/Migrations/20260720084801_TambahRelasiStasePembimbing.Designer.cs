@@ -3,6 +3,7 @@ using System;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ESchedulingKoasFKKH.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720084801_TambahRelasiStasePembimbing")]
+    partial class TambahRelasiStasePembimbing
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -771,6 +774,9 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("DefaultPembimbingId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Nama")
                         .IsRequired()
                         .HasColumnType("text");
@@ -782,6 +788,8 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DefaultPembimbingId");
 
                     b.HasIndex("StaseId");
 
@@ -888,21 +896,6 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.ToTable("PembimbingStase");
                 });
 
-            modelBuilder.Entity("PembimbingSubStase", b =>
-                {
-                    b.Property<int>("DaftarDefaultPembimbingId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SubStaseId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("DaftarDefaultPembimbingId", "SubStaseId");
-
-                    b.HasIndex("SubStaseId");
-
-                    b.ToTable("PembimbingSubStase");
-                });
-
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Jadwal", b =>
                 {
                     b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Kelompok", "Kelompok")
@@ -990,11 +983,17 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
 
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.SubStase", b =>
                 {
+                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", "DefaultPembimbing")
+                        .WithMany()
+                        .HasForeignKey("DefaultPembimbingId");
+
                     b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Stase", "Stase")
                         .WithMany("DaftarSubStase")
                         .HasForeignKey("StaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("DefaultPembimbing");
 
                     b.Navigation("Stase");
                 });
@@ -1010,21 +1009,6 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Stase", null)
                         .WithMany()
                         .HasForeignKey("DaftarStaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("PembimbingSubStase", b =>
-                {
-                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", null)
-                        .WithMany()
-                        .HasForeignKey("DaftarDefaultPembimbingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.SubStase", null)
-                        .WithMany()
-                        .HasForeignKey("SubStaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

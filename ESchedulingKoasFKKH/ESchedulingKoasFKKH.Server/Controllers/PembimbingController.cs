@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Auth;
+using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
@@ -42,7 +42,7 @@ public class PembimbingController : ControllerBase
             pembimbing.Id, 
             pembimbing.NIP, 
             pembimbing.Nama, 
-            daftarKelompok = pembimbing.DaftarKelompok.Select(x => x.Id) 
+            daftarJadwal = pembimbing.DaftarJadwal.Select(x => x.Id) 
         });
     }
 
@@ -56,7 +56,7 @@ public class PembimbingController : ControllerBase
             x.Id,
             x.NIP,
             x.Nama,
-            daftarKelompok = x.DaftarKelompok.Select(x => x.Id)
+            daftarJadwal = x.DaftarJadwal.Select(j => j.Id)
         }));
     }
 
@@ -101,7 +101,7 @@ public class PembimbingController : ControllerBase
                 pembimbing.Id,
                 pembimbing.NIP,
                 pembimbing.Nama,
-                daftarKelompok = pembimbing.DaftarKelompok.Select(x => x.Id)
+                daftarJadwal = pembimbing.DaftarJadwal.Select(x => x.Id)
             });
     }
 

@@ -245,6 +245,7 @@ export interface SubStase {
     idDefaultPembimbing?: number | null;
     namaDefaultPembimbing?: string | null;
     nipDefaultPembimbing?: string | null;
+    daftarDefaultPembimbing?: { id: number; nip: string; nama: string }[];
 }
 
 export interface Stase {
@@ -262,6 +263,7 @@ export interface Stase {
         namaPembimbing?: string | null;
     }[];
     daftarSubStase?: SubStase[];
+    daftarPembimbing?: { id: number; nip: string; nama: string }[];
 }
 
 export interface CreateStase {
@@ -306,16 +308,25 @@ export const staseApi = {
         return handleResponse<void>(res);
     },
 
-    pilihPembimbingSubStase: async (subStaseId: number, idPembimbing: number | null): Promise<void> => {
-        const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}/pilih-pembimbing`, {
+    updatePembimbingStase: async (staseId: number, idPembimbingList: number[]): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/${staseId}/pembimbing`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idPembimbing }),
+            body: JSON.stringify({ idPembimbingList }),
         });
         return handleResponse<void>(res);
     },
 
-    createSubStase: async (staseId: number, data: { nama: string; urutan?: number; idDefaultPembimbing?: number | null }): Promise<SubStase> => {
+    pilihPembimbingSubStase: async (subStaseId: number, idDefaultPembimbingList: number[]): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}/pilih-pembimbing`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idDefaultPembimbingList }),
+        });
+        return handleResponse<void>(res);
+    },
+
+    createSubStase: async (staseId: number, data: { nama: string; urutan?: number; idDefaultPembimbingList?: number[] }): Promise<SubStase> => {
         const res = await apiFetch(`${BASE_URL}/stase/${staseId}/sub-stase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -324,7 +335,7 @@ export const staseApi = {
         return handleResponse<SubStase>(res);
     },
 
-    updateSubStase: async (subStaseId: number, data: { nama: string; urutan?: number; idDefaultPembimbing?: number | null }): Promise<void> => {
+    updateSubStase: async (subStaseId: number, data: { nama: string; urutan?: number; idDefaultPembimbingList?: number[] }): Promise<void> => {
         const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -351,14 +362,33 @@ export const staseApi = {
 // ============================================================
 // KELOMPOK API
 // ============================================================
+export interface KelompokJadwalSubStase {
+    idSubStase: number | null;
+    urutan: number | null;
+    namaSubStase: string | null;
+    idPembimbing: number | null;
+    namaPembimbing: string | null;
+    nipPembimbing: string | null;
+    daftarPembimbing?: { id: number; nip: string; nama: string }[];
+}
+
+export interface KelompokJadwal {
+    id: number;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    idStase: number | null;
+    namaStase: string | null;
+    idPembimbing?: number | null;
+    namaPembimbing?: string | null;
+    nipPembimbing?: string | null;
+    daftarSubStase?: KelompokJadwalSubStase[];
+}
+
 export interface Kelompok {
     id: number;
     nama: string;
-    idPembimbing: number | null;
-    namaPembimbing?: string | null;
-    nipPembimbing?: string | null;
     daftarMahasiswa: { id: number; nim: string; nama: string }[];
-    daftarJadwal: { id: number; tanggalMulai: string; tanggalSelesai: string; idStase: number | null; namaStase: string | null }[];
+    daftarJadwal: KelompokJadwal[];
 }
 
 export interface CreateKelompok {
@@ -453,6 +483,7 @@ export interface JadwalSubStase {
   idPembimbing?: number | null;
   namaPembimbing?: string | null;
   nipPembimbing?: string | null;
+  daftarPembimbing?: { id: number; nip: string; nama: string }[];
 }
 
 export interface Jadwal {
@@ -472,6 +503,7 @@ export interface Jadwal {
 export interface CreateJadwalSubStaseInput {
   idSubStase: number;
   idPembimbing?: number | null;
+  idPembimbingList?: number[];
 }
 
 export interface CreateJadwal {

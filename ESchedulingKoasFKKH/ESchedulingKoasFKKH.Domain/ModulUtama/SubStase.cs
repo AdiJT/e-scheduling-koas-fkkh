@@ -8,7 +8,7 @@ public class SubStase : Entity<int>
     public int Urutan { get; set; }
 
     public Stase Stase { get; set; }
-    public Pembimbing? DefaultPembimbing { get; set; }
+    public List<Pembimbing> DaftarDefaultPembimbing { get; set; } = [];
 }
 
 public interface ISubStaseRepository

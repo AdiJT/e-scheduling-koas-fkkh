@@ -165,9 +165,7 @@ public class MahasiswaController : ControllerBase
             kelompok = mahasiswa.Kelompok is null ? null : new
             {
                 mahasiswa.Kelompok.Id,
-                mahasiswa.Kelompok.Nama,
-                idPembimbing = mahasiswa.Kelompok.Pembimbing?.Id,
-                namaPembimbing = mahasiswa.Kelompok.Pembimbing?.Nama
+                mahasiswa.Kelompok.Nama
             },
             idTahunAjaran = mahasiswa.TahunAjaran?.Id,
             tahunAjaran = mahasiswa.TahunAjaran is null ? null : new

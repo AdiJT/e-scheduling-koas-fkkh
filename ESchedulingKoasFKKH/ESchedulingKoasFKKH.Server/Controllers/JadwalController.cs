@@ -82,7 +82,7 @@ public class JadwalController : ControllerBase
             if (pembimbing is not null)
                 return Ok(daftarjadwal
                     .Where(x => 
-                        (x.Pembimbing?.Id == pembimbing.Id || x.Kelompok.Pembimbing?.Id == pembimbing.Id || x.DaftarJadwalSubStase.Any(s => s.Pembimbing?.Id == pembimbing.Id)) && 
+                        (x.Pembimbing?.Id == pembimbing.Id || x.DaftarJadwalSubStase.Any(s => s.Pembimbing?.Id == pembimbing.Id)) && 
                         (idKelompok is null || x.Kelompok.Id == idKelompok) && 
                         (idStase is null || x.Stase.Id == idStase))
                     .Select(ToResponse));
@@ -207,22 +207,28 @@ public class JadwalController : ControllerBase
         {
             foreach (var sub in subStaseList)
             {
-                Pembimbing? pembimbingSub = null;
                 var requestSub = create.DaftarSubStasePembimbing?.FirstOrDefault(x => x.IdSubStase == sub.Id);
+                Pembimbing? subPemb = null;
+
                 if (requestSub?.IdPembimbing.HasValue == true)
                 {
-                    pembimbingSub = await _pembimbingRepository.Get(requestSub.IdPembimbing.Value);
+                    subPemb = await _pembimbingRepository.Get(requestSub.IdPembimbing.Value);
                 }
-                else if (sub.DefaultPembimbing is not null)
+                else if (requestSub?.IdPembimbingList is not null && requestSub.IdPembimbingList.Count > 0)
                 {
-                    pembimbingSub = sub.DefaultPembimbing;
+                    subPemb = await _pembimbingRepository.Get(requestSub.IdPembimbingList.First());
+                }
+                else if (sub.DaftarDefaultPembimbing is not null && sub.DaftarDefaultPembimbing.Count > 0)
+                {
+                    var indexAcak = Random.Shared.Next(sub.DaftarDefaultPembimbing.Count);
+                    subPemb = sub.DaftarDefaultPembimbing[indexAcak];
                 }
 
                 jadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
                 {
                     Jadwal = jadwal,
                     SubStase = sub,
-                    Pembimbing = pembimbingSub
+                    Pembimbing = subPemb
                 });
             }
         }
@@ -299,7 +305,16 @@ public class JadwalController : ControllerBase
             foreach (var item in update.DaftarSubStasePembimbing)
             {
                 var existingSub = jadwal.DaftarJadwalSubStase.FirstOrDefault(x => x.SubStase.Id == item.IdSubStase);
-                Pembimbing? p = item.IdPembimbing.HasValue ? await _pembimbingRepository.Get(item.IdPembimbing.Value) : null;
+                Pembimbing? p = null;
+
+                if (item.IdPembimbing.HasValue)
+                {
+                    p = await _pembimbingRepository.Get(item.IdPembimbing.Value);
+                }
+                else if (item.IdPembimbingList is not null && item.IdPembimbingList.Count > 0)
+                {
+                    p = await _pembimbingRepository.Get(item.IdPembimbingList.First());
+                }
 
                 if (existingSub is not null)
                 {
@@ -361,7 +376,7 @@ public class JadwalController : ControllerBase
 
     private object ToResponse(Jadwal j)
     {
-        var pembimbing = j.Pembimbing ?? j.Kelompok?.Pembimbing;
+        var pembimbing = j.Pembimbing;
         return new
         {
             j.Id,

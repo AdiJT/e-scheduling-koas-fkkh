@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Abstracts;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 
@@ -6,7 +6,6 @@ public class Kelompok : Entity<int>
 {
     public required string Nama { get; set; }
 
-    public Pembimbing? Pembimbing { get; set; }
     public List<Mahasiswa> DaftarMahasiswa { get; set; } = [];
     public List<Jadwal> DaftarJadwal { get; set; } = [];
 }

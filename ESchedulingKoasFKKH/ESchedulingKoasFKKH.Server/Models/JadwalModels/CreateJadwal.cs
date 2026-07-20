@@ -24,4 +24,6 @@ public class CreateJadwalSubStase
     public int IdSubStase { get; set; }
 
     public int? IdPembimbing { get; set; }
+
+    public List<int>? IdPembimbingList { get; set; }
 }
