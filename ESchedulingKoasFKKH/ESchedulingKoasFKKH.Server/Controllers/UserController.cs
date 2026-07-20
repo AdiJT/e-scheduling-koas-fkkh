@@ -1,5 +1,6 @@
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Shared;
+using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
@@ -21,15 +22,18 @@ public class UserController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _jwtOptions;
+    private readonly IUnitOfWork _unitOfWork;
 
     public UserController(
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtOptions = jwtOptions.Value;
+        _unitOfWork = unitOfWork;
     }
 
     [Authorize]
@@ -107,5 +111,36 @@ public class UserController : ControllerBase
         };
 
         return Ok(new { user.Id, user.Role, token = tokenStr, fullName, profileId });
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile(UpdateProfile model)
+    {
+        var currentUsername = User?.Identity?.Name;
+        if (currentUsername is null) return Unauthorized();
+
+        var user = await _userRepository.GetByName(currentUsername);
+        if (user is null) return NotFound();
+
+        if (user.Name != model.NewUsername)
+        {
+            if (await _userRepository.IsExist(model.NewUsername, user.Id))
+            {
+                return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["newUsername"] = "Username sudah digunakan oleh user lain" });
+            }
+            user.Name = model.NewUsername;
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.NewPassword))
+        {
+            user.PasswordHash = _passwordHasher.HashPassword(user, model.NewPassword);
+        }
+
+        _userRepository.Update(user);
+        var result = await _unitOfWork.SaveChangesAsync();
+        if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+
+        return NoContent();
     }
 }

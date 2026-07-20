@@ -282,6 +282,11 @@ export interface UpdateStase {
     jenis: string;
 }
 
+export interface UpdateProfileInput {
+  newUsername: string;
+  newPassword?: string;
+}
+
 export interface RiwayatKelompok {
     id: number;
     idJadwalAsal: number;
@@ -629,6 +634,17 @@ export const riwayatKelompokApi = {
   delete: async (id: number): Promise<void> => {
     const res = await apiFetch(`${BASE_URL}/riwayat-kelompok/${id}`, {
       method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+export const userApi = {
+  updateProfile: async (data: UpdateProfileInput): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/user/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
     return handleResponse<void>(res);
   },

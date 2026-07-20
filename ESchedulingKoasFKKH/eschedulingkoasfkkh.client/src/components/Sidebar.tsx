@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { userApi } from '../services/api';
 import logoUndana from '../assets/logo_undana.png';
 import {
   DashboardIcon,
@@ -94,7 +95,55 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+
+  const handleOpenProfile = () => {
+    setNewUsername(user?.username || '');
+    setNewPassword('');
+    setConfirmPassword('');
+    setProfileError(null);
+    setProfileSuccess(null);
+    setShowProfileModal(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUsername.trim()) {
+      setProfileError('Username tidak boleh kosong');
+      return;
+    }
+    if (newPassword && newPassword !== confirmPassword) {
+      setProfileError('Konfirmasi password tidak cocok');
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      setProfileError(null);
+      setProfileSuccess(null);
+      await userApi.updateProfile({
+        newUsername: newUsername.trim(),
+        newPassword: newPassword || undefined
+      });
+      updateUser(newUsername.trim());
+      setProfileSuccess('Profil berhasil diperbarui!');
+      setTimeout(() => {
+        setShowProfileModal(false);
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      setProfileError(err.message || 'Gagal memperbarui profil. Username mungkin sudah digunakan.');
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -217,7 +266,11 @@ export default function Sidebar({
         </nav>
 
         <div className="p-3 border-t border-white/10">
-          <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center' : ''}`}>
+          <div 
+            onClick={handleOpenProfile}
+            title="Klik untuk edit profil"
+            className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 cursor-pointer hover:bg-white/10 transition-all duration-200 ${collapsed ? 'justify-center' : ''}`}
+          >
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xs font-bold shadow-md flex-shrink-0">
               {getInitials(user?.fullName || user?.username || 'Admin')}
             </div>
@@ -243,6 +296,98 @@ export default function Sidebar({
           </button>
         </div>
       </aside>
+
+      {/* Profile Edit Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
+          <div className="bg-white rounded-3xl shadow-elevated p-6 w-full max-w-sm animate-scale-in flex flex-col max-h-[90vh] overflow-hidden border border-slate-100">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3 shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-primary-900">Edit Profil</h3>
+                <p className="text-xs text-slate-500">Sesuaikan kredensial login Anda.</p>
+              </div>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="text-slate-400 hover:bg-slate-150 p-2 rounded-full transition-colors font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveProfile} className="space-y-4 mb-4 overflow-y-auto pr-1 flex-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Username Baru</label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all text-slate-800 font-semibold"
+                  placeholder="Masukkan username baru"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Password Baru</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all"
+                  placeholder="Isi jika ingin ganti password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Konfirmasi Password Baru</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all"
+                  placeholder="Ketik ulang password baru"
+                />
+              </div>
+
+              {profileError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+                  {profileError}
+                </div>
+              )}
+
+              {profileSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-700 font-medium">
+                  {profileSuccess}
+                </div>
+              )}
+            </form>
+
+            {/* Footer */}
+            <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                disabled={updating}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-all"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={updating}
+                className="flex-1 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-650 hover:from-indigo-650 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md text-xs disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+              >
+                {updating ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
