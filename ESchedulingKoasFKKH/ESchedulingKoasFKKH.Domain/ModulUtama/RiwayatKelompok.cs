@@ -22,5 +22,6 @@ public interface IRiwayatKelompokRepository
     Task<RiwayatKelompok?> Get(int id);
     Task<List<RiwayatKelompok>> GetAll();
     void Add(RiwayatKelompok riwayat);
+    void Update(RiwayatKelompok riwayat);
     void Delete(RiwayatKelompok riwayat);
 }

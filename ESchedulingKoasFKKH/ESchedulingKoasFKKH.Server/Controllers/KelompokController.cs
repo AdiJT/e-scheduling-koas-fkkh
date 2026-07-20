@@ -242,7 +242,8 @@ public class KelompokController : ControllerBase
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
         var allKelompoks = await _kelompokRepository.GetAll();
-        var existingRiwayatIds = (await _riwayatKelompokRepository.GetAll()).Select(r => r.IdJadwalAsal).ToHashSet();
+        var allRiwayat = await _riwayatKelompokRepository.GetAll();
+        var riwayatDict = allRiwayat.ToDictionary(r => r.IdJadwalAsal);
 
         bool dataChanged = false;
         foreach (var kel in allKelompoks)
@@ -250,7 +251,7 @@ public class KelompokController : ControllerBase
             foreach (var j in kel.DaftarJadwal)
             {
                 var tglSelesai = j.TanggalSelesai(_hariLiburService);
-                if (tglSelesai < today && !existingRiwayatIds.Contains(j.Id))
+                if (tglSelesai < today)
                 {
                     // Extract Tahun Ajaran from students
                     string tahunAjaranStr = "N/A";
@@ -271,24 +272,46 @@ public class KelompokController : ControllerBase
                         nipPembimbing = sub.Pembimbing?.NIP
                     }).ToList();
 
-                    var riwayat = new RiwayatKelompok
-                    {
-                        IdJadwalAsal = j.Id,
-                        NamaKelompok = kel.Nama,
-                        TahunAjaran = tahunAjaranStr,
-                        NamaStase = j.Stase?.Nama ?? "N/A",
-                        TanggalMulai = j.TanggalMulai,
-                        TanggalSelesai = tglSelesai,
-                        NamaPembimbing = j.Pembimbing?.Nama,
-                        NipPembimbing = j.Pembimbing?.NIP,
-                        DaftarMahasiswaJson = System.Text.Json.JsonSerializer.Serialize(mhsList),
-                        DaftarSubStaseJson = System.Text.Json.JsonSerializer.Serialize(subStasesList),
-                        TanggalDiarsipkan = DateTime.UtcNow
-                    };
+                    var mhsJson = System.Text.Json.JsonSerializer.Serialize(mhsList);
+                    var subStaseJson = System.Text.Json.JsonSerializer.Serialize(subStasesList);
 
-                    _riwayatKelompokRepository.Add(riwayat);
-                    existingRiwayatIds.Add(j.Id);
-                    dataChanged = true;
+                    if (!riwayatDict.TryGetValue(j.Id, out var riwayat))
+                    {
+                        riwayat = new RiwayatKelompok
+                        {
+                            IdJadwalAsal = j.Id,
+                            NamaKelompok = kel.Nama,
+                            TahunAjaran = tahunAjaranStr,
+                            NamaStase = j.Stase?.Nama ?? "N/A",
+                            TanggalMulai = j.TanggalMulai,
+                            TanggalSelesai = tglSelesai,
+                            NamaPembimbing = j.Pembimbing?.Nama,
+                            NipPembimbing = j.Pembimbing?.NIP,
+                            DaftarMahasiswaJson = mhsJson,
+                            DaftarSubStaseJson = subStaseJson,
+                            TanggalDiarsipkan = DateTime.UtcNow
+                        };
+
+                        _riwayatKelompokRepository.Add(riwayat);
+                        riwayatDict[j.Id] = riwayat;
+                        dataChanged = true;
+                    }
+                    else
+                    {
+                        bool changed = false;
+                        if (riwayat.NamaKelompok != kel.Nama) { riwayat.NamaKelompok = kel.Nama; changed = true; }
+                        if (riwayat.TahunAjaran != tahunAjaranStr) { riwayat.TahunAjaran = tahunAjaranStr; changed = true; }
+                        if (riwayat.NamaPembimbing != j.Pembimbing?.Nama) { riwayat.NamaPembimbing = j.Pembimbing?.Nama; changed = true; }
+                        if (riwayat.NipPembimbing != j.Pembimbing?.NIP) { riwayat.NipPembimbing = j.Pembimbing?.NIP; changed = true; }
+                        if (riwayat.DaftarMahasiswaJson != mhsJson) { riwayat.DaftarMahasiswaJson = mhsJson; changed = true; }
+                        if (riwayat.DaftarSubStaseJson != subStaseJson) { riwayat.DaftarSubStaseJson = subStaseJson; changed = true; }
+
+                        if (changed)
+                        {
+                            _riwayatKelompokRepository.Update(riwayat);
+                            dataChanged = true;
+                        }
+                    }
                 }
             }
         }

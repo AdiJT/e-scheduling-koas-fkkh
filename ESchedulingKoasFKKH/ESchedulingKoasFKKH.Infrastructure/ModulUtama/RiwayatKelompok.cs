@@ -24,6 +24,8 @@ internal class RiwayatKelompokRepository : IRiwayatKelompokRepository
 
     public void Add(RiwayatKelompok riwayat) => _appDbContext.RiwayatKelompok.Add(riwayat);
 
+    public void Update(RiwayatKelompok riwayat) => _appDbContext.RiwayatKelompok.Update(riwayat);
+
     public void Delete(RiwayatKelompok riwayat) => _appDbContext.RiwayatKelompok.Remove(riwayat);
 
     public async Task<RiwayatKelompok?> Get(int id) => await _appDbContext.RiwayatKelompok
