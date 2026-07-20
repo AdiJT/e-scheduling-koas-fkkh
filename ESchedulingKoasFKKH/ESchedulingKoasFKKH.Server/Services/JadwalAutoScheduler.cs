@@ -121,12 +121,23 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 var tanggalMulai = kandidat.TanggalMulai;
                 var tanggalSelesai = kandidat.TanggalSelesai;
 
-                _jadwalRepository.Add(new Jadwal
+                var newJadwal = new Jadwal
                 {
                     TanggalMulai = tanggalMulai,
                     Kelompok = kelompok,
                     Stase = stase,
-                });
+                    Pembimbing = kelompok.Pembimbing
+                };
+                foreach (var sub in stase.DaftarSubStase)
+                {
+                    newJadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
+                    {
+                        Jadwal = newJadwal,
+                        SubStase = sub,
+                        Pembimbing = sub.DefaultPembimbing
+                    });
+                }
+                _jadwalRepository.Add(newJadwal);
 
                 if (stase.Jenis == JenisStase.Terpisah)
                     pemakaianStaseTerpisah[stase.Id].Add(new RentangTanggal(tanggalMulai, tanggalSelesai));

@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Infrastructure.Database;
+using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +32,8 @@ public static class DepedencyInjection
         services.AddScoped<IJadwalRepository, JadwalRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITahunAjaranRepository, TahunAjaranRepository>();
+        services.AddScoped<ISubStaseRepository, SubStaseRepository>();
+        services.AddScoped<IJadwalSubStaseRepository, JadwalSubStaseRepository>();
 
         services.AddScoped<IHariLiburService, HariLiburService>();
 

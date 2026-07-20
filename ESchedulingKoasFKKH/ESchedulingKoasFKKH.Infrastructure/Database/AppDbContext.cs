@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ESchedulingKoasFKKH.Domain.Abstracts;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
@@ -43,4 +43,6 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<Jadwal> Jadwal { get; set; }
     public DbSet<User> User { get; set; }
     public DbSet<TahunAjaran> TahunAjaran { get; set; }
+    public DbSet<SubStase> SubStase { get; set; }
+    public DbSet<JadwalSubStase> JadwalSubStase { get; set; }
 }

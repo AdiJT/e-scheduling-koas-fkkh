@@ -996,6 +996,24 @@ export default function JadwalPage() {
               </div>
               
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Dosen Pembimbing Stase</p>
+                {detailJadwal.daftarSubStase && detailJadwal.daftarSubStase.length > 0 ? (
+                  <div className="space-y-1.5 mt-1">
+                    <p className="text-xs font-bold text-purple-700">Dosen Spesialis Sub-Stase ({detailJadwal.daftarSubStase.length}):</p>
+                    {detailJadwal.daftarSubStase.map(sub => (
+                      <div key={sub.idSubStase} className="text-xs text-slate-700 flex items-center gap-1.5 bg-white p-2 rounded border border-slate-200">
+                        <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-800 text-[10px] font-bold flex items-center justify-center">{sub.urutan}</span>
+                        <span className="font-semibold">{sub.namaSubStase}:</span>
+                        <span className="text-purple-900 font-medium">{sub.namaPembimbing || 'Belum diatur'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-semibold text-slate-800">{detailJadwal.namaPembimbing || 'Belum diatur'}</p>
+                )}
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-xs text-slate-500 mb-2">Status</p>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${statusColor(detailJadwal.status)}`}>
                   {renderStatusDot(detailJadwal.status)} {detailJadwal.status}

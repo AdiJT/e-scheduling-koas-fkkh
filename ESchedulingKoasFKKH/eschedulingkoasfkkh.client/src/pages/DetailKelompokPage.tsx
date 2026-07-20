@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi, pembimbingApi, mahasiswaApi, type Kelompok, type Pembimbing, type Mahasiswa } from '../services/api';
+import { kelompokApi, pembimbingApi, mahasiswaApi, jadwalApi, type Kelompok, type Pembimbing, type Mahasiswa, type Jadwal } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
 import { KelompokIcon, RefreshIcon, DosenIcon, MahasiswaIcon, DeleteIcon, JadwalIcon, InfoIcon, SaveIcon } from '../components/Icons';
@@ -17,6 +17,7 @@ export default function DetailKelompokPage() {
   const isDosen = user?.role?.toLowerCase() === 'dosen';
 
   const [kelompok, setKelompok] = useState<Kelompok | null>(null);
+  const [jadwalFullList, setJadwalFullList] = useState<Jadwal[]>([]);
   const [allPembimbing, setAllPembimbing] = useState<Pembimbing[]>([]);
   const [allMahasiswa, setAllMahasiswa] = useState<Mahasiswa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,8 +41,14 @@ export default function DetailKelompokPage() {
       setLoading(true);
       setError(null);
       
-      const kel = await kelompokApi.get(kelompokId);
+      const [kel, allJadwal] = await Promise.all([
+        kelompokApi.get(kelompokId),
+        jadwalApi.getAll()
+      ]);
+
       setKelompok(kel);
+      const filteredJadwal = allJadwal.filter(j => j.idKelompok === kelompokId);
+      setJadwalFullList(filteredJadwal);
 
       // Only fetch list of all supervisors and students if not a student (for admin/dosen who might need to manage members)
       if (!isMahasiswa) {
@@ -54,7 +61,6 @@ export default function DetailKelompokPage() {
           setAllMahasiswa(mhs);
         } catch (e) {
           console.warn("Failed to fetch support data:", e);
-          // Don't set error here, because we still have the main group data
         }
       }
     } catch (err: any) {
@@ -222,11 +228,11 @@ export default function DetailKelompokPage() {
         </div>
       )}
 
-      {/* Pembimbing Section */}
+      {/* Pembimbing Default / Pembimbing Utama */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden mb-6 animate-fade-in-up">
         <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-green-50 flex items-center justify-between">
           <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
-            <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Dosen Pembimbing
+            <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Dosen Pembimbing Kelompok (Utama)
           </h2>
           {!isAdmin && !isMahasiswa && !isDosen && (
             <button
@@ -272,7 +278,7 @@ export default function DetailKelompokPage() {
             <div className="flex justify-center mb-3 text-slate-300">
               <DosenIcon className="w-16 h-16" />
             </div>
-            <p className="text-slate-500 text-sm">Belum ada pembimbing yang ditentukan</p>
+            <p className="text-slate-500 text-sm">Belum ada pembimbing utama yang ditentukan</p>
           </div>
         )}
       </div>
@@ -352,8 +358,8 @@ export default function DetailKelompokPage() {
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden mt-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-between">
           <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
-            <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" /> Jadwal Lengkap Kelompok
-            <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">{kelompok.daftarJadwal.length}</span>
+            <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" /> Jadwal & Dosen Pembimbing per Stase
+            <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">{jadwalFullList.length}</span>
           </h2>
           <button 
             onClick={() => navigate('/jadwal')}
@@ -363,7 +369,7 @@ export default function DetailKelompokPage() {
           </button>
         </div>
 
-        {kelompok.daftarJadwal.length === 0 ? (
+        {jadwalFullList.length === 0 ? (
           <div className="p-10 text-center">
             <div className="flex justify-center mb-3 text-slate-300">
               <JadwalIcon className="w-16 h-16" />
@@ -379,14 +385,15 @@ export default function DetailKelompokPage() {
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Stase</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tanggal Mulai</th>
                   <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tanggal Selesai</th>
+                  <th className="px-4 md:px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Dosen Pembimbing Stase</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {kelompok.daftarJadwal.map((jadwal, index) => (
+                {jadwalFullList.map((jadwal, index) => (
                   <tr key={jadwal.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
                     <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{index + 1}</td>
                     <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                      <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium border border-purple-100">
+                      <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-semibold border border-purple-100">
                         {jadwal.namaStase}
                       </span>
                     </td>
@@ -395,6 +402,22 @@ export default function DetailKelompokPage() {
                     </td>
                     <td className="px-4 md:px-5 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                       {formatDateDisplay(jadwal.tanggalSelesai)}
+                    </td>
+                    <td className="px-4 md:px-5 py-3.5 text-sm text-slate-600">
+                      {jadwal.daftarSubStase && jadwal.daftarSubStase.length > 0 ? (
+                        <div className="space-y-1">
+                          <span className="text-xs font-bold text-purple-700 block mb-1">Dosen Spesialis Sub-Stase ({jadwal.daftarSubStase.length}):</span>
+                          {jadwal.daftarSubStase.map(sub => (
+                            <div key={sub.idSubStase} className="text-xs text-slate-700 flex items-center gap-1.5 bg-purple-50/50 px-2 py-1 rounded-md border border-purple-100">
+                              <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-800 text-[10px] font-bold flex items-center justify-center">{sub.urutan}</span>
+                              <span className="font-semibold">{sub.namaSubStase}:</span>
+                              <span className="text-purple-900 font-medium">{sub.namaPembimbing || 'Belum diatur'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="font-medium text-slate-800">{jadwal.namaPembimbing || 'Belum diatur'}</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -494,10 +517,10 @@ export default function DetailKelompokPage() {
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
             <h3 className="text-lg font-bold text-primary-900 mb-4 flex items-center gap-2">
               <span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" />
-              {kelompok.idPembimbing ? 'Ganti Pembimbing' : 'Pilih Pembimbing'}
+              {kelompok.idPembimbing ? 'Ganti Pembimbing Utama' : 'Pilih Pembimbing Utama'}
             </h3>
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Pilih Dosen Pembimbing</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Pilih Dosen Pembimbing Utama</label>
               <select
                 value={selectedPembimbingId}
                 onChange={(e) => setSelectedPembimbingId(e.target.value ? Number(e.target.value) : '')}

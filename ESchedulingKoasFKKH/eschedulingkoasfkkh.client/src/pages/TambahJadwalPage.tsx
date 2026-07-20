@@ -2,13 +2,14 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, kelompokApi, staseApi, type Kelompok, type Stase } from '../services/api';
+import { jadwalApi, kelompokApi, staseApi, pembimbingApi, type Kelompok, type Stase, type Pembimbing } from '../services/api';
 import { calculateEndDate, formatDateDisplay, getHolidaysInRange } from '../utils/holidays';
-import { JadwalIcon, SaveIcon, InfoIcon } from '../components/Icons';
+import { JadwalIcon, SaveIcon, InfoIcon, DosenIcon } from '../components/Icons';
 
 export default function TambahJadwalPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ idKelompok: '', idStase: '', tanggalMulai: '' });
+  const [form, setForm] = useState({ idKelompok: '', idStase: '', tanggalMulai: '', idPembimbing: '' });
+  const [subStaseDosen, setSubStaseDosen] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -16,6 +17,7 @@ export default function TambahJadwalPage() {
   // Data from API for dropdowns
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
   const [staseList, setStaseList] = useState<Stase[]>([]);
+  const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Calculated end date
@@ -26,12 +28,14 @@ export default function TambahJadwalPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [kelompoks, stases] = await Promise.all([
+        const [kelompoks, stases, pembimbings] = await Promise.all([
           kelompokApi.getAll(),
           staseApi.getAll(),
+          pembimbingApi.getAll(),
         ]);
         setKelompokList(kelompoks);
         setStaseList(stases);
+        setPembimbingList(pembimbings);
       } catch {
         setErrors({ general: 'Gagal memuat data. Pastikan server backend berjalan.' });
       } finally {
@@ -49,10 +53,22 @@ export default function TambahJadwalPage() {
         setSelectedStase(stase);
         const calculated = calculateEndDate(form.tanggalMulai, stase.waktu);
         setEndDate(calculated);
+
+        // Pre-fill default pembimbing for sub-stases if available
+        if (stase.daftarSubStase && stase.daftarSubStase.length > 0) {
+          const initialSubs: Record<number, string> = {};
+          stase.daftarSubStase.forEach(sub => {
+            initialSubs[sub.id] = sub.idDefaultPembimbing ? sub.idDefaultPembimbing.toString() : '';
+          });
+          setSubStaseDosen(initialSubs);
+        } else {
+          setSubStaseDosen({});
+        }
       }
     } else {
       setEndDate('');
       setSelectedStase(null);
+      setSubStaseDosen({});
     }
   }, [form.tanggalMulai, form.idStase, staseList]);
 
@@ -63,16 +79,32 @@ export default function TambahJadwalPage() {
     }
   };
 
+  const handleSubStaseDosenChange = (subStaseId: number, idPembimbing: string) => {
+    setSubStaseDosen(prev => ({
+      ...prev,
+      [subStaseId]: idPembimbing
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
+
+    const daftarSubStasePembimbing = selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0
+      ? selectedStase.daftarSubStase.map(sub => ({
+          idSubStase: sub.id,
+          idPembimbing: subStaseDosen[sub.id] ? parseInt(subStaseDosen[sub.id]) : null
+        }))
+      : undefined;
 
     try {
       await jadwalApi.create({
         tanggalMulai: form.tanggalMulai,
         idKelompok: parseInt(form.idKelompok),
         idStase: parseInt(form.idStase),
+        idPembimbing: form.idPembimbing ? parseInt(form.idPembimbing) : null,
+        daftarSubStasePembimbing
       });
       setShowSuccess(true);
       setTimeout(() => navigate('/jadwal'), 1500);
@@ -130,7 +162,7 @@ export default function TambahJadwalPage() {
       {loadingData ? (
         <div className="bg-white rounded-2xl shadow-card p-16 text-center">
           <div className="w-12 h-12 border-4 border-red-200 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 text-sm">Memuat data kelompok dan stase...</p>
+          <p className="text-slate-500 text-sm">Memuat data kelompok, stase, dan dosen...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
@@ -155,7 +187,7 @@ export default function TambahJadwalPage() {
                     <option value="">Pilih kelompok</option>
                     {kelompokList.map(k => (
                       <option key={k.id} value={k.id}>
-                        {k.nama} {k.idPembimbing ? '' : '(⚠️ Belum ada pembimbing)'}
+                        {k.nama}
                       </option>
                     ))}
                   </select>
@@ -176,7 +208,7 @@ export default function TambahJadwalPage() {
                     <option value="">Pilih stase</option>
                     {staseList.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.nama} ({s.waktu} minggu - {s.jenis})
+                        {s.nama} ({s.waktu} minggu - {s.jenis}) {s.daftarSubStase && s.daftarSubStase.length > 0 ? '✨ Has Sub-Stases' : ''}
                       </option>
                     ))}
                   </select>
@@ -197,6 +229,66 @@ export default function TambahJadwalPage() {
                   />
                   {errors.tanggalMulai && <p className="text-xs text-red-500 mt-1">{errors.tanggalMulai}</p>}
                 </div>
+
+                {/* Dosen Pembimbing untuk Stase Standar */}
+                {selectedStase && (!selectedStase.daftarSubStase || selectedStase.daftarSubStase.length === 0) && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <DosenIcon className="w-4 h-4 text-emerald-600" />
+                      <span>Dosen Pembimbing Stase</span>
+                    </label>
+                    <select
+                      name="idPembimbing"
+                      value={form.idPembimbing}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer"
+                    >
+                      <option value="">Pilih Dosen Pembimbing (opsional)</option>
+                      {pembimbingList.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.nama} (NIP: {p.nip})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Dosen yang akan membimbing kelompok ini khusus pada stase {selectedStase.nama}</p>
+                  </div>
+                )}
+
+                {/* Dosen Pembimbing untuk Stase KODIL (Sub-Stase) */}
+                {selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0 && (
+                  <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs">✨</div>
+                      <div>
+                        <h3 className="text-sm font-bold text-purple-950">Dosen Pembimbing Spesialis Sub-Stase {selectedStase.nama}</h3>
+                        <p className="text-xs text-purple-700">Tentukan dosen penanggung jawab untuk tiap sub-stase rotasi Kodil ini</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      {selectedStase.daftarSubStase.map(sub => (
+                        <div key={sub.id} className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
+                            <span className="text-sm font-bold text-slate-800">{sub.nama}</span>
+                          </div>
+                          <select
+                            value={subStaseDosen[sub.id] || ''}
+                            onChange={(e) => handleSubStaseDosenChange(sub.id, e.target.value)}
+                            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500 focus:bg-white cursor-pointer min-w-[220px]"
+                          >
+                            <option value="">Pilih Dosen Spesialis</option>
+                            {pembimbingList.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.nama}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Calculated End Date (Read-Only) */}
                 {endDate && (

@@ -238,6 +238,15 @@ export const pembimbingApi = {
 // ============================================================
 // STASE API
 // ============================================================
+export interface SubStase {
+    id: number;
+    nama: string;
+    urutan: number;
+    idDefaultPembimbing?: number | null;
+    namaDefaultPembimbing?: string | null;
+    nipDefaultPembimbing?: string | null;
+}
+
 export interface Stase {
     id: number;
     nama: string;
@@ -249,7 +258,10 @@ export interface Stase {
         tanggalSelesai: string;
         idKelompok: number | null;
         namaKelompok: string | null;
+        idPembimbing?: number | null;
+        namaPembimbing?: string | null;
     }[];
+    daftarSubStase?: SubStase[];
 }
 
 export interface CreateStase {
@@ -290,6 +302,40 @@ export const staseApi = {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
+        });
+        return handleResponse<void>(res);
+    },
+
+    pilihPembimbingSubStase: async (subStaseId: number, idPembimbing: number | null): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}/pilih-pembimbing`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idPembimbing }),
+        });
+        return handleResponse<void>(res);
+    },
+
+    createSubStase: async (staseId: number, data: { nama: string; urutan?: number; idDefaultPembimbing?: number | null }): Promise<SubStase> => {
+        const res = await apiFetch(`${BASE_URL}/stase/${staseId}/sub-stase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return handleResponse<SubStase>(res);
+    },
+
+    updateSubStase: async (subStaseId: number, data: { nama: string; urutan?: number; idDefaultPembimbing?: number | null }): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return handleResponse<void>(res);
+    },
+
+    deleteSubStase: async (subStaseId: number): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/stase/sub-stase/${subStaseId}`, {
+            method: 'DELETE',
         });
         return handleResponse<void>(res);
     },
@@ -400,6 +446,15 @@ export const kelompokApi = {
 // ============================================================
 // JADWAL API
 // ============================================================
+export interface JadwalSubStase {
+  idSubStase: number;
+  namaSubStase: string;
+  urutan: number;
+  idPembimbing?: number | null;
+  namaPembimbing?: string | null;
+  nipPembimbing?: string | null;
+}
+
 export interface Jadwal {
   id: number;
   tanggalMulai: string;
@@ -409,17 +464,29 @@ export interface Jadwal {
   idStase: number;
   namaStase: string;
   idPembimbing?: number | null;
+  namaPembimbing?: string | null;
+  nipPembimbing?: string | null;
+  daftarSubStase?: JadwalSubStase[];
+}
+
+export interface CreateJadwalSubStaseInput {
+  idSubStase: number;
+  idPembimbing?: number | null;
 }
 
 export interface CreateJadwal {
   tanggalMulai: string; // "YYYY-MM-DD" format
   idKelompok: number;
   idStase: number;
+  idPembimbing?: number | null;
+  daftarSubStasePembimbing?: CreateJadwalSubStaseInput[];
 }
 
 export interface UpdateJadwalRequest {
   tanggalMulai: string;
   konfirmasiOverride?: boolean;
+  idPembimbing?: number | null;
+  daftarSubStasePembimbing?: CreateJadwalSubStaseInput[];
 }
 
 export interface GenerateJadwalKelompokSummary {

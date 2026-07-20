@@ -9,6 +9,8 @@ public class Jadwal : Entity<int>
 
     public Kelompok Kelompok { get; set; }
     public Stase Stase { get; set; }
+    public Pembimbing? Pembimbing { get; set; }
+    public List<JadwalSubStase> DaftarJadwalSubStase { get; set; } = [];
 
     public DateOnly TanggalSelesai(IHariLiburService hariLiburService)
     {

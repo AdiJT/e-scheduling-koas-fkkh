@@ -11,6 +11,7 @@ public class Stase : Entity<int>
     public int JumlahHari => Waktu * 7;
 
     public List<Jadwal> DaftarJadwal { get; set; } = [];
+    public List<SubStase> DaftarSubStase { get; set; } = [];
 }
 
 public enum JenisStase

@@ -23,6 +23,8 @@ public class JadwalController : ControllerBase
     private readonly IJadwalAutoScheduler _jadwalAutoScheduler;
     private readonly IMahasiswaRepository _mahasiswaRepository;
     private readonly IPembimbingRepository _pembimbingRepository;
+    private readonly ISubStaseRepository _subStaseRepository;
+    private readonly IJadwalSubStaseRepository _jadwalSubStaseRepository;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
@@ -32,7 +34,9 @@ public class JadwalController : ControllerBase
         IHariLiburService hariLiburService,
         IJadwalAutoScheduler jadwalAutoScheduler,
         IMahasiswaRepository mahasiswaRepository,
-        IPembimbingRepository pembimbingRepository)
+        IPembimbingRepository pembimbingRepository,
+        ISubStaseRepository subStaseRepository,
+        IJadwalSubStaseRepository jadwalSubStaseRepository)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
@@ -42,6 +46,8 @@ public class JadwalController : ControllerBase
         _jadwalAutoScheduler = jadwalAutoScheduler;
         _mahasiswaRepository = mahasiswaRepository;
         _pembimbingRepository = pembimbingRepository;
+        _subStaseRepository = subStaseRepository;
+        _jadwalSubStaseRepository = jadwalSubStaseRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -51,36 +57,16 @@ public class JadwalController : ControllerBase
         if (jadwal is null) return NotFound();
 
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
-            return Ok(new
-            {
-                jadwal.Id,
-                jadwal.TanggalMulai,
-                tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
-                idStase = jadwal.Stase.Id,
-                namaStase = jadwal.Stase.Nama,
-                idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama,
-                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
-            });
+            return Ok(ToResponse(jadwal));
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
-        if (mahasiswa is not null && mahasiswa.Kelompok == jadwal.Kelompok)
-            return Ok(new
-            {
-                jadwal.Id,
-                jadwal.TanggalMulai,
-                tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
-                idStase = jadwal.Stase.Id,
-                namaStase = jadwal.Stase.Nama,
-                idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama,
-                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
-            });
+        if (mahasiswa is not null && mahasiswa.Kelompok?.Id == jadwal.Kelompok.Id)
+            return Ok(ToResponse(jadwal));
 
         return Forbid();
     }
 
-    [HttpGet()]
+    [HttpGet]
     public async Task<IActionResult> GetAll(int? idKelompok = null, int? idStase = null)
     {
         var daftarjadwal = await _jadwalRepository.GetAll();
@@ -88,17 +74,7 @@ public class JadwalController : ControllerBase
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola))
             return Ok(daftarjadwal
                 .Where(x => (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
-                .Select(x => new
-                {
-                    x.Id,
-                    x.TanggalMulai,
-                    tanggalSelesai = x.TanggalSelesai(_hariLiburService),
-                    idStase = x.Stase.Id,
-                    namaStase = x.Stase.Nama,
-                    idKelompok = x.Kelompok.Id,
-                    namaKelompok = x.Kelompok.Nama,
-                    idPembimbing = x.Kelompok.Pembimbing?.Id
-                }));
+                .Select(ToResponse));
 
         if (User.IsInRole(UserRoles.Dosen))
         {
@@ -106,37 +82,17 @@ public class JadwalController : ControllerBase
             if (pembimbing is not null)
                 return Ok(daftarjadwal
                     .Where(x => 
-                        x.Kelompok.Pembimbing == pembimbing && 
+                        (x.Pembimbing?.Id == pembimbing.Id || x.Kelompok.Pembimbing?.Id == pembimbing.Id || x.DaftarJadwalSubStase.Any(s => s.Pembimbing?.Id == pembimbing.Id)) && 
                         (idKelompok is null || x.Kelompok.Id == idKelompok) && 
                         (idStase is null || x.Stase.Id == idStase))
-                    .Select(x => new
-                    {
-                        x.Id,
-                        x.TanggalMulai,
-                        tanggalSelesai = x.TanggalSelesai(_hariLiburService),
-                        idStase = x.Stase.Id,
-                        namaStase = x.Stase.Nama,
-                        idKelompok = x.Kelompok.Id,
-                        namaKelompok = x.Kelompok.Nama,
-                        idPembimbing = x.Kelompok.Pembimbing?.Id
-                    }));
+                    .Select(ToResponse));
         }
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
         if (mahasiswa is not null)
             return Ok(daftarjadwal
-                .Where(x => x.Kelompok == mahasiswa?.Kelompok && (idStase is null || x.Stase.Id == idStase))
-                .Select(x => new
-                {
-                    x.Id,
-                    x.TanggalMulai,
-                    tanggalSelesai = x.TanggalSelesai(_hariLiburService),
-                    idStase = x.Stase.Id,
-                    namaStase = x.Stase.Nama,
-                    idKelompok = x.Kelompok.Id,
-                    namaKelompok = x.Kelompok.Nama,
-                    idPembimbing = x.Kelompok.Pembimbing?.Id
-                }));
+                .Where(x => x.Kelompok.Id == mahasiswa.Kelompok?.Id && (idStase is null || x.Stase.Id == idStase))
+                .Select(ToResponse));
 
         return Forbid();
     }
@@ -159,19 +115,13 @@ public class JadwalController : ControllerBase
                 ["idStase"] = $"Stase dengan id '{create.IdStase}' tidak ditemukan"
             });
 
-        if (kelompok.Pembimbing is null)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string>
-            {
-                ["idKelompok"] = $"Kelompok '{kelompok.Nama}' belum memiliki pembimbing"
-            });
-
-        if (kelompok.DaftarJadwal.Any(x => x.Stase == stase))
+        if (kelompok.DaftarJadwal.Any(x => x.Stase.Id == stase.Id))
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
                 ["idStase"] = $"Kelompok '{kelompok.Nama}' sudah memiliki jadwal untuk stase '{stase.Nama}'"
             });
 
-        //Cek stase Ujian setelah stase seminar dan stase seminar sudah dijadwalkan
+        // Cek stase Ujian setelah stase seminar dan stase seminar sudah dijadwalkan
         if (stase.Jenis == JenisStase.Ujian)
         {
             var jadwalSeminar = kelompok.DaftarJadwal.FirstOrDefault(x => x.Stase.Jenis == JenisStase.Seminar);
@@ -190,12 +140,12 @@ public class JadwalController : ControllerBase
                 });
         }
 
-        //Cek stase Seminar setelah semua stase telah dilakukan dan dijadwalkan terakhir
+        // Cek stase Seminar setelah semua stase telah dilakukan dan dijadwalkan terakhir
         if (stase.Jenis == JenisStase.Seminar)
         {
             var daftarStase = (await _staseRepository.GetAll()).Where(x => x.Jenis == JenisStase.Terpisah || x.Jenis == JenisStase.Bersamaan);
             var jadwalTerakhir = kelompok.DaftarJadwal.OrderBy(x => x.TanggalMulai).LastOrDefault();
-            if (daftarStase.Any(s => kelompok.DaftarJadwal.FirstOrDefault(y => y.Stase == s) == null) || jadwalTerakhir is null)
+            if (daftarStase.Any(s => kelompok.DaftarJadwal.FirstOrDefault(y => y.Stase.Id == s.Id) == null) || jadwalTerakhir is null)
                 return HelpersFunctions.BadRequest(new Dictionary<string, string>
                 {
                     ["idStase"] = $"Kelompok '{kelompok.Nama}' harus dijadwalkan untuk semua " +
@@ -210,7 +160,7 @@ public class JadwalController : ControllerBase
                 });
         }
 
-        //Cek bukan hari libur
+        // Cek bukan hari libur
         if (_hariLiburService.HariLibur(create.TanggalMulai))
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
             {
@@ -237,12 +187,45 @@ public class JadwalController : ControllerBase
                 });
         }
 
+        Pembimbing? pembimbingStase = null;
+        if (create.IdPembimbing.HasValue)
+        {
+            pembimbingStase = await _pembimbingRepository.Get(create.IdPembimbing.Value);
+        }
+
         var jadwal = new Jadwal
         {
             TanggalMulai = create.TanggalMulai,
             Kelompok = kelompok,
             Stase = stase,
+            Pembimbing = pembimbingStase
         };
+
+        // Jika stase memiliki sub-stase (seperti Kodil)
+        var subStaseList = await _subStaseRepository.GetByStase(stase.Id);
+        if (subStaseList.Count > 0)
+        {
+            foreach (var sub in subStaseList)
+            {
+                Pembimbing? pembimbingSub = null;
+                var requestSub = create.DaftarSubStasePembimbing?.FirstOrDefault(x => x.IdSubStase == sub.Id);
+                if (requestSub?.IdPembimbing.HasValue == true)
+                {
+                    pembimbingSub = await _pembimbingRepository.Get(requestSub.IdPembimbing.Value);
+                }
+                else if (sub.DefaultPembimbing is not null)
+                {
+                    pembimbingSub = sub.DefaultPembimbing;
+                }
+
+                jadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
+                {
+                    Jadwal = jadwal,
+                    SubStase = sub,
+                    Pembimbing = pembimbingSub
+                });
+            }
+        }
 
         _jadwalRepository.Add(jadwal);
         var result = await _unitOfWork.SaveChangesAsync();
@@ -252,17 +235,7 @@ public class JadwalController : ControllerBase
         return CreatedAtAction(
             nameof(Get),
             new { id = jadwal.Id },
-            new
-            {
-                jadwal.Id,
-                jadwal.TanggalMulai,
-                tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
-                idStase = jadwal.Stase.Id,
-                namaStase = jadwal.Stase.Nama,
-                idKelompok = jadwal.Kelompok.Id,
-                namaKelompok = jadwal.Kelompok.Nama,
-                idPembimbing = jadwal.Kelompok.Pembimbing?.Id
-            });
+            ToResponse(jadwal));
     }
 
     [HttpPost("generate")]
@@ -315,22 +288,52 @@ public class JadwalController : ControllerBase
         jadwal.Kelompok = kelompok;
         jadwal.Stase = stase;
 
+        if (update.IdPembimbing.HasValue)
+        {
+            jadwal.Pembimbing = await _pembimbingRepository.Get(update.IdPembimbing.Value);
+        }
+
+        // Update SubStase Pembimbing jika ada
+        if (update.DaftarSubStasePembimbing is not null && update.DaftarSubStasePembimbing.Count > 0)
+        {
+            foreach (var item in update.DaftarSubStasePembimbing)
+            {
+                var existingSub = jadwal.DaftarJadwalSubStase.FirstOrDefault(x => x.SubStase.Id == item.IdSubStase);
+                Pembimbing? p = item.IdPembimbing.HasValue ? await _pembimbingRepository.Get(item.IdPembimbing.Value) : null;
+
+                if (existingSub is not null)
+                {
+                    existingSub.Pembimbing = p;
+                }
+                else
+                {
+                    var subStaseObj = await _subStaseRepository.Get(item.IdSubStase);
+                    if (subStaseObj is not null)
+                    {
+                        jadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
+                        {
+                            Jadwal = jadwal,
+                            SubStase = subStaseObj,
+                            Pembimbing = p
+                        });
+                    }
+                }
+            }
+        }
+
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return Ok(new
+        var responseObj = (IDictionary<string, object?>)new System.Dynamic.ExpandoObject();
+        var baseRes = ToResponse(jadwal);
+        foreach (var prop in baseRes.GetType().GetProperties())
         {
-            jadwal.Id,
-            jadwal.TanggalMulai,
-            tanggalSelesai = jadwal.TanggalSelesai(_hariLiburService),
-            idStase = jadwal.Stase.Id,
-            namaStase = jadwal.Stase.Nama,
-            idKelompok = jadwal.Kelompok.Id,
-            namaKelompok = jadwal.Kelompok.Nama,
-            idPembimbing = jadwal.Kelompok.Pembimbing?.Id,
-            overrideDigunakan = warnings.Count > 0
-        });
+            responseObj[prop.Name] = prop.GetValue(baseRes, null);
+        }
+        responseObj["overrideDigunakan"] = warnings.Count > 0;
+
+        return Ok(responseObj);
     }
 
     [HttpDelete("{id:int}")]
@@ -354,6 +357,33 @@ public class JadwalController : ControllerBase
     {
         await _jadwalRepository.DeleteAll();
         return NoContent();
+    }
+
+    private object ToResponse(Jadwal j)
+    {
+        var pembimbing = j.Pembimbing ?? j.Kelompok?.Pembimbing;
+        return new
+        {
+            j.Id,
+            j.TanggalMulai,
+            tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+            idStase = j.Stase.Id,
+            namaStase = j.Stase.Nama,
+            idKelompok = j.Kelompok.Id,
+            namaKelompok = j.Kelompok.Nama,
+            idPembimbing = pembimbing?.Id,
+            namaPembimbing = pembimbing?.Nama,
+            nipPembimbing = pembimbing?.NIP,
+            daftarSubStase = j.DaftarJadwalSubStase?.OrderBy(s => s.SubStase.Urutan).Select(s => new
+            {
+                idSubStase = s.SubStase.Id,
+                namaSubStase = s.SubStase.Nama,
+                urutan = s.SubStase.Urutan,
+                idPembimbing = s.Pembimbing?.Id,
+                namaPembimbing = s.Pembimbing?.Nama,
+                nipPembimbing = s.Pembimbing?.NIP
+            }) ?? []
+        };
     }
 
     private Dictionary<string, string> ValidasiEditJadwalPenting(Jadwal jadwal, Kelompok kelompok, Stase stase, DateOnly tanggalMulaiBaru)
