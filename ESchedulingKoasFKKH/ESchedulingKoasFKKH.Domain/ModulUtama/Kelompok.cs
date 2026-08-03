@@ -8,6 +8,9 @@ public class Kelompok : Entity<int>
 
     public List<Mahasiswa> DaftarMahasiswa { get; set; } = [];
     public List<Jadwal> DaftarJadwal { get; set; } = [];
+
+    public int? IdTahunAjaran { get; set; }
+    public TahunAjaran? TahunAjaran { get; set; }
 }
 
 public interface IKelompokRepository

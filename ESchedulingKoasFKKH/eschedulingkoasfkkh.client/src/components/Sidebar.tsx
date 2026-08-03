@@ -378,7 +378,7 @@ export default function Sidebar({
                 type="button"
                 onClick={handleSaveProfile}
                 disabled={updating}
-                className="flex-1 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-650 hover:from-indigo-650 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md text-xs disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+                className="flex-1 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md text-xs disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
               >
                 {updating ? (
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

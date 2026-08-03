@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi, staseApi, pembimbingApi, jadwalApi, type Kelompok, type Stase, type Pembimbing } from '../services/api';
+import { kelompokApi, staseApi, pembimbingApi, jadwalApi, tahunAjaranApi, type Kelompok, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
 import { calculateEndDate, formatDateDisplay } from '../utils/holidays';
 import { SaveIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
 
@@ -11,7 +11,9 @@ export default function TambahJadwalPage() {
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
   const [staseList, setStaseList] = useState<Stase[]>([]);
   const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
+  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [filterTahunAjaran, setFilterTahunAjaran] = useState<number | ''>('');
 
   const [form, setForm] = useState({
     tanggalMulai: '',
@@ -32,14 +34,16 @@ export default function TambahJadwalPage() {
     const fetchData = async () => {
       try {
         setLoadingData(true);
-        const [kelompokData, staseData, pembimbingData] = await Promise.all([
+        const [kelompokData, staseData, pembimbingData, taData] = await Promise.all([
           kelompokApi.getAll(),
           staseApi.getAll(),
           pembimbingApi.getAll(),
+          tahunAjaranApi.getAll(),
         ]);
         setKelompokList(kelompokData);
         setStaseList(staseData);
         setPembimbingList(pembimbingData);
+        setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
       } catch (err) {
         console.error("Failed to load initial data for TambahJadwal:", err);
       } finally {
@@ -176,6 +180,27 @@ export default function TambahJadwalPage() {
                 <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-rose-500 to-red-500 rounded-full" /> Data Jadwal</h2>
               </div>
               <div className="p-6 space-y-5">
+                {/* Tahun Ajaran Filter (Optional) */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran Kelompok (Opsional)</label>
+                  <select
+                    value={filterTahunAjaran}
+                    onChange={(e) => {
+                      setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '');
+                      setForm(prev => ({ ...prev, idKelompok: '' }));
+                    }}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto"
+                  >
+                    <option value="">Semua Tahun Ajaran</option>
+                    {tahunAjaranList.map(ta => (
+                      <option key={ta.id} value={ta.id}>
+                        {ta.tahun} - {ta.semester}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">Pilih tahun ajaran untuk memfilter daftar kelompok di bawah ini.</p>
+                </div>
+
                 {/* Kelompok */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Kelompok <span className="text-red-500">*</span></label>
@@ -184,13 +209,15 @@ export default function TambahJadwalPage() {
                     value={form.idKelompok}
                     onChange={handleChange}
                     required
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
                       ${errors.idKelompok ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                   >
                     <option value="">Pilih kelompok</option>
-                    {kelompokList.map(k => (
+                    {kelompokList
+                      .filter(k => filterTahunAjaran === '' || k.idTahunAjaran === filterTahunAjaran)
+                      .map(k => (
                       <option key={k.id} value={k.id}>
-                        {k.nama}
+                        {k.nama} {k.tahunAjaran ? `(${k.tahunAjaran})` : ''}
                       </option>
                     ))}
                   </select>
@@ -205,7 +232,7 @@ export default function TambahJadwalPage() {
                     value={form.idStase}
                     onChange={handleChange}
                     required
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
                       ${errors.idStase ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                   >
                     <option value="">Pilih stase</option>

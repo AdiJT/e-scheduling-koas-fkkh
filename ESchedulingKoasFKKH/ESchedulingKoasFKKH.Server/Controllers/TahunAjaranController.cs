@@ -75,9 +75,8 @@ public class TahunAjaranController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get),
-            new { id = tahunAjaran.Id },
+        return Created(
+            $"/api/tahunajaran/{tahunAjaran.Id}",
             ToResponse(tahunAjaran));
     }
 

@@ -6,7 +6,7 @@ import { StaseIcon, SaveIcon, InfoIcon } from '../components/Icons';
 
 export default function TambahStasePage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nama: '', waktu: '', jenis: '' });
+  const [form, setForm] = useState({ nama: '', waktu: '', jenis: 'Terpisah' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

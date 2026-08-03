@@ -146,43 +146,14 @@ public class StaseController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get),
-            new { id = stase.Id },
+        return Created(
+            $"/api/stase/{stase.Id}",
             new
             {
                 stase.Id,
                 stase.Nama,
                 stase.Waktu,
-                jenis = stase.Jenis.Humanize(),
-                daftarJadwal = stase.DaftarJadwal?.Select(j => new
-                {
-                    j.Id,
-                    j.TanggalMulai,
-                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
-                    idKelompok = j.Kelompok?.Id,
-                    namaKelompok = j.Kelompok?.Nama,
-                    idPembimbing = j.Pembimbing?.Id,
-                    namaPembimbing = j.Pembimbing?.Nama
-                }) ?? [],
-                daftarSubStase = stase.DaftarSubStase?.OrderBy(s => s.Urutan).Select(s => new
-                {
-                    s.Id,
-                    s.Nama,
-                    s.Urutan,
-                    daftarDefaultPembimbing = s.DaftarDefaultPembimbing?.Select(p => new
-                    {
-                        p.Id,
-                        p.NIP,
-                        p.Nama
-                    }) ?? []
-                }) ?? [],
-                daftarPembimbing = stase.DaftarPembimbing?.Select(p => new
-                {
-                    p.Id,
-                    p.NIP,
-                    p.Nama
-                }) ?? []
+                jenis = stase.Jenis.Humanize()
             });
     }
 

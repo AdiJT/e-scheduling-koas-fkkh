@@ -18,17 +18,20 @@ public class PembimbingController : ControllerBase
     private readonly IUnitOfWork _unitOfWork;
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IStaseRepository _staseRepository;
 
     public PembimbingController(
         IPembimbingRepository pembimbingRepository,
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
-        IPasswordHasher<User> passwordHasher)
+        IPasswordHasher<User> passwordHasher,
+        IStaseRepository staseRepository)
     {
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _staseRepository = staseRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -37,12 +40,15 @@ public class PembimbingController : ControllerBase
         var pembimbing = await _pembimbingRepository.Get(id);
         if (pembimbing is null) return NotFound();
 
+        var semuaStase = await _staseRepository.GetAll();
+
         return Ok(new 
         { 
             pembimbing.Id, 
             pembimbing.NIP, 
             pembimbing.Nama, 
-            daftarJadwal = pembimbing.DaftarJadwal.Select(x => x.Id) 
+            daftarStase = pembimbing.DaftarStase.Select(s => s.Nama).ToList(),
+            koordinatorStase = semuaStase.Where(s => s.Koordinator?.Id == pembimbing.Id).Select(s => s.Nama).ToList()
         });
     }
 
@@ -50,13 +56,15 @@ public class PembimbingController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var daftarPembimbing = await _pembimbingRepository.GetAll();
+        var semuaStase = await _staseRepository.GetAll();
 
         return Ok(daftarPembimbing.Select(x => new
         {
             x.Id,
             x.NIP,
             x.Nama,
-            daftarJadwal = x.DaftarJadwal.Select(j => j.Id)
+            daftarStase = x.DaftarStase.Select(s => s.Nama).ToList(),
+            koordinatorStase = semuaStase.Where(s => s.Koordinator?.Id == x.Id).Select(s => s.Nama).ToList()
         }));
     }
 
@@ -93,15 +101,15 @@ public class PembimbingController : ControllerBase
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get),
-            new { id = pembimbing.Id },
+        return Created(
+            $"/api/pembimbing/{pembimbing.Id}",
             new
             {
                 pembimbing.Id,
                 pembimbing.NIP,
                 pembimbing.Nama,
-                daftarJadwal = pembimbing.DaftarJadwal.Select(x => x.Id)
+                daftarStase = new List<string>(),
+                koordinatorStase = new List<string>()
             });
     }
 

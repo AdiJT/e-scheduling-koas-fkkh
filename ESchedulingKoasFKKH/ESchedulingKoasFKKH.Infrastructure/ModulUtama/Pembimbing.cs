@@ -43,18 +43,21 @@ internal class PembimbingRepository : IPembimbingRepository
     public async Task<Pembimbing?> Get(int id) => await _appDbContext.Pembimbing
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
+        .Include(x => x.DaftarStase)
         .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Pembimbing?> Get(string nip) => await _appDbContext.Pembimbing
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
+        .Include(x => x.DaftarStase)
         .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.NIP == nip);
 
     public async Task<List<Pembimbing>> GetAll() => await _appDbContext.Pembimbing
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
+        .Include(x => x.DaftarStase)
         .Include(x => x.User)
         .ToListAsync();
 

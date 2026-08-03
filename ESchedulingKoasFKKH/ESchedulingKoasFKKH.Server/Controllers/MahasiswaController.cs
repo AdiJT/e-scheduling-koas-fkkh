@@ -95,9 +95,8 @@ public class MahasiswaController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get), 
-            new { id = mahasiswa.Id }, 
+        return Created(
+            $"/api/mahasiswa/{mahasiswa.Id}", 
             ToResponse(mahasiswa));
     }
 

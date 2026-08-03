@@ -2,9 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi, type Kelompok } from '../services/api';
+import { kelompokApi, tahunAjaranApi, type Kelompok, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
+import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon, ChevronDownIcon } from '../components/Icons';
 
 import Tooltip from '../components/Tooltip';
 
@@ -23,6 +23,8 @@ export default function KelompokPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterTahunAjaran, setFilterTahunAjaran] = useState<number | ''>('');
+  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -37,8 +39,12 @@ export default function KelompokPage() {
     try {
       setLoading(true);
       setError(null);
-      const kelompokData = await kelompokApi.getAll();
+      const [kelompokData, taData] = await Promise.all([
+        kelompokApi.getAll(),
+        tahunAjaranApi.getAll()
+      ]);
       setData(kelompokData);
+      setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
     } catch {
       setError('Gagal memuat data kelompok. Pastikan server backend sedang berjalan.');
     } finally {
@@ -51,7 +57,9 @@ export default function KelompokPage() {
   }, [fetchData]);
 
   const filteredData = data.filter(k => {
-    return k.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = k.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchTahun = filterTahunAjaran === '' ? true : k.idTahunAjaran === filterTahunAjaran;
+    return matchSearch && matchTahun;
   });
 
   // === DELETE ===
@@ -93,7 +101,12 @@ export default function KelompokPage() {
     try {
       setSaving(true);
       setEditErrors({});
-      await kelompokApi.update(editingId, { id: editingId, nama: editNama });
+      const kel = data.find(k => k.id === editingId);
+      await kelompokApi.update(editingId, { 
+        id: editingId, 
+        nama: editNama,
+        idTahunAjaran: kel?.idTahunAjaran ?? undefined
+      });
       setData(prev => prev.map(k => k.id === editingId ? { ...k, nama: editNama } : k));
       setEditingId(null);
     } catch (err: unknown) {
@@ -142,6 +155,18 @@ export default function KelompokPage() {
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input type="text" placeholder="Cari kelompok..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 transition-all" id="search-kelompok" />
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={filterTahunAjaran}
+              onChange={(e) => setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '')}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 transition-all cursor-pointer"
+            >
+              <option value="">Semua Tahun Ajaran</option>
+              {tahunAjaranList.map(ta => (
+                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
+              ))}
+            </select>
           </div>
           <Tooltip content="Muat ulang data" position="bottom">
             <button
@@ -200,29 +225,46 @@ export default function KelompokPage() {
                   : (currentJadwal?.namaPembimbing || 'Belum diatur');
 
                 return (
-                  <div key={kel.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
-                    <div className={`h-2 bg-gradient-to-r ${colors[i % colors.length]}`} />
-                    <div className="p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-110 transition-transform`}>
-                          K{kel.id}
+                  <div key={kel.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up flex flex-col" style={{ animationDelay: `${i * 80}ms` }}>
+                    <div className={`h-2 bg-gradient-to-r ${colors[i % colors.length]} shrink-0`} />
+                    <div className="p-5 flex-1 flex flex-col">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform shrink-0`}>
+                          <KelompokIcon className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {editingId === kel.id ? (
+                            <div>
+                              <input
+                                value={editNama}
+                                onChange={(e) => setEditNama(e.target.value)}
+                                className={`w-full px-3 py-1.5 bg-slate-50 border-2 rounded-lg text-sm font-bold
+                                  focus:outline-none focus:border-orange-500 transition-all
+                                  ${editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                                placeholder="Nama Kelompok"
+                              />
+                              {editErrors.nama && <p className="text-[10px] text-red-500 mt-1">{editErrors.nama}</p>}
+                            </div>
+                          ) : (
+                            <div>
+                              <h3 className="text-lg font-bold text-primary-900 leading-tight truncate" title={kel.nama}>{kel.nama}</h3>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                {kel.tahunAjaran && (
+                                  <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
+                                    T.A. {kel.tahunAjaran}
+                                  </span>
+                                )}
+                                {isMahasiswa && kel.daftarMahasiswa?.some(m => m.nim === user?.username) && (
+                                  <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[10px] font-bold flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    Kelompok Anda
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      {editingId === kel.id ? (
-                        <div className="mb-3">
-                          <input
-                            value={editNama}
-                            onChange={(e) => setEditNama(e.target.value)}
-                            className={`w-full px-3 py-2 bg-slate-50 border-2 rounded-lg text-sm font-bold
-                              focus:outline-none focus:border-orange-500 transition-all
-                              ${editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                          />
-                          {editErrors.nama && <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>}
-                        </div>
-                      ) : (
-                        <h3 className="text-lg font-bold text-primary-900 mb-1">{kel.nama}</h3>
-                      )}
 
                       <div className="space-y-2 mb-4 text-xs text-slate-500">
                         <p className="flex items-center gap-1.5">
@@ -252,16 +294,16 @@ export default function KelompokPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 pt-3 border-t border-slate-100">
+                      <div className="flex flex-col gap-2 pt-3 border-t border-slate-100 mt-auto">
                         {editingId === kel.id ? (
-                          <>
+                          <div className="flex gap-2">
                             <button
                               onClick={saveEdit}
                               disabled={saving}
-                              className="flex-1 py-2 bg-green-50 hover:bg-green-100 text-green-600 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                              className="flex-1 py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                               {saving ? (
-                                <div className="w-3 h-3 border-2 border-green-400/30 border-t-green-500 rounded-full animate-spin" />
+                                <div className="w-3 h-3 border-2 border-green-400/30 border-t-green-600 rounded-full animate-spin" />
                               ) : (
                                 <SaveIcon className="w-3.5 h-3.5" />
                               )}
@@ -270,21 +312,21 @@ export default function KelompokPage() {
                             <button onClick={cancelEdit} className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl transition-all">
                               ✕ Batal
                             </button>
-                          </>
+                          </div>
                         ) : (
                           <>
-                            <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1">
-                              <DetailIcon className="w-4 h-4" /> Detail & Jadwal Dosen
+                            <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5">
+                              <DetailIcon className="w-4 h-4" /> Kelola Detail & Jadwal
                             </button>
                             {!isPengelola && !isMahasiswa && !isDosen && (
-                              <>
+                              <div className="flex gap-2">
                                 <button onClick={() => startEdit(kel)} className="flex-1 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1">
-                                  <EditIcon className="w-4 h-4" /> Edit
+                                  <EditIcon className="w-3.5 h-3.5" /> Edit
                                 </button>
-                                <button onClick={() => handleDelete(kel.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1">
-                                  <DeleteIcon className="w-4 h-4" /> Hapus
+                                <button onClick={() => handleDelete(kel.id)} className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1">
+                                  <DeleteIcon className="w-3.5 h-3.5" /> Hapus
                                 </button>
-                              </>
+                              </div>
                             )}
                           </>
                         )}

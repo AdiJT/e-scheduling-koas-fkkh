@@ -11,6 +11,7 @@ internal class KelompokConfiguration : IEntityTypeConfiguration<Kelompok>
     {
         builder.HasMany(x => x.DaftarMahasiswa).WithOne(y => y.Kelompok).IsRequired(false);
         builder.HasMany(x => x.DaftarJadwal).WithOne(y => y.Kelompok);
+        builder.HasOne(x => x.TahunAjaran).WithMany(x => x.DaftarKelompok).HasForeignKey(x => x.IdTahunAjaran).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -28,6 +29,7 @@ internal class KelompokRepository : IKelompokRepository
     public void Delete(Kelompok kelompok) => _appDbContext.Kelompok.Remove(kelompok);
 
     public async Task<Kelompok?> Get(int id) => await _appDbContext.Kelompok
+        .Include(x => x.TahunAjaran)
         .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
@@ -36,6 +38,7 @@ internal class KelompokRepository : IKelompokRepository
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<Kelompok>> GetAll() => await _appDbContext.Kelompok
+        .Include(x => x.TahunAjaran)
         .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)

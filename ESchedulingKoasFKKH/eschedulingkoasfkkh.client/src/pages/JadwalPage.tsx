@@ -3,7 +3,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, staseApi, pembimbingApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing } from '../services/api';
+import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { useAuth } from '../contexts/AuthContext';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
@@ -72,6 +72,8 @@ export default function JadwalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTahunAjaran, setFilterTahunAjaran] = useState<number | ''>('');
+  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +84,7 @@ export default function JadwalPage() {
   // Reset pagination on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus]);
+  }, [filterStatus, filterTahunAjaran]);
 
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
@@ -122,7 +124,10 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const result = await jadwalApi.getAll();
+      const [result, taData] = await Promise.all([
+        jadwalApi.getAll(undefined, undefined, filterTahunAjaran ? Number(filterTahunAjaran) : undefined),
+        tahunAjaranApi.getAll()
+      ]);
       
       if (isMahasiswa) {
         // We can still try to find the kelompokId for local filtering if needed, 
@@ -131,12 +136,13 @@ export default function JadwalPage() {
       }
       
       setData(result);
+      setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
     } finally {
       setLoading(false);
     }
-  }, [isMahasiswa]);
+  }, [isMahasiswa, filterTahunAjaran]);
 
   useEffect(() => {
     fetchData();
@@ -572,21 +578,38 @@ export default function JadwalPage() {
           </button>
         </div>
 
-        {/* Status Filter (only for table) */}
-        {viewMode === 'table' && (
-          <div className="flex gap-2 flex-wrap">
-            {['all', 'Berlangsung', 'Akan Datang', 'Selesai'].map(s => (
-              <button key={s} onClick={() => setFilterStatus(s)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  filterStatus === s
-                    ? 'bg-primary-900 text-white shadow-md'
-                    : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
-                }`}>
-                {s === 'all' ? 'Semua' : s}
-              </button>
-            ))}
+
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          {/* Status Filter (only for table) */}
+          {viewMode === 'table' && (
+            <div className="flex gap-2 flex-wrap">
+              {['all', 'Berlangsung', 'Akan Datang', 'Selesai'].map(s => (
+                <button key={s} onClick={() => setFilterStatus(s)}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    filterStatus === s
+                      ? 'bg-primary-900 text-white shadow-md'
+                      : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                  }`}>
+                  {s === 'all' ? 'Semua' : s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Tahun Ajaran Filter */}
+          <div className="w-full sm:w-48">
+            <select
+              value={filterTahunAjaran}
+              onChange={(e) => setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '')}
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all cursor-pointer"
+            >
+              <option value="">Semua Tahun Ajaran</option>
+              {tahunAjaranList.map(ta => (
+                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
+              ))}
+            </select>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Content Area */}

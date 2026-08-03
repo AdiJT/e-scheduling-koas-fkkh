@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Abstracts;
 
 namespace ESchedulingKoasFKKH.Domain.ModulUtama;
 
@@ -8,6 +8,7 @@ public class TahunAjaran : Entity<int>
     public Semester Semester { get; set; }
 
     public List<Mahasiswa> DaftarSiswa { get; set; } = [];
+    public List<Kelompok> DaftarKelompok { get; set; } = [];
 }
 
 public enum Semester

@@ -6,7 +6,7 @@ import Layout from '../components/Layout';
 import { staseApi, jadwalApi, pembimbingApi, type Stase, type Jadwal, type Pembimbing, type SubStase } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
-import { StaseIcon, KelompokIcon, JadwalIcon, InfoIcon, PrintIcon, StaseTerpisahIcon, StaseBersamaanIcon, DosenIcon, EditIcon, DeleteIcon, SaveIcon } from '../components/Icons';
+import { StaseIcon, KelompokIcon, JadwalIcon, InfoIcon, PrintIcon, StaseTerpisahIcon, StaseBersamaanIcon, DosenIcon, EditIcon, DeleteIcon, SaveIcon, KoordinatorIcon } from '../components/Icons';
 
 export default function DetailStasePage() {
   const navigate = useNavigate();
@@ -240,7 +240,7 @@ export default function DetailStasePage() {
       <div className="mb-6 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 rounded-2xl p-5 text-white shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md text-white flex items-center justify-center font-bold text-xl shadow-inner border border-white/30">
-            👑
+            <KoordinatorIcon className="w-7 h-7 text-indigo-100" />
           </div>
           <div>
             <span className="text-[11px] font-bold tracking-wider uppercase bg-white/20 px-2.5 py-0.5 rounded-full border border-white/30 text-purple-100">
@@ -611,7 +611,7 @@ export default function DetailStasePage() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default (Multi-Select)</label>
                 <div className="border-2 border-slate-200 rounded-xl max-h-40 overflow-y-auto p-2 bg-slate-50 space-y-1">
-                  {pembimbingList.map(p => (
+                  {(stase.daftarPembimbing || []).map(p => (
                     <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-purple-50 cursor-pointer text-xs">
                       <input
                         type="checkbox"
@@ -622,6 +622,11 @@ export default function DetailStasePage() {
                       <span className="font-semibold text-slate-700">{p.nama}</span>
                     </label>
                   ))}
+                  {(!stase.daftarPembimbing || stase.daftarPembimbing.length === 0) && (
+                    <p className="text-xs text-slate-500 italic p-2 text-center">
+                      Belum ada dosen pembimbing pada stase ini. Silakan kelola Dosen Stase terlebih dahulu.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -669,7 +674,7 @@ export default function DetailStasePage() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Dosen Penanggung Jawab Default (Multi-Select)</label>
                 <div className="border-2 border-slate-200 rounded-xl max-h-40 overflow-y-auto p-2 bg-slate-50 space-y-1">
-                  {pembimbingList.map(p => (
+                  {(stase.daftarPembimbing || []).map(p => (
                     <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-amber-50 cursor-pointer text-xs">
                       <input
                         type="checkbox"
@@ -680,6 +685,11 @@ export default function DetailStasePage() {
                       <span className="font-semibold text-slate-700">{p.nama}</span>
                     </label>
                   ))}
+                  {(!stase.daftarPembimbing || stase.daftarPembimbing.length === 0) && (
+                    <p className="text-xs text-slate-500 italic p-2 text-center">
+                      Belum ada dosen pembimbing pada stase ini. Silakan kelola Dosen Stase terlebih dahulu.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -741,7 +751,7 @@ export default function DetailStasePage() {
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-purple-500 cursor-pointer"
                 >
                   <option value="">-- Tanpa Koordinator Stase --</option>
-                  {(stase.daftarPembimbing && stase.daftarPembimbing.length > 0 ? stase.daftarPembimbing : pembimbingList).map(p => (
+                  {pembimbingList.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.nama} (NIP: {p.nip})
                     </option>

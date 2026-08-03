@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { staseApi, type Stase } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { StaseIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, SaveIcon, JadwalIcon as ClockIcon, StaseTerpisahIcon, StaseBersamaanIcon } from '../components/Icons';
+import { StaseIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, SaveIcon, JadwalIcon as ClockIcon, StaseTerpisahIcon, StaseBersamaanIcon, KoordinatorIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function StasePage() {
@@ -371,11 +371,15 @@ export default function StasePage() {
                     <tr key={stase.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
                       <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer group/link"
+                          onClick={() => navigate(`/stase/${stase.id}`)}
+                          title="Lihat Detail Stase"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm transition-transform group-hover/link:scale-105">
                             {stase.nama.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-primary-900">{stase.nama}</span>
+                          <span className="text-sm font-medium text-primary-900 group-hover/link:text-purple-600 transition-colors">{stase.nama}</span>
                         </div>
                       </td>
                       <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
@@ -386,7 +390,7 @@ export default function StasePage() {
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         {stase.namaKoordinator ? (
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 w-fit">
-                            <span>👑</span>
+                            <KoordinatorIcon className="w-4 h-4 text-indigo-500" />
                             <span>{stase.namaKoordinator}</span>
                           </div>
                         ) : (

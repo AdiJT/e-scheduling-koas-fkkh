@@ -67,13 +67,13 @@ public class JadwalController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(int? idKelompok = null, int? idStase = null)
+    public async Task<IActionResult> GetAll(int? idKelompok = null, int? idStase = null, int? idTahunAjaran = null)
     {
         var daftarjadwal = await _jadwalRepository.GetAll();
 
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola))
             return Ok(daftarjadwal
-                .Where(x => (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase))
+                .Where(x => (idKelompok is null || x.Kelompok.Id == idKelompok) && (idStase is null || x.Stase.Id == idStase) && (idTahunAjaran is null || x.Kelompok.IdTahunAjaran == idTahunAjaran))
                 .Select(ToResponse));
 
         if (User.IsInRole(UserRoles.Dosen))
@@ -84,14 +84,15 @@ public class JadwalController : ControllerBase
                     .Where(x => 
                         (x.Pembimbing?.Id == pembimbing.Id || x.DaftarJadwalSubStase.Any(s => s.Pembimbing?.Id == pembimbing.Id)) && 
                         (idKelompok is null || x.Kelompok.Id == idKelompok) && 
-                        (idStase is null || x.Stase.Id == idStase))
+                        (idStase is null || x.Stase.Id == idStase) &&
+                        (idTahunAjaran is null || x.Kelompok.IdTahunAjaran == idTahunAjaran))
                     .Select(ToResponse));
         }
 
         var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
         if (mahasiswa is not null)
             return Ok(daftarjadwal
-                .Where(x => x.Kelompok.Id == mahasiswa.Kelompok?.Id && (idStase is null || x.Stase.Id == idStase))
+                .Where(x => x.Kelompok.Id == mahasiswa.Kelompok?.Id && (idStase is null || x.Stase.Id == idStase) && (idTahunAjaran is null || x.Kelompok.IdTahunAjaran == idTahunAjaran))
                 .Select(ToResponse));
 
         return Forbid();
@@ -238,9 +239,8 @@ public class JadwalController : ControllerBase
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get),
-            new { id = jadwal.Id },
+        return Created(
+            $"/api/jadwal/{jadwal.Id}",
             ToResponse(jadwal));
     }
 

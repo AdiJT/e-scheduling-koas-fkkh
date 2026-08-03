@@ -70,9 +70,9 @@ export default function DosenPage() {
     } else if (sortColumn === 'nama') {
       aVal = a.nama || '';
       bVal = b.nama || '';
-    } else if (sortColumn === 'kelompok') {
-      aVal = a.daftarKelompok ? a.daftarKelompok.join(', ') : '';
-      bVal = b.daftarKelompok ? b.daftarKelompok.join(', ') : '';
+    } else if (sortColumn === 'stase') {
+      aVal = a.daftarStase ? a.daftarStase.join(', ') : '';
+      bVal = b.daftarStase ? b.daftarStase.join(', ') : '';
     }
 
     if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -297,10 +297,13 @@ export default function DosenPage() {
                       Nama Dosen {renderSortIndicator('nama')}
                     </th>
                     <th
-                      onClick={() => handleSort('kelompok')}
+                      onClick={() => handleSort('stase')}
                       className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-emerald-700/50"
                     >
-                      Kelompok {renderSortIndicator('kelompok')}
+                      Stase {renderSortIndicator('stase')}
+                    </th>
+                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                      Koordinator
                     </th>
                     {!isPengelola && (
                       <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
@@ -327,19 +330,36 @@ export default function DosenPage() {
                         </div>
                       </td>
 
-                      {/* Kelompok */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                        {dsn.daftarKelompok && dsn.daftarKelompok.length > 0 ? (
-                          <div className="flex gap-1 min-w-max">
-                            {dsn.daftarKelompok.map(kId => (
-                              <span key={kId} className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                Kelompok {kId}
+                      {/* Stase */}
+                      <td className="px-4 md:px-5 py-3.5 max-w-[250px]">
+                        {dsn.daftarStase && dsn.daftarStase.length > 0 ? (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {dsn.daftarStase.map(staseName => (
+                              <span key={staseName} className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200/60 leading-tight">
+                                {staseName}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
-                            Belum ada
+                          <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-500">
+                            Belum ada stase
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Koordinator */}
+                      <td className="px-4 md:px-5 py-3.5 max-w-[250px]">
+                        {dsn.koordinatorStase && dsn.koordinatorStase.length > 0 ? (
+                          <div className="flex gap-1.5 flex-wrap">
+                            {dsn.koordinatorStase.map(staseName => (
+                              <span key={staseName} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 leading-tight shadow-sm">
+                                <span className="text-blue-500">★</span> {staseName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-50 text-slate-400">
+                            -
                           </span>
                         )}
                       </td>

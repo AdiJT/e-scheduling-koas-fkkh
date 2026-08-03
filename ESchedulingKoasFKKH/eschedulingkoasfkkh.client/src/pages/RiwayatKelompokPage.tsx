@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { riwayatKelompokApi, type RiwayatKelompok } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
-import { SearchIcon, RefreshIcon, DetailIcon, DeleteIcon, InfoIcon, JadwalIcon as ClockIcon, DosenIcon, MahasiswaIcon } from '../components/Icons';
+import { SearchIcon, RefreshIcon, DetailIcon, DeleteIcon, InfoIcon, JadwalIcon as ClockIcon, DosenIcon, MahasiswaIcon, HistoryIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function RiwayatKelompokPage() {
@@ -24,6 +24,7 @@ export default function RiwayatKelompokPage() {
   const [pageSize, setPageSize] = useState(25);
   const [sortColumn, setSortColumn] = useState<string>('tanggalDiarsipkan');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [filterTahunAjaran, setFilterTahunAjaran] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -43,20 +44,24 @@ export default function RiwayatKelompokPage() {
     fetchData();
   }, [fetchData]);
 
-  // Reset pagination on search change
+  // Reset pagination on search or filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filterTahunAjaran]);
 
   const filteredData = data.filter(r => {
     const term = searchTerm.toLowerCase();
-    return (
-      r.namaKelompok.toLowerCase().includes(term) ||
+    const matchSearch = r.namaKelompok.toLowerCase().includes(term) ||
       r.namaStase.toLowerCase().includes(term) ||
       (r.namaPembimbing && r.namaPembimbing.toLowerCase().includes(term)) ||
-      r.tahunAjaran.toLowerCase().includes(term)
-    );
+      r.tahunAjaran.toLowerCase().includes(term);
+    
+    const matchTahunAjaran = filterTahunAjaran === '' || r.tahunAjaran === filterTahunAjaran;
+
+    return matchSearch && matchTahunAjaran;
   });
+
+  const uniqueTahunAjaran = Array.from(new Set(data.map(r => r.tahunAjaran))).filter(Boolean).sort();
 
   const sortedData = [...filteredData].sort((a, b) => {
     let aVal: any = '';
@@ -131,7 +136,7 @@ export default function RiwayatKelompokPage() {
       <div className="mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-            <span>⏱️</span>
+            <HistoryIcon className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary-900">Riwayat Kelompok</h1>
@@ -162,6 +167,19 @@ export default function RiwayatKelompokPage() {
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-all"
             />
           </div>
+          
+          <div className="w-full sm:w-48">
+            <select
+              value={filterTahunAjaran}
+              onChange={(e) => setFilterTahunAjaran(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 transition-all cursor-pointer !bg-none appearance-auto"
+            >
+              <option value="">Semua Tahun Ajaran</option>
+              {uniqueTahunAjaran.map(ta => (
+                <option key={ta} value={ta}>{ta}</option>
+              ))}
+            </select>
+          </div>
 
           <Tooltip content="Muat ulang data" position="bottom">
             <button
@@ -183,8 +201,8 @@ export default function RiwayatKelompokPage() {
           </div>
         ) : filteredData.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="flex justify-center mb-4 text-slate-300 text-5xl">
-              ⏱️
+            <div className="flex justify-center mb-4 text-slate-300">
+              <HistoryIcon className="w-16 h-16" />
             </div>
             <p className="text-slate-600 font-medium">Belum ada riwayat terekam</p>
             <p className="text-sm text-slate-400 mt-1">

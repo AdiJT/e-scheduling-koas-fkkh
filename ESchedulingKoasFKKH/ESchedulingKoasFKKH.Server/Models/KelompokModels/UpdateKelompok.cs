@@ -9,4 +9,5 @@ public class UpdateKelompok
 
     [Required]
     public string Nama { get; set; } = string.Empty;
+    public int? IdTahunAjaran { get; set; }
 }

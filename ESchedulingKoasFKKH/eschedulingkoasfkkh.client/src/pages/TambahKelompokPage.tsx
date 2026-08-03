@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi } from '../services/api';
+import { kelompokApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { KelompokIcon, SaveIcon, InfoIcon } from '../components/Icons';
 
 export default function TambahKelompokPage() {
@@ -10,6 +10,24 @@ export default function TambahKelompokPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const [idTahunAjaran, setIdTahunAjaran] = useState<number | ''>('');
+  const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
+  const [isLoadingTahunAjaran, setIsLoadingTahunAjaran] = useState(true);
+
+  useEffect(() => {
+    const fetchTahunAjaran = async () => {
+      try {
+        const list = await tahunAjaranApi.getAll();
+        setTahunAjaranList(list.sort((a, b) => b.tahun - a.tahun)); // Urutkan tahun terbaru di atas
+      } catch (err) {
+        console.error("Gagal mengambil data tahun ajaran:", err);
+      } finally {
+        setIsLoadingTahunAjaran(false);
+      }
+    };
+    fetchTahunAjaran();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +35,10 @@ export default function TambahKelompokPage() {
     setErrors({});
 
     try {
-      await kelompokApi.create({ nama });
+      await kelompokApi.create({ 
+        nama, 
+        idTahunAjaran: idTahunAjaran === '' ? undefined : Number(idTahunAjaran) 
+      });
       
       setShowSuccess(true);
       setTimeout(() => navigate('/kelompok'), 1500);
@@ -81,6 +102,21 @@ export default function TambahKelompokPage() {
                 ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
             />
             {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
+
+            <div className="mt-5">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-slate-400 font-normal">(Opsional)</span></label>
+              <select
+                value={idTahunAjaran}
+                onChange={(e) => setIdTahunAjaran(e.target.value ? Number(e.target.value) : '')}
+                disabled={isLoadingTahunAjaran}
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all disabled:opacity-50 !bg-none appearance-auto"
+              >
+                <option value="">-- Pilih Tahun Ajaran --</option>
+                {tahunAjaranList.map(ta => (
+                  <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
+                ))}
+              </select>
+            </div>
             
             <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl p-4">
               <h4 className="text-sm font-semibold text-orange-800 mb-2 flex items-center gap-1.5">

@@ -14,8 +14,18 @@ interface ApiError {
 async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
         if (response.status === 400) {
-            const errorData: ApiError = await response.json().catch(() => ({}));
-            throw { status: 400, errors: errorData.errors || {}, message: 'Validasi gagal' };
+            const errorData: any = await response.json().catch(() => ({}));
+            
+            // Normalize errors to lowercase keys and string values
+            const normalizedErrors: Record<string, string> = {};
+            if (errorData.errors) {
+                for (const [key, value] of Object.entries(errorData.errors)) {
+                    const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
+                    normalizedErrors[lowerKey] = Array.isArray(value) ? value[0] : (value as string);
+                }
+            }
+            
+            throw { status: 400, errors: normalizedErrors, message: 'Validasi gagal' };
         }
         if (response.status === 404) {
             throw { status: 404, message: 'Data tidak ditemukan' };
@@ -184,7 +194,8 @@ export interface Pembimbing {
     id: number;
     nip: string;
     nama: string;
-    daftarKelompok: number[];
+    daftarStase: string[];
+    koordinatorStase: string[];
 }
 
 export interface CreatePembimbing {
@@ -419,17 +430,21 @@ export interface KelompokJadwal {
 export interface Kelompok {
     id: number;
     nama: string;
+    idTahunAjaran?: number | null;
+    tahunAjaran?: string | null;
     daftarMahasiswa: { id: number; nim: string; nama: string }[];
     daftarJadwal: KelompokJadwal[];
 }
 
 export interface CreateKelompok {
     nama: string;
+    idTahunAjaran?: number;
 }
 
 export interface UpdateKelompok {
     id: number;
     nama: string;
+    idTahunAjaran?: number;
 }
 
 export const kelompokApi = {
@@ -575,8 +590,14 @@ export interface GenerateJadwalResult {
 }
 
 export const jadwalApi = {
-  getAll: async (): Promise<Jadwal[]> => {
-    const res = await apiFetch(`${BASE_URL}/Jadwal`);
+  getAll: async (idKelompok?: number, idStase?: number, idTahunAjaran?: number): Promise<Jadwal[]> => {
+    const params = new URLSearchParams();
+    if (idKelompok) params.append('idKelompok', idKelompok.toString());
+    if (idStase) params.append('idStase', idStase.toString());
+    if (idTahunAjaran) params.append('idTahunAjaran', idTahunAjaran.toString());
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiFetch(`${BASE_URL}/Jadwal${queryString}`);
     return handleResponse<Jadwal[]>(res);
   },
 

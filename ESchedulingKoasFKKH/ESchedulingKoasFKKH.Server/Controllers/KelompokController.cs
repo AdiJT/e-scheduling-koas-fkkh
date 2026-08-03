@@ -46,18 +46,20 @@ public class KelompokController : ControllerBase
             {
                 kelompok.Id,
                 kelompok.Nama,
-                daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = kelompok.DaftarJadwal.Select(j => new
+                idTahunAjaran = kelompok.IdTahunAjaran,
+                tahunAjaran = kelompok.TahunAjaran != null ? $"{kelompok.TahunAjaran.Tahun} - {kelompok.TahunAjaran.Semester}" : null,
+                daftarMahasiswa = (kelompok.DaftarMahasiswa ?? Enumerable.Empty<Mahasiswa>()).Select(m => new { m.Id, m.NIM, m.Nama }),
+                daftarJadwal = (kelompok.DaftarJadwal ?? Enumerable.Empty<Jadwal>()).Select(j => new
                 {
                     j.Id,
                     j.TanggalMulai,
-                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    tanggalSelesai = j.Stase != null ? j.TanggalSelesai(_hariLiburService) : j.TanggalMulai,
                     idStase = j.Stase?.Id,
                     namaStase = j.Stase?.Nama,
                     idPembimbing = j.Pembimbing?.Id,
                     namaPembimbing = j.Pembimbing?.Nama,
                     nipPembimbing = j.Pembimbing?.NIP,
-                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
+                    daftarSubStase = (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>()).Select(sub => new
                     {
                         idSubStase = sub.SubStase?.Id,
                         urutan = sub.SubStase?.Urutan,
@@ -84,18 +86,20 @@ public class KelompokController : ControllerBase
             {
                 x.Id,
                 x.Nama,
-                daftarMahasiswa = x.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = x.DaftarJadwal.Select(j => new
+                idTahunAjaran = x.IdTahunAjaran,
+                tahunAjaran = x.TahunAjaran != null ? $"{x.TahunAjaran.Tahun} - {x.TahunAjaran.Semester}" : null,
+                daftarMahasiswa = (x.DaftarMahasiswa ?? Enumerable.Empty<Mahasiswa>()).Select(m => new { m.Id, m.NIM, m.Nama }),
+                daftarJadwal = (x.DaftarJadwal ?? Enumerable.Empty<Jadwal>()).Select(j => new
                 {
                     j.Id,
                     j.TanggalMulai,
-                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
+                    tanggalSelesai = j.Stase != null ? j.TanggalSelesai(_hariLiburService) : j.TanggalMulai,
                     idStase = j.Stase?.Id,
                     namaStase = j.Stase?.Nama,
                     idPembimbing = j.Pembimbing?.Id,
                     namaPembimbing = j.Pembimbing?.Nama,
                     nipPembimbing = j.Pembimbing?.NIP,
-                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
+                    daftarSubStase = (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>()).Select(sub => new
                     {
                         idSubStase = sub.SubStase?.Id,
                         urutan = sub.SubStase?.Urutan,
@@ -121,6 +125,7 @@ public class KelompokController : ControllerBase
         var kelompok = new Kelompok
         {
             Nama = create.Nama,
+            IdTahunAjaran = create.IdTahunAjaran
         };
 
         _kelompokRepository.Add(kelompok);
@@ -128,34 +133,13 @@ public class KelompokController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return CreatedAtAction(
-            nameof(Get),
-            new { id = kelompok.Id },
+        return Created(
+            $"/api/kelompok/{kelompok.Id}",
             new
             {
                 kelompok.Id,
                 kelompok.Nama,
-                daftarMahasiswa = kelompok.DaftarMahasiswa.Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = kelompok.DaftarJadwal.Select(j => new
-                {
-                    j.Id,
-                    j.TanggalMulai,
-                    tanggalSelesai = j.TanggalSelesai(_hariLiburService),
-                    idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama,
-                    idPembimbing = j.Pembimbing?.Id,
-                    namaPembimbing = j.Pembimbing?.Nama,
-                    nipPembimbing = j.Pembimbing?.NIP,
-                    daftarSubStase = j.DaftarJadwalSubStase.Select(sub => new
-                    {
-                        idSubStase = sub.SubStase?.Id,
-                        urutan = sub.SubStase?.Urutan,
-                        namaSubStase = sub.SubStase?.Nama,
-                        idPembimbing = sub.Pembimbing?.Id,
-                        namaPembimbing = sub.Pembimbing?.Nama,
-                        nipPembimbing = sub.Pembimbing?.NIP
-                    }).OrderBy(s => s.urutan)
-                })
+                idTahunAjaran = kelompok.IdTahunAjaran
             });
     }
 
@@ -173,6 +157,7 @@ public class KelompokController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama kelompok '{update.Nama}' sudah digunakan" });
 
         kelompok.Nama = update.Nama;
+        kelompok.IdTahunAjaran = update.IdTahunAjaran;
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
