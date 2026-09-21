@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, tahunAjaranApi, type Kelompok, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon, ChevronDownIcon } from '../components/Icons';
+import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
 
 import Tooltip from '../components/Tooltip';
 
