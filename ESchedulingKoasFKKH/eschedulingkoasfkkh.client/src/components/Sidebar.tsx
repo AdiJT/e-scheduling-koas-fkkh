@@ -13,6 +13,9 @@ import {
   JadwalIcon,
   LogoutIcon,
   HistoryIcon,
+  BellIcon,
+  MegaphoneIcon,
+  UsersIcon,
 } from './Icons';
 
 interface NavItem {
@@ -27,7 +30,11 @@ interface NavSection {
   items: NavItem[];
 }
 
-const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
+const navSections = (userRole?: string): NavSection[] => {
+  const role = userRole?.toLowerCase();
+  const isMahasiswaOrDosen = role === 'mahasiswa' || role === 'dosen';
+  const isAdmin = role === 'admin' || role === 'administrator';
+
   if (isMahasiswaOrDosen) {
     return [
       {
@@ -37,23 +44,24 @@ const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
         ]
       },
       {
-        title: 'Akademik',
+        title: 'Akademik & Penjadwalan',
         items: [
-          { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' }
-        ]
-      },
-      {
-        title: 'Penjadwalan',
-        items: [
+          { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' },
           { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
           { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
           { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
+        ]
+      },
+      {
+        title: 'Komunikasi',
+        items: [
+          { id: 'notifikasi', label: 'Notifikasi', icon: BellIcon, path: '/notifikasi' }
         ]
       }
     ];
   }
 
-  return [
+  const sections: NavSection[] = [
     {
       title: 'Menu Utama',
       items: [
@@ -64,9 +72,9 @@ const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
       title: 'Data Master',
       items: [
         { id: 'tahun-ajaran', label: 'Tahun Ajaran', icon: TahunAjaranIcon, path: '/tahun-ajaran' },
-        { id: 'mahasiswa', label: 'Mahasiswa', icon: MahasiswaIcon, path: '/mahasiswa' },
+        { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' },
         { id: 'dosen', label: 'Dosen', icon: DosenIcon, path: '/dosen' },
-        { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' }
+        { id: 'mahasiswa', label: 'Mahasiswa', icon: MahasiswaIcon, path: '/mahasiswa' }
       ]
     },
     {
@@ -76,8 +84,26 @@ const navSections = (isMahasiswaOrDosen: boolean): NavSection[] => {
         { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
         { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
       ]
+    },
+    {
+      title: 'Komunikasi',
+      items: [
+        { id: 'broadcast', label: 'Broadcast', icon: MegaphoneIcon, path: '/broadcast' },
+        { id: 'notifikasi', label: 'Notifikasi', icon: BellIcon, path: '/notifikasi' }
+      ]
     }
   ];
+
+  if (isAdmin) {
+    sections.push({
+      title: 'Pengaturan Sistem',
+      items: [
+        { id: 'manajemen-pengguna', label: 'Manajemen Pengguna', icon: UsersIcon, path: '/manajemen-pengguna' }
+      ]
+    });
+  }
+
+  return sections;
 };
 
 interface SidebarProps {
@@ -166,11 +192,7 @@ export default function Sidebar({
     return parts[0].charAt(0).toUpperCase();
   };
 
-  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
-  const isDosen = user?.role?.toLowerCase() === 'dosen';
-  const isMahasiswaOrDosen = isMahasiswa || isDosen;
-
-  const activeSections = navSections(isMahasiswaOrDosen);
+  const activeSections = navSections(user?.role);
 
   const getRoleDisplay = () => {
     const role = user?.role?.toLowerCase();

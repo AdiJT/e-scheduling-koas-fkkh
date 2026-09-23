@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon } from '../components/Icons';
+import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function MahasiswaPage() {
@@ -343,9 +343,7 @@ export default function MahasiswaPage() {
                     >
                       Kelompok {renderSortIndicator('idKelompok')}
                     </th>
-                    {!isPengelola && (
-                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
-                    )}
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -389,28 +387,41 @@ export default function MahasiswaPage() {
                       </td>
 
                       {/* Aksi */}
-                      {!isPengelola && (
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2">
-                            <Tooltip content="Edit" position="bottom">
-                              <button
-                                onClick={() => startEdit(mhs)}
-                                className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
-                              >
-                                <EditIcon className="w-5 h-5" />
-                              </button>
-                            </Tooltip>
-                            <Tooltip content="Hapus" position="bottom">
-                              <button
-                                onClick={() => handleDelete(mhs.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
-                              >
-                                <DeleteIcon className="w-5 h-5" />
-                              </button>
-                            </Tooltip>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                          <Tooltip content="Detail Mahasiswa" position="bottom">
+                            <button
+                              onClick={() => navigate(`/mahasiswa/${mhs.id}`)}
+                              className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 transition-all duration-200 text-sm"
+                              title="Detail Mahasiswa"
+                            >
+                              <DetailIcon className="w-5 h-5" />
+                            </button>
+                          </Tooltip>
+                          {!isPengelola && (
+                            <>
+                              <Tooltip content="Edit" position="bottom">
+                                <button
+                                  onClick={() => startEdit(mhs)}
+                                  className="p-2 rounded-lg text-amber-500 hover:bg-amber-100 transition-all duration-200 text-sm"
+                                  title="Edit Mahasiswa"
+                                >
+                                  <EditIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
+                              <Tooltip content="Hapus" position="bottom">
+                                <button
+                                  onClick={() => handleDelete(mhs.id)}
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                                  title="Hapus Mahasiswa"
+                                >
+                                  <DeleteIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

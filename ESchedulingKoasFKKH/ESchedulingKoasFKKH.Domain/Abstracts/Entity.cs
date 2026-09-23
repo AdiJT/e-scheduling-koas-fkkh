@@ -1,4 +1,4 @@
-﻿namespace ESchedulingKoasFKKH.Domain.Abstracts;
+namespace ESchedulingKoasFKKH.Domain.Abstracts;
 
 public abstract class Entity<T> : IEquatable<Entity<T>>
     where T : IEquatable<T>
@@ -11,7 +11,12 @@ public abstract class Entity<T> : IEquatable<Entity<T>>
 
     public bool Equals(Entity<T>? other) => other is not null && other.GetType() == GetType() && other.Id.Equals(Id);
 
-    public static bool operator ==(Entity<T>? left, Entity<T>? right) => left is not null && left.Equals(right);
+    public static bool operator ==(Entity<T>? left, Entity<T>? right)
+    {
+        if (left is null)
+            return right is null;
+        return left.Equals(right);
+    }
 
     public static bool operator !=(Entity<T>? left, Entity<T>? right) => !(left == right);
 }

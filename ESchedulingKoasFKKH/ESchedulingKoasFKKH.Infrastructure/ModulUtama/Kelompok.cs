@@ -31,6 +31,7 @@ internal class KelompokRepository : IKelompokRepository
     public async Task<Kelompok?> Get(int id) => await _appDbContext.Kelompok
         .Include(x => x.TahunAjaran)
         .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
+        .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.User)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.DaftarJadwalSubStase).ThenInclude(x => x.SubStase)
@@ -40,6 +41,7 @@ internal class KelompokRepository : IKelompokRepository
     public async Task<List<Kelompok>> GetAll() => await _appDbContext.Kelompok
         .Include(x => x.TahunAjaran)
         .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
+        .Include(x => x.DaftarMahasiswa).ThenInclude(m => m.User)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.DaftarJadwalSubStase).ThenInclude(x => x.SubStase)

@@ -137,6 +137,85 @@ export interface Mahasiswa {
     } | null;
 }
 
+export interface SubStaseJadwal {
+    idSubStase?: number;
+    namaSubStase?: string;
+    urutan?: number;
+    idPembimbing?: number;
+    namaPembimbing?: string;
+    nipPembimbing?: string;
+}
+
+export interface JadwalMahasiswa {
+    id: number;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    status: 'Sedang Berjalan' | 'Mendatang' | 'Selesai';
+    idStase?: number;
+    namaStase?: string;
+    jumlahHari?: number;
+    idPembimbing?: number;
+    namaPembimbing?: string;
+    nipPembimbing?: string;
+    daftarSubStase: SubStaseJadwal[];
+}
+
+export interface AnggotaKelompok {
+    id: number;
+    nim: string;
+    nama: string;
+}
+
+export interface KelompokDetailMahasiswa {
+    id: number;
+    nama: string;
+    idTahunAjaran?: number | null;
+    tahunAjaran?: string | null;
+    daftarAnggota: AnggotaKelompok[];
+    daftarJadwal: JadwalMahasiswa[];
+}
+
+export interface RiwayatStaseMahasiswa {
+    id: number;
+    idJadwalAsal: number;
+    namaKelompok: string;
+    tahunAjaran: string;
+    namaStase: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    namaPembimbing?: string;
+    nipPembimbing?: string;
+    daftarSubStase: {
+        namaSubStase: string;
+        namaPembimbing?: string;
+        nipPembimbing?: string;
+    }[];
+    daftarMahasiswa: {
+        nim: string;
+        nama: string;
+    }[];
+    tanggalDiarsipkan: string;
+}
+
+export interface MahasiswaDetail extends Mahasiswa {
+    user?: {
+        id: number;
+        name: string;
+        role: string;
+    } | null;
+    kelompok?: {
+        id: number;
+        nama: string;
+    } | null;
+    kelompokDetail?: KelompokDetailMahasiswa | null;
+    riwayatStase: RiwayatStaseMahasiswa[];
+    statistik: {
+        totalStaseSelesai: number;
+        totalStaseSedangBerjalan: number;
+        totalStaseMendatang: number;
+    };
+}
+
 export interface CreateMahasiswa {
     nim: string;
     nama: string;
@@ -156,9 +235,9 @@ export const mahasiswaApi = {
         return handleResponse<Mahasiswa[]>(res);
     },
 
-    get: async (id: number): Promise<Mahasiswa> => {
+    get: async (id: number): Promise<MahasiswaDetail> => {
         const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}`);
-        return handleResponse<Mahasiswa>(res);
+        return handleResponse<MahasiswaDetail>(res);
     },
 
     create: async (data: CreateMahasiswa): Promise<Mahasiswa> => {
@@ -185,6 +264,15 @@ export const mahasiswaApi = {
         });
         return handleResponse<void>(res);
     },
+
+    resetPassword: async (id: number, password?: string): Promise<{ message: string; defaultUsed: boolean }> => {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        return handleResponse<{ message: string; defaultUsed: boolean }>(res);
+    },
 };
 
 // ============================================================
@@ -196,6 +284,75 @@ export interface Pembimbing {
     nama: string;
     daftarStase: string[];
     koordinatorStase: string[];
+}
+
+export interface StaseRingkas {
+    id: number;
+    nama: string;
+    jumlahHari: number;
+}
+
+export interface JadwalBimbinganDosen {
+    id: number;
+    idKelompok: number;
+    namaKelompok: string;
+    tahunAjaran?: string | null;
+    idStase?: number;
+    namaStase?: string;
+    jumlahHari?: number;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    status: 'Sedang Berjalan' | 'Mendatang' | 'Selesai';
+    peran: 'Pembimbing Utama' | 'Pembimbing Sub-Stase' | 'Koordinator Stase' | 'Dosen Pengampu' | string;
+    subStaseInfo?: string | null;
+    daftarMahasiswa: {
+        id: number;
+        nim: string;
+        nama: string;
+    }[];
+}
+
+export interface RiwayatBimbinganDosen {
+    id: number;
+    idJadwalAsal: number;
+    namaKelompok: string;
+    tahunAjaran: string;
+    namaStase: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    peran: 'Pembimbing Utama' | 'Pembimbing Sub-Stase' | 'Koordinator Stase' | 'Dosen Pengampu' | string;
+    subStaseInfo?: string | null;
+    namaPembimbing?: string;
+    nipPembimbing?: string;
+    daftarSubStase: {
+        namaSubStase: string;
+        namaPembimbing?: string;
+        nipPembimbing?: string;
+    }[];
+    daftarMahasiswa: {
+        nim: string;
+        nama: string;
+    }[];
+    tanggalDiarsipkan: string;
+}
+
+export interface PembimbingDetail extends Pembimbing {
+    user?: {
+        id: number;
+        name: string;
+        role: string;
+    } | null;
+    daftarStaseDetail: StaseRingkas[];
+    koordinatorStaseDetail: StaseRingkas[];
+    jadwalBimbingan: JadwalBimbinganDosen[];
+    riwayatBimbingan: RiwayatBimbinganDosen[];
+    statistik: {
+        totalStaseDiampu: number;
+        totalKoordinatorStase: number;
+        totalBimbinganAktif: number;
+        totalBimbinganMendatang: number;
+        totalBimbinganSelesai: number;
+    };
 }
 
 export interface CreatePembimbing {
@@ -215,9 +372,9 @@ export const pembimbingApi = {
         return handleResponse<Pembimbing[]>(res);
     },
 
-    get: async (id: number): Promise<Pembimbing> => {
+    get: async (id: number): Promise<PembimbingDetail> => {
         const res = await apiFetch(`${BASE_URL}/pembimbing/${id}`);
-        return handleResponse<Pembimbing>(res);
+        return handleResponse<PembimbingDetail>(res);
     },
 
     create: async (data: CreatePembimbing): Promise<Pembimbing> => {
@@ -243,6 +400,15 @@ export const pembimbingApi = {
             method: 'DELETE',
         });
         return handleResponse<void>(res);
+    },
+
+    resetPassword: async (id: number, password?: string): Promise<{ message: string; defaultUsed: boolean }> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/${id}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        return handleResponse<{ message: string; defaultUsed: boolean }>(res);
     },
 };
 
@@ -670,3 +836,181 @@ export const userApi = {
     return handleResponse<void>(res);
   },
 };
+
+// ============================================================
+// Notifikasi & Broadcast Types and APIs
+// ============================================================
+
+export interface NotifikasiItem {
+  id: number;
+  judul: string;
+  pesan: string;
+  tipe: string; // broadcast, penugasan, kegiatan_mulai, kegiatan_selesai, sistem, jadwal, pemberitahuan
+  kategori?: string;
+  tautan?: string;
+  isRead: boolean;
+  readAt?: string;
+  metadataKey?: string;
+  broadcastId?: number;
+  prioritas?: string;
+  createdAt: string;
+}
+
+export interface NotifikasiListResponse {
+  items: NotifikasiItem[];
+  total: number;
+  unreadCount: number;
+}
+
+export interface BroadcastItem {
+  id: number;
+  judul: string;
+  pesan: string;
+  targetRole: string;
+  targetKelompokId?: number;
+  targetNamaKelompok?: string;
+  prioritas: string;
+  kategori?: string;
+  actionUrl?: string;
+  senderName: string;
+  createdAt: string;
+  totalPenerima: number;
+}
+
+export interface CreateBroadcastInput {
+  judul: string;
+  pesan: string;
+  targetRole: string;
+  targetKelompokId?: number;
+  prioritas?: string;
+  kategori?: string;
+  actionUrl?: string;
+}
+
+export const notifikasiApi = {
+  getAll: async (unreadOnly?: boolean, limit: number = 50): Promise<NotifikasiListResponse> => {
+    const params = new URLSearchParams();
+    if (unreadOnly !== undefined) params.append('unreadOnly', String(unreadOnly));
+    if (limit) params.append('limit', String(limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiFetch(`${BASE_URL}/notifikasi${qs}`);
+    return handleResponse<NotifikasiListResponse>(res);
+  },
+
+  getUnreadCount: async (): Promise<{ unreadCount: number }> => {
+    const res = await apiFetch(`${BASE_URL}/notifikasi/unread-count`);
+    return handleResponse<{ unreadCount: number }>(res);
+  },
+
+  markAsRead: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}/read`, {
+      method: 'PUT',
+    });
+    return handleResponse<void>(res);
+  },
+
+  markAllAsRead: async (): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/notifikasi/read-all`, {
+      method: 'PUT',
+    });
+    return handleResponse<void>(res);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+
+  clearAll: async (): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/notifikasi/clear-all`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+export const broadcastApi = {
+  getAll: async (): Promise<BroadcastItem[]> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast`);
+    return handleResponse<BroadcastItem[]>(res);
+  },
+
+  get: async (id: number): Promise<BroadcastItem> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast/${id}`);
+    return handleResponse<BroadcastItem>(res);
+  },
+
+  create: async (data: CreateBroadcastInput): Promise<BroadcastItem> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<BroadcastItem>(res);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+// ============================================================
+// USER MANAGEMENT API (Admin & Pengelola)
+// ============================================================
+export interface ManagedUser {
+  id: number;
+  username: string;
+  role: 'admin' | 'pengelola';
+  isCurrentLoggedInUser: boolean;
+}
+
+export interface CreateManagedUserInput {
+  username: string;
+  password: string;
+  role: 'admin' | 'pengelola';
+}
+
+export interface UpdateManagedUserInput {
+  username: string;
+  role: 'admin' | 'pengelola';
+  password?: string;
+}
+
+export const userManagementApi = {
+  getAll: async (): Promise<ManagedUser[]> => {
+    const res = await apiFetch(`${BASE_URL}/user/manage`);
+    return handleResponse<ManagedUser[]>(res);
+  },
+
+  create: async (data: CreateManagedUserInput): Promise<ManagedUser> => {
+    const res = await apiFetch(`${BASE_URL}/user/manage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<ManagedUser>(res);
+  },
+
+  update: async (id: number, data: UpdateManagedUserInput): Promise<ManagedUser> => {
+    const res = await apiFetch(`${BASE_URL}/user/manage/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<ManagedUser>(res);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/user/manage/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+

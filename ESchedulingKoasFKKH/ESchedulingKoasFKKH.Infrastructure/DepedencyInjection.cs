@@ -35,6 +35,8 @@ public static class DepedencyInjection
         services.AddScoped<ISubStaseRepository, SubStaseRepository>();
         services.AddScoped<IJadwalSubStaseRepository, JadwalSubStaseRepository>();
         services.AddScoped<IRiwayatKelompokRepository, RiwayatKelompokRepository>();
+        services.AddScoped<INotifikasiRepository, NotifikasiRepository>();
+        services.AddScoped<IBroadcastRepository, BroadcastRepository>();
 
         services.AddScoped<IHariLiburService, HariLiburService>();
 

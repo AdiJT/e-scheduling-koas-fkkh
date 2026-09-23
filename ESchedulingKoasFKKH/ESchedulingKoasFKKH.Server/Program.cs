@@ -35,6 +35,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
+builder.Services.AddScoped<IAutoArchiveService, AutoArchiveService>();
+builder.Services.AddScoped<INotifikasiService, NotifikasiService>();
 
 var app = builder.Build();
 

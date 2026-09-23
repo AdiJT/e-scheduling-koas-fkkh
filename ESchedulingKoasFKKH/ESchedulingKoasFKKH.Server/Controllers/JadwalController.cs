@@ -25,6 +25,7 @@ public class JadwalController : ControllerBase
     private readonly IPembimbingRepository _pembimbingRepository;
     private readonly ISubStaseRepository _subStaseRepository;
     private readonly IJadwalSubStaseRepository _jadwalSubStaseRepository;
+    private readonly INotifikasiService _notifikasiService;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
@@ -36,7 +37,8 @@ public class JadwalController : ControllerBase
         IMahasiswaRepository mahasiswaRepository,
         IPembimbingRepository pembimbingRepository,
         ISubStaseRepository subStaseRepository,
-        IJadwalSubStaseRepository jadwalSubStaseRepository)
+        IJadwalSubStaseRepository jadwalSubStaseRepository,
+        INotifikasiService notifikasiService)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
@@ -48,6 +50,7 @@ public class JadwalController : ControllerBase
         _pembimbingRepository = pembimbingRepository;
         _subStaseRepository = subStaseRepository;
         _jadwalSubStaseRepository = jadwalSubStaseRepository;
+        _notifikasiService = notifikasiService;
     }
 
     [HttpGet("{id:int}")]
@@ -238,6 +241,42 @@ public class JadwalController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
+
+        try
+        {
+            // Notifikasi ke anggota kelompok
+            if (kelompok.DaftarMahasiswa is not null)
+            {
+                foreach (var m in kelompok.DaftarMahasiswa)
+                {
+                    if (m.User is not null)
+                    {
+                        await _notifikasiService.SendNotificationAsync(
+                            m.User.Id,
+                            $"Jadwal Stase Baru: {stase.Nama}",
+                            $"Jadwal stase {stase.Nama} untuk {kelompok.Nama} telah dibuat (mulai {jadwal.TanggalMulai:dd/MM/yyyy}).",
+                            "jadwal",
+                            "Jadwal",
+                            "/jadwal"
+                        );
+                    }
+                }
+            }
+
+            // Notifikasi ke pembimbing stase jika ada
+            if (pembimbingStase?.User is not null)
+            {
+                await _notifikasiService.SendNotificationAsync(
+                    pembimbingStase.User.Id,
+                    $"Penugasan Pembimbing: {stase.Nama}",
+                    $"Anda ditugaskan sebagai pembimbing stase {stase.Nama} untuk {kelompok.Nama} (mulai {jadwal.TanggalMulai:dd/MM/yyyy}).",
+                    "penugasan",
+                    "Penugasan",
+                    "/jadwal"
+                );
+            }
+        }
+        catch { /* Notifikasi tidak boleh menggagalkan response */ }
 
         return Created(
             $"/api/jadwal/{jadwal.Id}",

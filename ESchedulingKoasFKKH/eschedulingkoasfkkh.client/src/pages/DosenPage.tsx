@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { pembimbingApi, type Pembimbing } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon } from '../components/Icons';
+import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function DosenPage() {
@@ -305,9 +305,7 @@ export default function DosenPage() {
                     <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
                       Koordinator
                     </th>
-                    {!isPengelola && (
-                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
-                    )}
+                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -365,28 +363,41 @@ export default function DosenPage() {
                       </td>
 
                       {/* Aksi */}
-                      {!isPengelola && (
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2">
-                            <Tooltip content="Edit" position="bottom">
-                              <button
-                                onClick={() => startEdit(dsn)}
-                                className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
-                              >
-                                <EditIcon className="w-5 h-5" />
-                              </button>
-                            </Tooltip>
-                            <Tooltip content="Hapus" position="bottom">
-                              <button
-                                onClick={() => handleDelete(dsn.id)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
-                              >
-                                <DeleteIcon className="w-5 h-5" />
-                              </button>
-                            </Tooltip>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                          <Tooltip content="Detail Dosen" position="bottom">
+                            <button
+                              onClick={() => navigate(`/dosen/${dsn.id}`)}
+                              className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-all duration-200 text-sm"
+                              title="Detail Dosen"
+                            >
+                              <DetailIcon className="w-5 h-5" />
+                            </button>
+                          </Tooltip>
+                          {!isPengelola && (
+                            <>
+                              <Tooltip content="Edit" position="bottom">
+                                <button
+                                  onClick={() => startEdit(dsn)}
+                                  className="p-2 rounded-lg text-blue-500 hover:bg-blue-100 transition-all duration-200 text-sm"
+                                  title="Edit Dosen"
+                                >
+                                  <EditIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
+                              <Tooltip content="Hapus" position="bottom">
+                                <button
+                                  onClick={() => handleDelete(dsn.id)}
+                                  className="p-2 rounded-lg text-red-500 hover:bg-red-100 transition-all duration-200 text-sm"
+                                  title="Hapus Dosen"
+                                >
+                                  <DeleteIcon className="w-5 h-5" />
+                                </button>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

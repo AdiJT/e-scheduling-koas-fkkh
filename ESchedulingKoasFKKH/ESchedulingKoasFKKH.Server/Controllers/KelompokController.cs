@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.KelompokModels;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,19 +20,25 @@ public class KelompokController : ControllerBase
     private readonly IRiwayatKelompokRepository _riwayatKelompokRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
+    private readonly IAutoArchiveService _autoArchiveService;
+    private readonly INotifikasiService _notifikasiService;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
         IMahasiswaRepository mahasiswaRepository,
         IRiwayatKelompokRepository riwayatKelompokRepository,
         IUnitOfWork unitOfWork,
-        IHariLiburService hariLiburService)
+        IHariLiburService hariLiburService,
+        IAutoArchiveService autoArchiveService,
+        INotifikasiService notifikasiService)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
         _riwayatKelompokRepository = riwayatKelompokRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
+        _autoArchiveService = autoArchiveService;
+        _notifikasiService = notifikasiService;
     }
 
     [HttpGet("{id:int}")]
@@ -198,6 +205,22 @@ public class KelompokController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
+        if (mahasiswa.User is not null)
+        {
+            try
+            {
+                await _notifikasiService.SendNotificationAsync(
+                    mahasiswa.User.Id,
+                    "Penugasan Kelompok",
+                    $"Anda telah ditugaskan ke dalam {kelompok.Nama}.",
+                    "penugasan",
+                    "Penugasan",
+                    $"/mahasiswa/{mahasiswa.Id}"
+                );
+            }
+            catch { /* Notification failure should not break the response */ }
+        }
+
         return NoContent();
     }
 
@@ -220,90 +243,27 @@ public class KelompokController : ControllerBase
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
+        if (mahasiswa.User is not null)
+        {
+            try
+            {
+                await _notifikasiService.SendNotificationAsync(
+                    mahasiswa.User.Id,
+                    "Perubahan Kelompok",
+                    $"Anda telah dikeluarkan dari {kelompok.Nama}.",
+                    "pemberitahuan",
+                    "Akademik",
+                    $"/mahasiswa/{mahasiswa.Id}"
+                );
+            }
+            catch { /* Notification failure should not break the response */ }
+        }
+
         return NoContent();
     }
 
     private async Task AutoArchiveCompletedSchedulesAsync()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var allKelompoks = await _kelompokRepository.GetAll();
-        var allRiwayat = await _riwayatKelompokRepository.GetAll();
-        var riwayatDict = allRiwayat.ToDictionary(r => r.IdJadwalAsal);
-
-        bool dataChanged = false;
-        foreach (var kel in allKelompoks)
-        {
-            foreach (var j in kel.DaftarJadwal)
-            {
-                var tglSelesai = j.TanggalSelesai(_hariLiburService);
-                if (tglSelesai < today)
-                {
-                    // Extract Tahun Ajaran from students
-                    string tahunAjaranStr = "N/A";
-                    if (kel.DaftarMahasiswa.Count > 0)
-                    {
-                        var firstStudent = kel.DaftarMahasiswa.First();
-                        if (firstStudent.TahunAjaran is not null)
-                        {
-                            tahunAjaranStr = $"{firstStudent.TahunAjaran.Tahun} - {firstStudent.TahunAjaran.Semester}";
-                        }
-                    }
-
-                    var mhsList = kel.DaftarMahasiswa.Select(m => new { m.NIM, m.Nama }).ToList();
-                    var subStasesList = j.DaftarJadwalSubStase.Select(sub => new
-                    {
-                        namaSubStase = sub.SubStase?.Nama,
-                        namaPembimbing = sub.Pembimbing?.Nama,
-                        nipPembimbing = sub.Pembimbing?.NIP
-                    }).ToList();
-
-                    var mhsJson = System.Text.Json.JsonSerializer.Serialize(mhsList);
-                    var subStaseJson = System.Text.Json.JsonSerializer.Serialize(subStasesList);
-
-                    if (!riwayatDict.TryGetValue(j.Id, out var riwayat))
-                    {
-                        riwayat = new RiwayatKelompok
-                        {
-                            IdJadwalAsal = j.Id,
-                            NamaKelompok = kel.Nama,
-                            TahunAjaran = tahunAjaranStr,
-                            NamaStase = j.Stase?.Nama ?? "N/A",
-                            TanggalMulai = j.TanggalMulai,
-                            TanggalSelesai = tglSelesai,
-                            NamaPembimbing = j.Pembimbing?.Nama,
-                            NipPembimbing = j.Pembimbing?.NIP,
-                            DaftarMahasiswaJson = mhsJson,
-                            DaftarSubStaseJson = subStaseJson,
-                            TanggalDiarsipkan = DateTime.UtcNow
-                        };
-
-                        _riwayatKelompokRepository.Add(riwayat);
-                        riwayatDict[j.Id] = riwayat;
-                        dataChanged = true;
-                    }
-                    else
-                    {
-                        bool changed = false;
-                        if (riwayat.NamaKelompok != kel.Nama) { riwayat.NamaKelompok = kel.Nama; changed = true; }
-                        if (riwayat.TahunAjaran != tahunAjaranStr) { riwayat.TahunAjaran = tahunAjaranStr; changed = true; }
-                        if (riwayat.NamaPembimbing != j.Pembimbing?.Nama) { riwayat.NamaPembimbing = j.Pembimbing?.Nama; changed = true; }
-                        if (riwayat.NipPembimbing != j.Pembimbing?.NIP) { riwayat.NipPembimbing = j.Pembimbing?.NIP; changed = true; }
-                        if (riwayat.DaftarMahasiswaJson != mhsJson) { riwayat.DaftarMahasiswaJson = mhsJson; changed = true; }
-                        if (riwayat.DaftarSubStaseJson != subStaseJson) { riwayat.DaftarSubStaseJson = subStaseJson; changed = true; }
-
-                        if (changed)
-                        {
-                            _riwayatKelompokRepository.Update(riwayat);
-                            dataChanged = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (dataChanged)
-        {
-            await _unitOfWork.SaveChangesAsync();
-        }
+        await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
     }
 }

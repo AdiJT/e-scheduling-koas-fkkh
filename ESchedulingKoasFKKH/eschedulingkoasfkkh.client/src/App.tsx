@@ -17,6 +17,11 @@ import DetailKelompokPage from './pages/DetailKelompokPage';
 import TambahJadwalPage from './pages/TambahJadwalPage';
 import DetailStasePage from './pages/DetailStasePage';
 import RiwayatKelompokPage from './pages/RiwayatKelompokPage';
+import DetailMahasiswaPage from './pages/DetailMahasiswaPage';
+import DetailDosenPage from './pages/DetailDosenPage';
+import BroadcastPage from './pages/BroadcastPage';
+import NotifikasiPage from './pages/NotifikasiPage';
+import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage';
 
 function App() {
     return (
@@ -27,6 +32,15 @@ function App() {
 
                     <Route path="/dashboard" element={
                         <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                    } />
+                    <Route path="/manajemen-pengguna" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator']}><ManajemenPenggunaPage /></ProtectedRoute>
+                    } />
+                    <Route path="/broadcast" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><BroadcastPage /></ProtectedRoute>
+                    } />
+                    <Route path="/notifikasi" element={
+                        <ProtectedRoute><NotifikasiPage /></ProtectedRoute>
                     } />
                     <Route path="/tahun-ajaran" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TahunAjaranPage /></ProtectedRoute>
@@ -53,8 +67,14 @@ function App() {
                     <Route path="/mahasiswa/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahMahasiswaPage /></ProtectedRoute>
                     } />
+                    <Route path="/mahasiswa/:id" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola', 'dosen', 'mahasiswa']}><DetailMahasiswaPage /></ProtectedRoute>
+                    } />
                     <Route path="/dosen/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahDosenPage /></ProtectedRoute>
+                    } />
+                    <Route path="/dosen/:id" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola', 'dosen']}><DetailDosenPage /></ProtectedRoute>
                     } />
                     <Route path="/stase/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahStasePage /></ProtectedRoute>
