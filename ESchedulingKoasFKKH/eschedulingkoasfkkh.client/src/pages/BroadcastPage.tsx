@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { broadcastApi, type BroadcastItem, kelompokApi, type Kelompok } from '../services/api';
-import { MegaphoneIcon, SearchIcon, RefreshIcon } from '../components/Icons';
+import { MegaphoneIcon, SearchIcon, RefreshIcon, DetailIcon, DeleteIcon } from '../components/Icons';
+import Tooltip from '../components/Tooltip';
 
 export default function BroadcastPage() {
+  const navigate = useNavigate();
   const [broadcasts, setBroadcasts] = useState<BroadcastItem[]>([]);
   const [kelompoks, setKelompoks] = useState<Kelompok[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterTarget, setFilterTarget] = useState<string>('all');
+  const [filterPrioritas, setFilterPrioritas] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -115,13 +122,23 @@ export default function BroadcastPage() {
 
   const filteredBroadcasts = broadcasts.filter(b => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       b.judul.toLowerCase().includes(q) ||
       b.pesan.toLowerCase().includes(q) ||
-      b.senderName?.toLowerCase().includes(q) ||
-      b.targetRole.toLowerCase().includes(q)
-    );
+      (b.senderName && b.senderName.toLowerCase().includes(q)) ||
+      (b.targetRole && b.targetRole.toLowerCase().includes(q));
+
+    const matchTarget = filterTarget === 'all' || b.targetRole?.toLowerCase() === filterTarget.toLowerCase();
+    const matchPrioritas = filterPrioritas === 'all' || b.prioritas?.toLowerCase() === filterPrioritas.toLowerCase();
+
+    return matchSearch && matchTarget && matchPrioritas;
   });
+
+  const totalItems = filteredBroadcasts.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedBroadcasts = filteredBroadcasts.slice(startIndex, endIndex);
 
   const getPriorityBadge = (p: string) => {
     switch (p?.toLowerCase()) {
@@ -152,228 +169,348 @@ export default function BroadcastPage() {
   return (
     <Layout>
       <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-white/10 backdrop-blur-md">
-              <MegaphoneIcon className="w-6 h-6 text-amber-300" />
+        {/* Page Header Card */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl animate-fade-in-down">
+          {/* Subtle decorative watermark */}
+          <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+            <MegaphoneIcon className="w-56 h-56 text-white" />
+          </div>
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+                title="Kembali ke Dashboard"
+              >
+                ←
+              </button>
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                <MegaphoneIcon className="w-6 h-6 text-amber-300" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Pusat Broadcast & Pengumuman</h1>
+                <p className="text-sm text-indigo-100/90">Kirim dan kelola pengumuman resmi ke dosen, mahasiswa, maupun kelompok tertentu</p>
+              </div>
             </div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Pusat Broadcast & Pengumuman</h1>
-          </div>
-          <p className="text-sm text-primary-100/80 max-w-xl">
-            Kirim pengumuman resmi dan pemberitahuan penting langsung ke panel notifikasi dosen, mahasiswa, maupun kelompok tertentu.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
-            title="Muat Ulang"
-          >
-            <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={handleOpenModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold text-sm shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Buat Broadcast
-          </button>
-        </div>
-      </div>
-
-      {/* Success / Error Alerts */}
-      {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 animate-fade-in">
-          <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm font-medium">{successMsg}</p>
-        </div>
-      )}
-      {errorMsg && !isModalOpen && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-3 animate-fade-in">
-          <svg className="w-5 h-5 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm font-medium">{errorMsg}</p>
-        </div>
-      )}
-
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-            <MegaphoneIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Broadcast</p>
-            <p className="text-2xl font-bold text-slate-800">{totalBroadcast}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Semua Pengguna</p>
-            <p className="text-2xl font-bold text-slate-800">{targetSemuaCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Dosen</p>
-            <p className="text-2xl font-bold text-slate-800">{targetDosenCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Mahasiswa</p>
-            <p className="text-2xl font-bold text-slate-800">{targetMahasiswaCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Table Section */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        {/* Table Toolbar */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <SearchIcon className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cari judul, pengirim, atau isi pesan..."
-              className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-            />
-          </div>
-          <span className="text-xs text-slate-500 self-center">
-            Menampilkan <span className="font-semibold text-slate-700">{filteredBroadcasts.length}</span> pengumuman
-          </span>
-        </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <div className="py-20 text-center text-slate-400 space-y-3">
-            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm">Memuat data broadcast...</p>
-          </div>
-        ) : filteredBroadcasts.length === 0 ? (
-          <div className="py-20 text-center text-slate-400 px-4">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
-              <MegaphoneIcon className="w-8 h-8 opacity-40" />
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-indigo-100 self-start sm:self-center">
+              <span>Total {totalBroadcast} Broadcast</span>
             </div>
-            <h3 className="text-base font-bold text-slate-700">Belum Ada Broadcast Pengumuman</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto mt-1">
-              Klik tombol <span className="font-semibold text-primary-600">"Buat Broadcast"</span> untuk mengirim pengumuman baru kepada pengguna sistem.
-            </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 text-xs font-bold text-slate-600 uppercase tracking-wider border-b border-slate-100">
-                <tr>
-                  <th className="py-3.5 px-4 lg:px-6">Judul & Pesan</th>
-                  <th className="py-3.5 px-4">Sasaran</th>
-                  <th className="py-3.5 px-4">Prioritas & Kategori</th>
-                  <th className="py-3.5 px-4">Pengirim & Waktu</th>
-                  <th className="py-3.5 px-4 text-center">Penerima</th>
-                  <th className="py-3.5 px-4 lg:px-6 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredBroadcasts.map(item => (
-                  <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-4 px-4 lg:px-6 max-w-md">
-                      <p className="font-bold text-slate-900 text-sm">{item.judul}</p>
-                      <p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{item.pesan}</p>
-                      {item.actionUrl && (
-                        <span className="inline-block mt-1 text-[11px] font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
-                          Tautan: {item.actionUrl}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      {getTargetBadge(item)}
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1 items-start">
-                        {getPriorityBadge(item.prioritas)}
-                        {item.kategori && (
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                            {item.kategori}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 whitespace-nowrap">
-                      <p className="font-medium text-slate-800 text-xs">{item.senderName || 'Admin'}</p>
-                      <p className="text-[11px] text-slate-400">
-                        {new Date(item.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </td>
-                    <td className="py-4 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700">
-                        {item.totalPenerima} user
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 lg:px-6 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setDetailBroadcast(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                          title="Lihat Detail"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Hapus Broadcast"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </div>
+
+        {/* Success / Error Alerts */}
+        {successMsg && (
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 animate-fade-in">
+            <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-medium">{successMsg}</p>
           </div>
         )}
-      </div>
+        {errorMsg && !isModalOpen && (
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-3 animate-fade-in">
+            <svg className="w-5 h-5 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-medium">{errorMsg}</p>
+          </div>
+        )}
+
+        {/* Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <MegaphoneIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Broadcast</p>
+              <p className="text-2xl font-bold text-slate-800">{totalBroadcast}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Semua Pengguna</p>
+              <p className="text-2xl font-bold text-slate-800">{targetSemuaCount}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Dosen</p>
+              <p className="text-2xl font-bold text-slate-800">{targetDosenCount}</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Mahasiswa</p>
+              <p className="text-2xl font-bold text-slate-800">{targetMahasiswaCount}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Bar */}
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Cari judul, pengirim, atau isi pesan broadcast..."
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400
+                  focus:outline-none focus:border-indigo-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+              />
+            </div>
+
+            {/* Filter Sasaran */}
+            <select
+              value={filterTarget}
+              onChange={e => { setFilterTarget(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+                focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer"
+            >
+              <option value="all">Semua Sasaran</option>
+              <option value="semua">Semua Pengguna</option>
+              <option value="dosen">Dosen Pembimbing</option>
+              <option value="mahasiswa">Seluruh Mahasiswa</option>
+              <option value="kelompok">Kelompok Tertentu</option>
+            </select>
+
+            {/* Filter Prioritas */}
+            <select
+              value={filterPrioritas}
+              onChange={e => { setFilterPrioritas(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
+                focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer"
+            >
+              <option value="all">Semua Prioritas</option>
+              <option value="Normal">Normal</option>
+              <option value="Penting">Penting</option>
+              <option value="Mendesak">Mendesak</option>
+            </select>
+
+            {/* Refresh Button */}
+            <Tooltip content="Muat ulang data" position="bottom">
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              >
+                <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </Tooltip>
+
+            {/* Buat Broadcast Button */}
+            <button
+              onClick={handleOpenModal}
+              className="px-5 py-2.5 bg-gradient-to-r from-primary-900 to-indigo-800 hover:from-primary-800 hover:to-indigo-700 
+                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-indigo 
+                transition-all duration-300 active:scale-95 text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+            >
+              <span>+</span> Buat Broadcast
+            </button>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          {loading ? (
+            <div className="p-16 text-center">
+              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-slate-500 text-sm">Memuat data broadcast dari server...</p>
+            </div>
+          ) : filteredBroadcasts.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="flex justify-center mb-4 text-slate-300">
+                <MegaphoneIcon className="w-16 h-16 opacity-40" />
+              </div>
+              <h3 className="text-base font-bold text-slate-700">Belum Ada Broadcast Pengumuman</h3>
+              <p className="text-sm text-slate-500 max-w-sm mx-auto mt-1">
+                {search || filterTarget !== 'all' || filterPrioritas !== 'all'
+                  ? 'Tidak ada broadcast yang cocok dengan filter pencarian.'
+                  : 'Klik tombol "+ Buat Broadcast" untuk mengirim pengumuman baru kepada pengguna sistem.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Table Header Info */}
+              <div className="px-5 py-3.5 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-xs text-slate-500 font-medium">
+                  Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Broadcast
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    className="pr-6 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-xs text-slate-500 font-medium">data</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto pb-4">
+                <table className="w-full min-w-max" id="table-broadcast">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 text-white">
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Judul & Pesan</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Sasaran</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Prioritas & Kategori</th>
+                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Pengirim & Waktu</th>
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Penerima</th>
+                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {paginatedBroadcasts.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-4 md:px-5 py-4 text-xs font-medium text-slate-500">
+                          {startIndex + index + 1}
+                        </td>
+                        <td className="px-4 md:px-5 py-4 max-w-md">
+                          <p className="font-bold text-slate-900 text-sm">{item.judul}</p>
+                          <p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{item.pesan}</p>
+                          {item.actionUrl && (
+                            <span className="inline-block mt-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                              Tautan: {item.actionUrl}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 md:px-5 py-4 whitespace-nowrap">
+                          {getTargetBadge(item)}
+                        </td>
+                        <td className="px-4 md:px-5 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-1 items-start">
+                            {getPriorityBadge(item.prioritas)}
+                            {item.kategori && (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                                {item.kategori}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 md:px-5 py-4 whitespace-nowrap">
+                          <p className="font-medium text-slate-800 text-xs">{item.senderName || 'Admin'}</p>
+                          <p className="text-[11px] text-slate-400">
+                            {new Date(item.createdAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </td>
+                        <td className="px-4 md:px-5 py-4 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700">
+                            {item.totalPenerima} user
+                          </span>
+                        </td>
+                        <td className="px-4 md:px-5 py-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <Tooltip content="Lihat Detail">
+                              <button
+                                onClick={() => setDetailBroadcast(item)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 cursor-pointer"
+                              >
+                                <DetailIcon className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
+                            <Tooltip content="Hapus Broadcast">
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 cursor-pointer"
+                              >
+                                <DeleteIcon className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                  <span className="text-xs font-medium text-slate-500">
+                    Memiliki Total <span className="text-primary-900 font-bold">{totalItems}</span> Data
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Tooltip content="Sebelumnya" position="top">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const page = i + 1;
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow-sm ${
+                              currentPage === page
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Tooltip content="Berikutnya" position="top">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       {/* Modal Buat Broadcast */}
       {isModalOpen && (

@@ -265,39 +265,43 @@ export default function DetailMahasiswaPage() {
         <p className="text-xs text-slate-500 mt-1">Fakultas Kedokteran Hewan - Sistem Penjadwalan KOAS</p>
       </div>
 
-      {/* Page Header (Hidden on Print) */}
-      <div className="mb-6 animate-fade-in-down print:hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      {/* Hero Header Card (Hidden on Print) */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 to-blue-800 rounded-2xl p-6 sm:p-7 text-white shadow-xl mb-6 animate-fade-in-down print:hidden">
+        {/* Decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <MahasiswaIcon className="w-64 h-64 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/mahasiswa')}
-              className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-primary-900 hover:bg-slate-50 hover:shadow-soft transition-all duration-200 flex items-center justify-center cursor-pointer shadow-sm"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer flex-shrink-0"
               title="Kembali ke Kelola Mahasiswa"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <MahasiswaIcon className="w-6 h-6 text-blue-200" />
+            </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                  Detail Mahasiswa
-                </span>
-                <span className="text-slate-300">/</span>
-                <span className="text-xs font-mono text-slate-500">{mahasiswa?.nim || 'Memuat...'}</span>
-              </div>
-              <h1 className="text-2xl font-bold text-primary-900 mt-0.5">
-                {mahasiswa ? mahasiswa.nama : 'Detail Mahasiswa'}
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                Detail Mahasiswa
               </h1>
+              <p className="text-sm text-blue-100/90 mt-0.5">
+                Informasi profil akademik, kelompok rotasi, dan riwayat stase koas
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
             <Tooltip content="Muat ulang data" position="bottom">
               <button
                 onClick={fetchData}
                 disabled={loading}
-                className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-xl transition-all border border-white/15 shadow-sm flex items-center justify-center cursor-pointer disabled:opacity-50"
               >
                 <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
@@ -305,9 +309,9 @@ export default function DetailMahasiswaPage() {
 
             <button
               onClick={() => window.print()}
-              className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2 text-sm cursor-pointer"
+              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-medium rounded-xl border border-white/15 transition-all shadow-sm flex items-center gap-2 text-sm cursor-pointer backdrop-blur-sm"
             >
-              <PrintIcon className="w-4 h-4 text-slate-500" />
+              <PrintIcon className="w-4 h-4 text-blue-200" />
               <span>Cetak PDF</span>
             </button>
 
@@ -321,18 +325,18 @@ export default function DetailMahasiswaPage() {
                     setResetPasswordError(null);
                     setResetPasswordSuccess(null);
                   }}
-                  className="px-4 py-2.5 bg-white border border-amber-300 text-amber-800 hover:bg-amber-50 font-semibold rounded-xl shadow-sm transition-all duration-200 text-sm flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-semibold rounded-xl border border-white/15 shadow-sm transition-all duration-200 text-sm flex items-center gap-2 cursor-pointer backdrop-blur-sm"
                   title="Reset password akun mahasiswa ini"
                 >
-                  <LockIcon className="w-4 h-4 text-amber-600" />
+                  <LockIcon className="w-4 h-4 text-amber-300" />
                   <span>Reset Password</span>
                 </button>
 
                 <button
                   onClick={openEditModal}
-                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-md hover:shadow-glow-blue transition-all duration-200 text-sm flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2.5 bg-white hover:bg-blue-50 active:scale-95 text-primary-900 font-bold rounded-xl shadow-md transition-all duration-200 text-sm flex items-center gap-2 cursor-pointer"
                 >
-                  <EditIcon className="w-4 h-4" />
+                  <EditIcon className="w-4 h-4 text-primary-800" />
                   <span>Edit Mahasiswa</span>
                 </button>
               </>
@@ -612,7 +616,7 @@ export default function DetailMahasiswaPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-max">
                     <thead>
-                      <tr className="bg-gradient-to-r from-primary-900 to-blue-900 text-white">
+                      <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
                         <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider w-12">No</th>
                         <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Nama Stase</th>
                         <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Periode Tanggal</th>

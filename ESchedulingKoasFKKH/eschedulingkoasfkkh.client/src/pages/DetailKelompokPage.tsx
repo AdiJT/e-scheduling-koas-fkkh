@@ -145,16 +145,37 @@ export default function DetailKelompokPage() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3 mb-1">
-          <button onClick={() => navigate('/kelompok')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all duration-200">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md">
-            <KelompokIcon className="w-6 h-6" />
+      {/* Hero Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-6 sm:p-7 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <KelompokIcon className="w-64 h-64 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/kelompok')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer flex-shrink-0"
+              title="Kembali ke Kelola Kelompok"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <KelompokIcon className="w-6 h-6 text-amber-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                {kelompok.nama.toLowerCase().startsWith('kelompok') ? `Detail ${kelompok.nama}` : `Detail Kelompok ${kelompok.nama}`}
+              </h1>
+              <p className="text-sm text-amber-100/90 mt-0.5">
+                Informasi anggota kelompok dan Dosen Pembimbing per stase
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Detail {kelompok.nama}</h1>
-            <p className="text-sm text-slate-500">Informasi anggota kelompok dan Dosen Pembimbing per stase</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-amber-100 self-start sm:self-center">
+            <span>{kelompok.daftarMahasiswa.length} Mahasiswa • {kelompok.daftarJadwal.length} Stase</span>
           </div>
         </div>
       </div>

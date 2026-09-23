@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { riwayatKelompokApi, type RiwayatKelompok } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
-import { SearchIcon, RefreshIcon, DetailIcon, DeleteIcon, InfoIcon, JadwalIcon as ClockIcon, DosenIcon, MahasiswaIcon, HistoryIcon } from '../components/Icons';
+import { SearchIcon, RefreshIcon, DetailIcon, DeleteIcon, InfoIcon, JadwalIcon as ClockIcon, JadwalIcon, KelompokIcon, DosenIcon, MahasiswaIcon, HistoryIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function RiwayatKelompokPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'administrator';
 
@@ -132,15 +134,33 @@ export default function RiwayatKelompokPage() {
 
   return (
     <Layout>
-      {/* Page Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-            <HistoryIcon className="w-6 h-6" />
+      {/* Page Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-800 to-indigo-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <HistoryIcon className="w-56 h-56 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Dashboard"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <HistoryIcon className="w-6 h-6 text-indigo-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Riwayat Kelompok</h1>
+              <p className="text-sm text-indigo-100/90">Daftar lengkap stase yang telah selesai dijalani oleh kelompok KOAS</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Riwayat Kelompok</h1>
-            <p className="text-sm text-slate-500">Daftar lengkap stase yang telah selesai dijalani oleh kelompok KOAS</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-indigo-100 self-start sm:self-center">
+            <span>Total {data.length} Riwayat</span>
           </div>
         </div>
       </div>
@@ -384,59 +404,87 @@ export default function RiwayatKelompokPage() {
 
       {/* Detail Modal */}
       {selectedRiwayat && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-elevated w-full max-w-2xl mx-auto my-8 animate-scale-in overflow-hidden border border-slate-100">
-            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-550 to-indigo-700 text-white flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold">Detail Riwayat: {selectedRiwayat.namaKelompok}</h3>
-                <p className="text-xs text-indigo-100 mt-1">Diarsipkan secara otomatis pada {new Date(selectedRiwayat.tanggalDiarsipkan).toLocaleString('id-ID')}</p>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-auto my-8 animate-scale-in overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-indigo-800 via-indigo-700 to-primary-900 text-white p-6 flex items-center justify-between shrink-0 shadow-md">
+              {/* Subtle decorative watermark */}
+              <div className="absolute -right-4 -bottom-6 opacity-10 pointer-events-none transform rotate-12">
+                <KelompokIcon className="w-48 h-48 text-white" />
               </div>
+
+              <div className="relative z-10 flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                  <KelompokIcon className="w-6 h-6 text-indigo-200" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-semibold text-indigo-200 uppercase tracking-wider mb-0.5">
+                    <span>Arsip Riwayat Stase</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    {selectedRiwayat.namaKelompok.toLowerCase().startsWith('kelompok')
+                      ? `Detail Riwayat ${selectedRiwayat.namaKelompok}`
+                      : `Detail Riwayat Kelompok ${selectedRiwayat.namaKelompok}`}
+                  </h3>
+                  <p className="text-xs text-indigo-200/90 mt-0.5">
+                    Diarsipkan pada {new Date(selectedRiwayat.tanggalDiarsipkan).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={() => setSelectedRiwayat(null)}
-                className="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center font-bold transition-all text-white"
+                className="relative z-10 w-9 h-9 bg-white/10 hover:bg-white/20 active:scale-95 rounded-xl flex items-center justify-center font-bold transition-all text-white border border-white/20 cursor-pointer backdrop-blur-sm"
+                title="Tutup Modal"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-              {/* Info Header */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div>
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Info Header Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/90 p-4 rounded-2xl border border-slate-100/90">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-xs">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Tahun Ajaran</span>
                   <p className="text-sm font-bold text-slate-800 mt-0.5">{selectedRiwayat.tahunAjaran}</p>
                 </div>
-                <div>
+                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-xs">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Stase</span>
                   <p className="text-sm font-bold text-indigo-700 mt-0.5">{selectedRiwayat.namaStase}</p>
                 </div>
-                <div className="col-span-2 border-t border-slate-200/60 pt-3 mt-1">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Periode Jadwal</span>
-                  <p className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1.5">
-                    ⏱️ {formatDateDisplay(selectedRiwayat.tanggalMulai)} s/d {formatDateDisplay(selectedRiwayat.tanggalSelesai)}
-                  </p>
+                <div className="sm:col-span-2 bg-white p-3.5 rounded-xl border border-slate-100 shadow-xs flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                    <JadwalIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Periode Jadwal</span>
+                    <p className="text-sm font-bold text-slate-800">
+                      {formatDateDisplay(selectedRiwayat.tanggalMulai)} s/d {formatDateDisplay(selectedRiwayat.tanggalSelesai)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Dosen Pembimbing */}
               <div>
-                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-                  <DosenIcon className="w-5 h-5 text-indigo-500" />
-                  Dosen Pembimbing Stase
+                <h4 className="text-sm font-bold text-slate-800 mb-2.5 flex items-center gap-2">
+                  <DosenIcon className="w-4 h-4 text-indigo-600" />
+                  <span>Dosen Pembimbing Stase</span>
                 </h4>
                 {selectedRiwayat.namaPembimbing ? (
-                  <div className="bg-teal-50/50 border border-teal-100 p-4 rounded-2xl flex items-center gap-3">
-                    <div className="w-10 h-10 bg-teal-600 text-white font-bold rounded-xl flex items-center justify-center shadow-sm">
+                  <div className="bg-emerald-50/60 border border-emerald-100/80 p-4 rounded-2xl flex items-center gap-3.5">
+                    <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-sm rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                       {selectedRiwayat.namaPembimbing.charAt(0)}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-800">{selectedRiwayat.namaPembimbing}</p>
-                      <p className="text-xs text-slate-500 font-mono">NIP: {selectedRiwayat.nipPembimbing || '-'}</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">NIP: {selectedRiwayat.nipPembimbing || '-'}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl text-center text-xs text-slate-500 italic">
-                    Dosen pembimbing utama stase tidak ditunjuk.
+                  <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-2xl text-center text-xs text-slate-500 italic">
+                    Dosen pembimbing utama stase belum ditentukan pada riwayat ini.
                   </div>
                 )}
               </div>
@@ -444,15 +492,17 @@ export default function RiwayatKelompokPage() {
               {/* Sub-Stase (If Kodil) */}
               {selectedRiwayat.daftarSubStase && selectedRiwayat.daftarSubStase.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-                    <span>📦</span>
-                    Dosen Pembimbing Per Sub-Stase
+                  <h4 className="text-sm font-bold text-slate-800 mb-2.5 flex items-center gap-2">
+                    <span className="text-indigo-600">📦</span>
+                    <span>Dosen Pembimbing Per Sub-Stase</span>
                   </h4>
                   <div className="space-y-2">
                     {selectedRiwayat.daftarSubStase.map((sub, idx) => (
                       <div key={idx} className="bg-indigo-50/40 border border-indigo-100/60 p-3.5 rounded-2xl flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-md">Sub-Stase {idx + 1}</span>
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md">
+                            Sub-Stase {idx + 1}
+                          </span>
                           <p className="text-xs font-bold text-slate-800 mt-1">{sub.namaSubStase}</p>
                         </div>
                         <div className="text-right shrink-0">
@@ -473,21 +523,31 @@ export default function RiwayatKelompokPage() {
 
               {/* Daftar Mahasiswa */}
               <div>
-                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
-                  <MahasiswaIcon className="w-5 h-5 text-indigo-500" />
-                  Anggota Mahasiswa KOAS ({selectedRiwayat.daftarMahasiswa?.length || 0})
-                </h4>
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <MahasiswaIcon className="w-4 h-4 text-indigo-600" />
+                    <span>Anggota Mahasiswa KOAS</span>
+                  </h4>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {selectedRiwayat.daftarMahasiswa?.length || 0} Mahasiswa
+                  </span>
+                </div>
                 <div className="border border-slate-100 rounded-2xl overflow-hidden divide-y divide-slate-100">
                   {selectedRiwayat.daftarMahasiswa && selectedRiwayat.daftarMahasiswa.length > 0 ? (
                     selectedRiwayat.daftarMahasiswa.map((m, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between gap-3 transition-colors">
+                      <div key={idx} className="p-3.5 bg-slate-50/40 hover:bg-slate-50/80 flex items-center justify-between gap-3 transition-colors">
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-slate-400 w-5">{idx + 1}</span>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                            {m.nama.charAt(0)}
+                          </div>
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-slate-800">{m.nama}</p>
-                            <p className="text-[10px] text-slate-500 font-mono">NIM: {m.nim}</p>
+                            <p className="text-[11px] text-slate-500 font-mono mt-0.5">NIM: {m.nim}</p>
                           </div>
                         </div>
+                        <span className="text-[11px] font-semibold text-slate-400">
+                          #{idx + 1}
+                        </span>
                       </div>
                     ))
                   ) : (
@@ -499,10 +559,11 @@ export default function RiwayatKelompokPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50/60 flex justify-end shrink-0">
               <button
                 onClick={() => setSelectedRiwayat(null)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-semibold rounded-xl shadow-md transition-all text-sm"
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-800 to-indigo-900 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-xl shadow-md transition-all text-sm cursor-pointer active:scale-95"
               >
                 Tutup Detail
               </button>

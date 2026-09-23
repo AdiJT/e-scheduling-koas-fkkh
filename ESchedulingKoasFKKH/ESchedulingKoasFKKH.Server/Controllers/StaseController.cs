@@ -41,6 +41,13 @@ public class StaseController : ControllerBase
         var stase = await _staseRepository.Get(id);
         if (stase is null) return NotFound();
 
+        // Pastikan dosen koordinator otomatis terdaftar sebagai pembimbing stase
+        if (stase.Koordinator != null && !stase.DaftarPembimbing.Any(p => p.Id == stase.Koordinator.Id))
+        {
+            stase.DaftarPembimbing.Add(stase.Koordinator);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         return Ok(new
         {
             stase.Id,
@@ -84,7 +91,22 @@ public class StaseController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return Ok((await _staseRepository.GetAll()).Select(x => new
+        var staseList = await _staseRepository.GetAll();
+        bool hasChanges = false;
+        foreach (var s in staseList)
+        {
+            if (s.Koordinator != null && !s.DaftarPembimbing.Any(p => p.Id == s.Koordinator.Id))
+            {
+                s.DaftarPembimbing.Add(s.Koordinator);
+                hasChanges = true;
+            }
+        }
+        if (hasChanges)
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return Ok(staseList.Select(x => new
         {
             x.Id,
             x.Nama,
@@ -319,6 +341,12 @@ public class StaseController : ControllerBase
             }
         }
 
+        // Koordinator stase tetap otomatis terdaftar sebagai pembimbing
+        if (stase.Koordinator != null && !stase.DaftarPembimbing.Any(p => p.Id == stase.Koordinator.Id))
+        {
+            stase.DaftarPembimbing.Add(stase.Koordinator);
+        }
+
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
@@ -339,6 +367,12 @@ public class StaseController : ControllerBase
                 return HelpersFunctions.NotFound(new Dictionary<string, string> { ["idKoordinator"] = $"Dosen dengan id '{request.IdKoordinator.Value}' tidak ditemukan" });
 
             stase.Koordinator = pembimbing;
+
+            // Koordinator otomatis terdaftar sebagai pembimbing stase ini
+            if (!stase.DaftarPembimbing.Any(p => p.Id == pembimbing.Id))
+            {
+                stase.DaftarPembimbing.Add(pembimbing);
+            }
         }
         else
         {

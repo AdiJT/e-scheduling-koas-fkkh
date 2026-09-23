@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { notifikasiApi, type NotifikasiItem } from '../services/api';
-import { BellIcon, RefreshIcon, SearchIcon, MegaphoneIcon } from '../components/Icons';
+import { BellIcon, RefreshIcon, SearchIcon, MegaphoneIcon, DeleteIcon, JadwalIcon } from '../components/Icons';
+import Tooltip from '../components/Tooltip';
 
 export default function NotifikasiPage() {
   const [notifications, setNotifications] = useState<NotifikasiItem[]>([]);
@@ -156,54 +157,34 @@ export default function NotifikasiPage() {
   return (
     <Layout>
       <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-primary-900 via-primary-800 to-slate-900 rounded-2xl p-6 text-white shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-white/10 backdrop-blur-md">
-              <BellIcon className="w-6 h-6 text-amber-300" />
-            </div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Pusat Notifikasi</h1>
-          </div>
-          <p className="text-sm text-primary-100/80 max-w-xl">
-            Semua pengumuman resmi, informasi penugasan, dan pengingat stase yang Anda terima akan terhimpun di sini.
-          </p>
+      {/* Page Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <BellIcon className="w-56 h-56 text-white" />
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={fetchNotifications}
-            disabled={loading}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
-            title="Muat Ulang"
-          >
-            <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          {unreadCount > 0 && (
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button
-              onClick={handleMarkAllAsRead}
-              disabled={actionLoading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs backdrop-blur-md transition-all border border-white/20"
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Dashboard"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Tandai Semua Dibaca
+              ←
             </button>
-          )}
-          {totalNotif > 0 && (
-            <button
-              onClick={handleClearAll}
-              disabled={actionLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold text-xs backdrop-blur-md transition-all border border-rose-500/30"
-              title="Bersihkan Semua Notifikasi"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Bersihkan
-            </button>
-          )}
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <BellIcon className="w-6 h-6 text-amber-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Pusat Notifikasi</h1>
+              <p className="text-sm text-indigo-100/90">Semua pengumuman resmi, informasi penugasan, dan pengingat stase Anda</p>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-indigo-100 self-start sm:self-center">
+            <span>Total {totalNotif} Notifikasi</span>
+          </div>
         </div>
       </div>
 
@@ -218,38 +199,59 @@ export default function NotifikasiPage() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Notifikasi</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">{totalNotif}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in-up">
+        <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+            <BellIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Notifikasi</p>
+            <p className="text-2xl font-bold text-slate-800">{totalNotif}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Belum Dibaca</p>
-          <p className={`text-2xl font-bold mt-1 ${unreadCount > 0 ? 'text-primary-600' : 'text-slate-800'}`}>
-            {unreadCount}
-          </p>
+        <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Belum Dibaca</p>
+            <p className={`text-2xl font-bold ${unreadCount > 0 ? 'text-blue-600' : 'text-slate-800'}`}>
+              {unreadCount}
+            </p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengumuman</p>
-          <p className="text-2xl font-bold text-purple-600 mt-1">{broadcastCount}</p>
+        <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <MegaphoneIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengumuman</p>
+            <p className="text-2xl font-bold text-slate-800">{broadcastCount}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jadwal & Tugas</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{jadwalCount}</p>
+        <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <JadwalIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jadwal & Tugas</p>
+            <p className="text-2xl font-bold text-slate-800">{jadwalCount}</p>
+          </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        {/* Controls Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Action Bar */}
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 animate-fade-in-up">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold pb-1 lg:pb-0">
             <button
               onClick={() => setFilter('semua')}
-              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 filter === 'semua'
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-primary-900 text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -257,9 +259,9 @@ export default function NotifikasiPage() {
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 filter === 'unread'
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-primary-900 text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -267,9 +269,9 @@ export default function NotifikasiPage() {
             </button>
             <button
               onClick={() => setFilter('broadcast')}
-              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 filter === 'broadcast'
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-primary-900 text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -277,9 +279,9 @@ export default function NotifikasiPage() {
             </button>
             <button
               onClick={() => setFilter('jadwal')}
-              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 filter === 'jadwal'
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-primary-900 text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -287,9 +289,9 @@ export default function NotifikasiPage() {
             </button>
             <button
               onClick={() => setFilter('penugasan')}
-              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 filter === 'penugasan'
-                  ? 'bg-primary-600 text-white shadow-sm'
+                  ? 'bg-primary-900 text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -297,23 +299,75 @@ export default function NotifikasiPage() {
             </button>
           </div>
 
-          {/* Search Box */}
-          <div className="relative max-w-xs w-full">
-            <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cari notifikasi..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
+          {/* Search Box & Quick Actions */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="relative min-w-[220px]">
+              <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari notifikasi..."
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all"
+              />
+            </div>
+
+            <Tooltip content="Muat ulang notifikasi" position="bottom">
+              <button
+                onClick={fetchNotifications}
+                disabled={loading}
+                className="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+              >
+                <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </Tooltip>
+
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition-all border border-blue-200 cursor-pointer whitespace-nowrap"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Tandai Dibaca
+              </button>
+            )}
+
+            {totalNotif > 0 && (
+              <button
+                onClick={handleClearAll}
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-all border border-rose-200 cursor-pointer whitespace-nowrap"
+                title="Bersihkan Semua Notifikasi"
+              >
+                <DeleteIcon className="w-3.5 h-3.5" />
+                Bersihkan
+              </button>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        {/* Table Header Info */}
+        <div className="px-5 py-3.5 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+          <p className="text-xs text-slate-500 font-medium">
+            Menampilkan <span className="text-primary-900 font-bold">{filteredNotifications.length}</span> Notifikasi
+          </p>
+          {unreadCount > 0 && (
+            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+              {unreadCount} belum dibaca
+            </span>
+          )}
         </div>
 
         {/* Notifications List */}
         {loading ? (
           <div className="py-24 text-center text-slate-400 space-y-3">
-            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm font-medium">Memuat notifikasi...</p>
           </div>
         ) : filteredNotifications.length === 0 ? (
@@ -348,7 +402,7 @@ export default function NotifikasiPage() {
                         {item.judul}
                       </h4>
                       {!item.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-primary-600 ring-4 ring-primary-100"></span>
+                        <span className="w-2 h-2 rounded-full bg-blue-600 ring-4 ring-blue-100"></span>
                       )}
                     </div>
                     <span className="text-xs text-slate-400">
@@ -382,7 +436,7 @@ export default function NotifikasiPage() {
                       {item.tautan && (
                         <button
                           onClick={() => handleOpenAction(item)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100/80 px-2.5 py-1 rounded-lg transition-colors"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100/80 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                         >
                           Lihat Halaman Terkait &rarr;
                         </button>
@@ -393,20 +447,19 @@ export default function NotifikasiPage() {
                       {!item.isRead && (
                         <button
                           onClick={() => handleMarkAsRead(item.id)}
-                          className="text-xs font-semibold text-slate-500 hover:text-primary-600 hover:underline px-2 py-1"
+                          className="text-xs font-semibold text-slate-500 hover:text-primary-600 hover:underline px-2 py-1 cursor-pointer"
                         >
                           Tandai Dibaca
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                        title="Hapus Notifikasi"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <Tooltip content="Hapus Notifikasi">
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        >
+                          <DeleteIcon className="w-4 h-4" />
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>

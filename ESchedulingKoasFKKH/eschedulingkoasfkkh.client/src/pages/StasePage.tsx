@@ -176,16 +176,33 @@ export default function StasePage() {
 
   return (
     <Layout>
-      {/* Page Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-            <StaseIcon className="w-6 h-6" />
+      {/* Page Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-purple-800 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <StaseIcon className="w-56 h-56 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Dashboard"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <StaseIcon className="w-6 h-6 text-purple-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
+              <p className="text-sm text-purple-100/90">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
-            <p className="text-sm text-slate-500">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-purple-100 self-start sm:self-center">
+            <span>Total {data.length} Stase</span>
           </div>
         </div>
       </div>
@@ -332,66 +349,68 @@ export default function StasePage() {
                 </span>
               </div>
             </div>
-            <div className="overflow-x-auto pb-4">
-              <table className="w-full min-w-max" id="table-stase">
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto" id="table-stase">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-800 to-purple-700 text-white">
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                    <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-12">No</th>
                     <th
                       onClick={() => handleSort('nama')}
-                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-purple-900/50"
+                      className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:bg-purple-900/50"
                     >
                       Nama Stase {renderSortIndicator('nama')}
                     </th>
                     <th
                       onClick={() => handleSort('waktu')}
-                      className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-purple-900/50"
+                      className="px-3 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-purple-900/50 w-28"
                     >
                       Waktu {renderSortIndicator('waktu')}
                     </th>
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Koordinator Stase</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider">Koordinator Stase</th>
                     {!isMahasiswa && !isDosen && (
                       <>
                         <th
                           onClick={() => handleSort('jenis')}
-                          className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-purple-900/50"
+                          className="px-3 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-purple-900/50 w-28"
                         >
                           Jenis {renderSortIndicator('jenis')}
                         </th>
-                        <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Jadwal</th>
+                        <th className="px-3 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-24">Jadwal</th>
                       </>
                     )}
                     {!isMahasiswa && (
-                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                      <th className="px-3 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-28">Aksi</th>
                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedData.map((stase, index) => (
                     <tr key={stase.id} className="hover:bg-purple-50/30 transition-colors duration-150 group">
-                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
+                      <td className="px-4 py-3.5">
                         <div 
                           className="flex items-center gap-3 cursor-pointer group/link"
                           onClick={() => navigate(`/stase/${stase.id}`)}
                           title="Lihat Detail Stase"
                         >
-                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm transition-transform group-hover/link:scale-105">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm transition-transform group-hover/link:scale-105 shrink-0">
                             {stase.nama.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-primary-900 group-hover/link:text-purple-600 transition-colors">{stase.nama}</span>
+                          <span className="text-sm font-semibold text-primary-900 group-hover/link:text-purple-600 transition-colors leading-snug break-words">
+                            {stase.nama}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                      <td className="px-3 py-3.5 text-center whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 whitespace-nowrap">
                           <ClockIcon className="w-3.5 h-3.5" /> {stase.waktu} Minggu
                         </span>
                       </td>
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5">
                         {stase.namaKoordinator ? (
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 w-fit">
-                            <KoordinatorIcon className="w-4 h-4 text-indigo-500" />
-                            <span>{stase.namaKoordinator}</span>
+                          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 max-w-full">
+                            <KoordinatorIcon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <span className="break-words leading-tight">{stase.namaKoordinator}</span>
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400 italic font-mono">- Belum ditunjuk -</span>
@@ -399,12 +418,12 @@ export default function StasePage() {
                       </td>
                       {!isMahasiswa && !isDosen && (
                         <>
-                          <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                          <td className="px-3 py-3.5 text-center whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getJenisColor(stase.jenis)}`}>
                               {renderJenisIcon(stase.jenis, "w-3.5 h-3.5")} {stase.jenis}
                             </span>
                           </td>
-                          <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                          <td className="px-3 py-3.5 text-center whitespace-nowrap">
                             <span className="text-xs text-slate-500">
                               {stase.daftarJadwal.length > 0 ? (
                                 <span className="inline-block px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-semibold whitespace-nowrap">
@@ -420,7 +439,7 @@ export default function StasePage() {
                         </>
                       )}
                       {!isMahasiswa && (
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <td className="px-3 py-3.5 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
                             <Tooltip content="Detail" position="bottom">
                               <button

@@ -170,21 +170,33 @@ export default function DosenPage() {
 
   return (
     <Layout>
-      {/* Page Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3 mb-1">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all duration-200"
-          >
-            ←
-          </button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md">
-            <DosenIcon className="w-6 h-6" />
+      {/* Page Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <DosenIcon className="w-56 h-56 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Dashboard"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <DosenIcon className="w-6 h-6 text-emerald-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Kelola Dosen</h1>
+              <p className="text-sm text-emerald-100/90">Tambah, edit, atau hapus data dosen pembimbing</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Kelola Dosen</h1>
-            <p className="text-sm text-slate-500">Tambah, edit, atau hapus data dosen pembimbing</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-emerald-100 self-start sm:self-center">
+            <span>Total {data.length} Dosen</span>
           </div>
         </div>
       </div>

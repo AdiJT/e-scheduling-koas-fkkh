@@ -149,7 +149,19 @@ export default function DetailStasePage() {
   };
 
   // Manage Dosen Stase Handlers
+  const handleOpenManageDosen = () => {
+    const ids = stase?.daftarPembimbing?.map(p => p.id) || [];
+    if (stase?.idKoordinator && !ids.includes(stase.idKoordinator)) {
+      ids.push(stase.idKoordinator);
+    }
+    setSelectedDosenIds(ids);
+    setShowManageDosen(true);
+  };
+
   const handleToggleDosen = (dosenId: number) => {
+    // Koordinator stase dikunci agar tetap terdaftar sebagai pembimbing
+    if (stase?.idKoordinator === dosenId) return;
+
     setSelectedDosenIds(prev =>
       prev.includes(dosenId)
         ? prev.filter(id => id !== dosenId)
@@ -160,7 +172,11 @@ export default function DetailStasePage() {
   const handleSaveManageDosen = async () => {
     try {
       setActionLoading(true);
-      await staseApi.updatePembimbingStase(staseId, selectedDosenIds);
+      const idsToSave = [...selectedDosenIds];
+      if (stase?.idKoordinator && !idsToSave.includes(stase.idKoordinator)) {
+        idsToSave.push(stase.idKoordinator);
+      }
+      await staseApi.updatePembimbingStase(staseId, idsToSave);
       setShowManageDosen(false);
       await fetchData();
     } catch (err) {
@@ -222,16 +238,35 @@ export default function DetailStasePage() {
 
   return (
     <Layout>
-      {/* Header */}
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3 mb-1">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all duration-200">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-            <StaseIcon className="w-6 h-6" />
+      {/* Hero Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 rounded-2xl p-6 sm:p-7 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <StaseIcon className="w-64 h-64 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/stase')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Daftar Stase"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <StaseIcon className="w-6 h-6 text-purple-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Detail Stase: {stase.nama}</h1>
+              <p className="text-sm text-purple-100/90 mt-0.5">
+                Informasi lengkap{isKodil ? ', sub-stase rotasi,' : ''} dan jadwal kelompok pada stase ini
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Detail Stase: {stase.nama}</h1>
-            <p className="text-sm text-slate-500">Informasi lengkap{isKodil ? ', sub-stase rotasi,' : ''} dan jadwal kelompok pada stase ini</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-purple-100 self-start sm:self-center">
+            <span>{stase.waktu} Minggu • {stase.jenis}</span>
           </div>
         </div>
       </div>
@@ -318,7 +353,7 @@ export default function DetailStasePage() {
           </div>
           {isAdmin && (
             <button
-              onClick={() => { setSelectedDosenIds(stase.daftarPembimbing?.map(p => p.id) || []); setShowManageDosen(true); }}
+              onClick={handleOpenManageDosen}
               className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1.5"
             >
               <DosenIcon className="w-4 h-4" /> Kelola Dosen Stase
@@ -327,17 +362,40 @@ export default function DetailStasePage() {
         </div>
         {stase.daftarPembimbing && stase.daftarPembimbing.length > 0 ? (
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {stase.daftarPembimbing.map((p) => (
-              <div key={p.id} className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-                  {p.nama.charAt(0)}
+            {stase.daftarPembimbing.map((p) => {
+              const isKoordinator = stase.idKoordinator === p.id;
+              return (
+                <div
+                  key={p.id}
+                  className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
+                    isKoordinator
+                      ? 'bg-gradient-to-r from-purple-50 to-indigo-50/60 border-purple-200 shadow-sm'
+                      : 'bg-emerald-50/50 border-emerald-100'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 shadow-sm ${
+                      isKoordinator
+                        ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white'
+                        : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {p.nama.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-bold text-slate-800 text-xs truncate">{p.nama}</p>
+                      {isKoordinator && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 rounded-md border border-purple-200 inline-flex items-center gap-0.5">
+                          <KoordinatorIcon className="w-2.5 h-2.5 text-purple-600" /> Koordinator
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-mono">NIP: {p.nip}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-800 text-xs truncate">{p.nama}</p>
-                  <p className="text-[11px] text-slate-500 font-mono">NIP: {p.nip}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="p-6 text-center text-slate-400 text-xs">
@@ -462,9 +520,9 @@ export default function DetailStasePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-max">
+            <table className="w-full table-auto">
               <thead>
-                <tr className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white">
+                <tr className="bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 text-white">
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider">No</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider">Kelompok</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider">Tanggal Mulai</th>
@@ -544,24 +602,53 @@ export default function DetailStasePage() {
             </p>
 
             <div className="mb-5 border-2 border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col h-[280px]">
-              <div className="flex-1 overflow-y-auto p-2">
-                {pembimbingList.map(p => (
-                  <label key={p.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-emerald-50/50 cursor-pointer transition-colors border border-transparent hover:border-emerald-100">
-                    <input
-                      type="checkbox"
-                      checked={selectedDosenIds.includes(p.id)}
-                      onChange={() => handleToggleDosen(p.id)}
-                      className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{p.nama}</p>
-                      <p className="text-xs text-slate-400 font-mono">NIP: {p.nip}</p>
-                    </div>
-                  </label>
-                ))}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {pembimbingList.map(p => {
+                  const isKoordinator = stase?.idKoordinator === p.id;
+                  const isChecked = isKoordinator || selectedDosenIds.includes(p.id);
+
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl transition-colors border ${
+                        isKoordinator
+                          ? 'bg-purple-50/80 border-purple-200 cursor-default'
+                          : isChecked
+                          ? 'bg-emerald-50/60 border-emerald-200 cursor-pointer'
+                          : 'bg-white border-slate-100 hover:border-slate-200 cursor-pointer'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={isKoordinator}
+                        onChange={() => handleToggleDosen(p.id)}
+                        className={`w-4 h-4 rounded ${
+                          isKoordinator
+                            ? 'text-purple-600 border-purple-300 focus:ring-purple-500'
+                            : 'text-emerald-600 border-slate-300 focus:ring-emerald-500'
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-slate-800">{p.nama}</p>
+                          {isKoordinator && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 rounded-full inline-flex items-center gap-1">
+                              <KoordinatorIcon className="w-3 h-3 text-purple-600" /> Koordinator (Otomatis Terdaftar)
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 font-mono">NIP: {p.nip}</p>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
-              <div className="p-3 border-t border-slate-200 bg-white text-xs font-semibold text-slate-600 text-center">
-                <span className="text-emerald-600">{selectedDosenIds.length}</span> Dosen dipilih untuk stase ini
+              <div className="p-3 border-t border-slate-200 bg-white text-xs font-semibold text-slate-600 text-center flex items-center justify-center gap-1">
+                <span className="text-emerald-600 font-bold">
+                  {new Set([...selectedDosenIds, ...(stase?.idKoordinator ? [stase.idKoordinator] : [])]).size}
+                </span>
+                <span>Dosen dipilih untuk stase ini</span>
               </div>
             </div>
 

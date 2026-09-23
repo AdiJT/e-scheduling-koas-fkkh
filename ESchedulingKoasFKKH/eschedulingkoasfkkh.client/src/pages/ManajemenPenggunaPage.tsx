@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import {
   userManagementApi,
@@ -14,9 +15,13 @@ import {
   UserIcon,
   LockIcon,
   EyeOffIcon,
+  EditIcon,
+  DeleteIcon,
 } from '../components/Icons';
+import Tooltip from '../components/Tooltip';
 
 export default function ManajemenPenggunaPage() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -230,48 +235,34 @@ export default function ManajemenPenggunaPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        {/* Hero Header Card */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl animate-fade-in">
           <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-4">
             <UsersIcon className="w-80 h-80" />
           </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold tracking-wider text-amber-300 uppercase">
-                <ShieldCheckIcon className="w-4 h-4 text-amber-400" />
-                Akses Khusus Administrator
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+                title="Kembali ke Dashboard"
+              >
+                ←
+              </button>
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                <UsersIcon className="w-6 h-6 text-amber-300" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                Manajemen Pengguna
-              </h1>
-              <p className="text-primary-100 max-w-2xl text-sm sm:text-base leading-relaxed">
-                Kelola hak akses dan akun staf sistem e-scheduling FKKH. Atur pengguna dengan peranan{' '}
-                <span className="font-semibold text-white">Administrator</span> dan{' '}
-                <span className="font-semibold text-white">Pengelola</span>.
-              </p>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Manajemen Pengguna</h1>
+                <p className="text-sm text-primary-100/90 leading-relaxed mt-0.5">
+                  Kelola hak akses dan akun staf sistem dengan peranan Administrator dan Pengelola
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={fetchUsers}
-                disabled={loading}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white font-medium text-sm transition-all border border-white/10 backdrop-blur-sm disabled:opacity-50"
-                title="Segarkan data"
-              >
-                <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Segarkan</span>
-              </button>
-
-              <button
-                onClick={handleOpenAdd}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-semibold text-sm shadow-lg shadow-amber-500/30 transition-all"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-                Tambah Pengguna
-              </button>
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-indigo-100 self-start sm:self-center">
+              <span>Total {totalUsers} Pengguna Staf</span>
             </div>
           </div>
         </div>
@@ -298,69 +289,59 @@ export default function ManajemenPenggunaPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 animate-fade-in-up">
           {/* Card 1: Total Staf */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Total Pengguna Staf
-                </p>
-                <h3 className="text-3xl font-extrabold text-slate-800 mt-1">
-                  {loading ? '...' : totalUsers}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Admin & Pengelola terdaftar</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                <UsersIcon className="w-6 h-6" />
-              </div>
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Total Pengguna Staf
+              </p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">
+                {loading ? '...' : totalUsers}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Admin & Pengelola terdaftar</p>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-primary-600" />
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <UsersIcon className="w-6 h-6" />
+            </div>
           </div>
 
           {/* Card 2: Administrator */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Administrator
-                </p>
-                <h3 className="text-3xl font-extrabold text-purple-700 mt-1">
-                  {loading ? '...' : totalAdmin}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Hak akses kontrol penuh</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-                <ShieldCheckIcon className="w-6 h-6" />
-              </div>
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Administrator
+              </p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-purple-700 mt-1">
+                {loading ? '...' : totalAdmin}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Hak akses kontrol penuh</p>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-600" />
+            <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
+              <ShieldCheckIcon className="w-6 h-6" />
+            </div>
           </div>
 
           {/* Card 3: Pengelola */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Pengelola
-                </p>
-                <h3 className="text-3xl font-extrabold text-teal-700 mt-1">
-                  {loading ? '...' : totalPengelola}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Manajemen jadwal & data akademik</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
-                <UserIcon className="w-6 h-6" />
-              </div>
+          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Pengelola
+              </p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-teal-700 mt-1">
+                {loading ? '...' : totalPengelola}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Manajemen jadwal & data akademik</p>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-600" />
+            <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 flex-shrink-0">
+              <UserIcon className="w-6 h-6" />
+            </div>
           </div>
         </div>
 
-        {/* Filter and Table Section */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          {/* Controls Bar */}
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+        {/* Action Bar */}
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 animate-fade-in-up">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
               <SearchIcon className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -369,7 +350,7 @@ export default function ManajemenPenggunaPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari berdasarkan username..."
-                className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition bg-white"
+                className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:bg-white transition"
               />
               {search && (
                 <button
@@ -381,38 +362,83 @@ export default function ManajemenPenggunaPage() {
               )}
             </div>
 
-            {/* Role Filter Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 rounded-xl text-xs font-semibold text-slate-600 self-start md:self-auto">
+            {/* Filter and Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Role Filter Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600">
+                <button
+                  onClick={() => setRoleFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    roleFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-sm font-bold'
+                      : 'hover:text-slate-900'
+                  }`}
+                >
+                  Semua ({totalUsers})
+                </button>
+                <button
+                  onClick={() => setRoleFilter('admin')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    roleFilter === 'admin'
+                      ? 'bg-white text-purple-700 shadow-sm font-bold'
+                      : 'hover:text-slate-900'
+                  }`}
+                >
+                  Administrator ({totalAdmin})
+                </button>
+                <button
+                  onClick={() => setRoleFilter('pengelola')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    roleFilter === 'pengelola'
+                      ? 'bg-white text-teal-700 shadow-sm font-bold'
+                      : 'hover:text-slate-900'
+                  }`}
+                >
+                  Pengelola ({totalPengelola})
+                </button>
+              </div>
+
+              {/* Refresh Button */}
+              <Tooltip content="Muat ulang data" position="bottom">
+                <button
+                  onClick={fetchUsers}
+                  disabled={loading}
+                  className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </Tooltip>
+
+              {/* Tambah Pengguna Button */}
               <button
-                onClick={() => setRoleFilter('all')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  roleFilter === 'all'
-                    ? 'bg-white text-slate-900 shadow-sm font-bold'
-                    : 'hover:text-slate-900'
-                }`}
+                onClick={handleOpenAdd}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-semibold text-sm shadow-md hover:shadow-glow-amber transition-all cursor-pointer"
               >
-                Semua ({totalUsers})
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Tambah Pengguna</span>
               </button>
-              <button
-                onClick={() => setRoleFilter('admin')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  roleFilter === 'admin'
-                    ? 'bg-white text-purple-700 shadow-sm font-bold'
-                    : 'hover:text-slate-900'
-                }`}
-              >
+            </div>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up">
+          {/* Table Header Info */}
+          <div className="px-5 py-3.5 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-xs text-slate-500 font-medium">
+              Menampilkan <span className="text-primary-900 font-bold">{filteredUsers.length}</span> dari <span className="text-primary-900 font-bold">{totalUsers}</span> pengguna staf
+            </p>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block" />
                 Administrator ({totalAdmin})
-              </button>
-              <button
-                onClick={() => setRoleFilter('pengelola')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  roleFilter === 'pengelola'
-                    ? 'bg-white text-teal-700 shadow-sm font-bold'
-                    : 'hover:text-slate-900'
-                }`}
-              >
+              </span>
+              <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
                 Pengelola ({totalPengelola})
-              </button>
+              </span>
             </div>
           </div>
 
@@ -420,18 +446,19 @@ export default function ManajemenPenggunaPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                  <th className="py-3.5 px-6">Pengguna</th>
-                  <th className="py-3.5 px-6">Peranan (Role)</th>
-                  <th className="py-3.5 px-6">Cakupan Izin</th>
-                  <th className="py-3.5 px-6 text-center">Status Akun</th>
-                  <th className="py-3.5 px-6 text-right">Aksi</th>
+                <tr className="bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 text-white">
+                  <th className="py-3.5 px-4 md:px-5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                  <th className="py-3.5 px-4 md:px-5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Pengguna</th>
+                  <th className="py-3.5 px-4 md:px-5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Peranan (Role)</th>
+                  <th className="py-3.5 px-4 md:px-5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Cakupan Izin</th>
+                  <th className="py-3.5 px-4 md:px-5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Status Akun</th>
+                  <th className="py-3.5 px-4 md:px-5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
                       <div className="inline-flex items-center gap-2">
                         <RefreshIcon className="w-5 h-5 animate-spin text-primary-600" />
                         <span>Memuat data pengguna...</span>
@@ -440,7 +467,7 @@ export default function ManajemenPenggunaPage() {
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <UsersIcon className="w-12 h-12 text-slate-300" />
                         <p className="font-medium text-slate-600">Tidak ada pengguna yang cocok.</p>
@@ -451,7 +478,7 @@ export default function ManajemenPenggunaPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((item) => {
+                  filteredUsers.map((item, index) => {
                     const isAdmin = item.role === 'admin';
                     const isSelf = item.isCurrentLoggedInUser;
                     const isLastAdmin = isAdmin && totalAdmin <= 1;
@@ -463,8 +490,13 @@ export default function ManajemenPenggunaPage() {
                           isSelf ? 'bg-primary-50/30' : ''
                         }`}
                       >
+                        {/* No */}
+                        <td className="py-4 px-4 md:px-5 text-xs font-medium text-slate-500">
+                          {index + 1}
+                        </td>
+
                         {/* User Info */}
-                        <td className="py-4 px-6">
+                        <td className="py-4 px-4 md:px-5">
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white shadow-sm flex-shrink-0 ${
@@ -492,7 +524,7 @@ export default function ManajemenPenggunaPage() {
                         </td>
 
                         {/* Role Badge */}
-                        <td className="py-4 px-6">
+                        <td className="py-4 px-4 md:px-5 whitespace-nowrap">
                           {isAdmin ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
                               <ShieldCheckIcon className="w-3.5 h-3.5 text-purple-600" />
@@ -507,7 +539,7 @@ export default function ManajemenPenggunaPage() {
                         </td>
 
                         {/* Scope */}
-                        <td className="py-4 px-6 text-xs text-slate-600 max-w-xs">
+                        <td className="py-4 px-4 md:px-5 text-xs text-slate-600 max-w-xs">
                           {isAdmin ? (
                             <div className="space-y-0.5">
                               <span className="font-medium text-purple-900 block">
@@ -530,7 +562,7 @@ export default function ManajemenPenggunaPage() {
                         </td>
 
                         {/* Status */}
-                        <td className="py-4 px-6 text-center">
+                        <td className="py-4 px-4 md:px-5 text-center whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Aktif
@@ -538,34 +570,43 @@ export default function ManajemenPenggunaPage() {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-4 px-6 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(item)}
-                              className="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-primary-400 hover:bg-primary-50 text-slate-700 hover:text-primary-700 text-xs font-semibold transition"
-                              title="Edit Pengguna"
-                            >
-                              Edit
-                            </button>
+                        <td className="py-4 px-4 md:px-5 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center justify-center gap-1">
+                            <Tooltip content="Edit Pengguna" position="top">
+                              <button
+                                onClick={() => handleOpenEdit(item)}
+                                className="p-2 text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-all duration-200 cursor-pointer"
+                              >
+                                <EditIcon className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
 
-                            <button
-                              onClick={() => setDeleteConfirmUser(item)}
-                              disabled={isSelf || isLastAdmin || deletingId === item.id}
-                              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${
-                                isSelf || isLastAdmin
-                                  ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                                  : 'border-red-200 hover:bg-red-50 text-red-600 hover:border-red-400 active:scale-95'
-                              }`}
-                              title={
+                            <Tooltip
+                              content={
                                 isSelf
                                   ? 'Anda tidak dapat menghapus akun Anda sendiri'
                                   : isLastAdmin
                                   ? 'Minimal harus ada 1 akun Administrator'
                                   : 'Hapus Pengguna'
                               }
+                              position="top"
                             >
-                              {deletingId === item.id ? 'Menghapus...' : 'Hapus'}
-                            </button>
+                              <button
+                                onClick={() => setDeleteConfirmUser(item)}
+                                disabled={isSelf || isLastAdmin || deletingId === item.id}
+                                className={`p-2 rounded-lg transition-all duration-200 ${
+                                  isSelf || isLastAdmin || deletingId === item.id
+                                    ? 'text-slate-300 bg-slate-50 cursor-not-allowed'
+                                    : 'text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer'
+                                }`}
+                              >
+                                {deletingId === item.id ? (
+                                  <RefreshIcon className="w-4 h-4 animate-spin text-red-500" />
+                                ) : (
+                                  <DeleteIcon className="w-4 h-4" />
+                                )}
+                              </button>
+                            </Tooltip>
                           </div>
                         </td>
                       </tr>
@@ -574,23 +615,6 @@ export default function ManajemenPenggunaPage() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          {/* Table Footer info */}
-          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-            <span>
-              Menampilkan <strong>{filteredUsers.length}</strong> dari <strong>{totalUsers}</strong> pengguna staf
-            </span>
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block" />
-                Administrator ({totalAdmin})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
-                Pengelola ({totalPengelola})
-              </span>
-            </div>
           </div>
         </div>
 

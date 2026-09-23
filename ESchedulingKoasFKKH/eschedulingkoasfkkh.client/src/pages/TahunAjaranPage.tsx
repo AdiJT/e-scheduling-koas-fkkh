@@ -219,17 +219,33 @@ export default function TahunAjaranPage() {
 
   return (
     <Layout>
-      <div className="mb-6 animate-fade-in-down">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">
-            ←
-          </button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-md">
-            <TahunAjaranIcon className="w-6 h-6" />
+      {/* Page Header Card */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-sky-700 to-cyan-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+        {/* Subtle decorative watermark */}
+        <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
+          <TahunAjaranIcon className="w-56 h-56 text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              title="Kembali ke Dashboard"
+            >
+              ←
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
+              <TahunAjaranIcon className="w-6 h-6 text-sky-200" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Kelola Tahun Ajaran</h1>
+              <p className="text-sm text-sky-100/90">Atur tahun dan semester untuk data mahasiswa KOAS</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Kelola Tahun Ajaran</h1>
-            <p className="text-sm text-slate-500">Atur tahun dan semester untuk data mahasiswa KOAS</p>
+
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-sky-100 self-start sm:self-center">
+            <span>Total {data.length} Tahun Ajaran</span>
           </div>
         </div>
       </div>
