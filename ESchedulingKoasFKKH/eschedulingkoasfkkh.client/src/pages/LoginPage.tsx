@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon } from '../components/Icons';
+import logo from "../assets/logo_undana.png";
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -77,7 +78,7 @@ export default function LoginPage() {
           <div className="mb-6 inline-flex">
             {/*Update Logo*/}
             <div className="w-50 rounded-3xl flex items-center justify-center animate-bounce-gentle">
-              <img className="h-40 object-cover ..." src="src\assets\logo_undana.png" />
+              <img className="h-40 object-cover ..." src={logo} />
             </div>
           </div>
 
