@@ -6,14 +6,13 @@ import { userApi } from '../services/api';
 import { ChevronDownIcon, LogoutIcon, LockIcon, UserIcon } from './Icons';
 
 export default function NavbarProfile() {
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Profile modal state
-  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -35,7 +34,6 @@ export default function NavbarProfile() {
 
   const handleOpenEditModal = () => {
     setIsOpen(false);
-    setNewUsername(user?.username || '');
     setNewPassword('');
     setConfirmPassword('');
     setErrorMsg(null);
@@ -45,11 +43,11 @@ export default function NavbarProfile() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername.trim()) {
-      setErrorMsg('Username tidak boleh kosong');
+    if (!newPassword) {
+      setErrorMsg('Masukkan password baru terlebih dahulu');
       return;
     }
-    if (newPassword && newPassword !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       setErrorMsg('Konfirmasi password baru tidak cocok');
       return;
     }
@@ -59,17 +57,16 @@ export default function NavbarProfile() {
       setErrorMsg(null);
       setSuccessMsg(null);
       await userApi.updateProfile({
-        newUsername: newUsername.trim(),
-        newPassword: newPassword || undefined,
+        newUsername: user?.username || '',
+        newPassword: newPassword,
       });
-      updateUser(newUsername.trim());
-      setSuccessMsg('Profil dan password berhasil diperbarui!');
+      setSuccessMsg('Password berhasil diperbarui!');
       setTimeout(() => {
         setShowModal(false);
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Gagal memperbarui profil. Username mungkin sudah digunakan.');
+      setErrorMsg(err.message || 'Gagal memperbarui password.');
     } finally {
       setUpdating(false);
     }
@@ -134,7 +131,13 @@ export default function NavbarProfile() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in origin-top-right">
+        <>
+          {/* Mobile Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-[1px] z-40 sm:hidden animate-fade-in"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed right-3 sm:right-0 sm:absolute top-16 sm:top-auto sm:mt-2 w-[calc(100vw-1.5rem)] max-w-[300px] sm:w-72 sm:max-w-none rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in origin-top-right">
           {/* User Info Header */}
           <div className="p-4 bg-gradient-to-br from-slate-50 via-primary-50/20 to-white border-b border-slate-100">
             <div className="flex items-center gap-3">
@@ -167,11 +170,11 @@ export default function NavbarProfile() {
               <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
                 <LockIcon className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
                   Ubah Password & Profil
                 </p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-400 truncate">
                   Sesuaikan username dan kata sandi
                 </p>
               </div>
@@ -188,17 +191,18 @@ export default function NavbarProfile() {
               <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition-colors">
                 <LogoutIcon className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-rose-600">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-rose-600 truncate">
                   Keluar Akun
                 </p>
-                <p className="text-[10px] text-rose-400">
+                <p className="text-[10px] text-rose-400 truncate">
                   Akhiri sesi login saat ini
                 </p>
               </div>
             </button>
           </div>
         </div>
+      </>
       )}
 
       {/* Edit Profile / Change Password Modal */}
@@ -232,17 +236,22 @@ export default function NavbarProfile() {
             {/* Form */}
             <form onSubmit={handleSaveProfile} className="space-y-4 mb-4 overflow-y-auto pr-1 flex-1 text-left">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                  Username Baru
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Username
+                  </label>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                    Read-only
+                  </span>
+                </div>
                 <input
                   type="text"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-slate-800 font-semibold"
-                  placeholder="Masukkan username baru"
-                  required
+                  value={user?.username || ''}
+                  readOnly
+                  disabled
+                  className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 font-semibold cursor-not-allowed select-none focus:outline-none"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">Username akun bersifat permanen dan tidak dapat diubah.</p>
               </div>
 
               <div>
@@ -254,7 +263,8 @@ export default function NavbarProfile() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                  placeholder="Kosongkan jika tidak diubah"
+                  placeholder="Masukkan password baru"
+                  required
                 />
               </div>
 
@@ -268,6 +278,7 @@ export default function NavbarProfile() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                   placeholder="Ketik ulang password baru"
+                  required
                 />
               </div>
 

@@ -416,6 +416,8 @@ public class JadwalController : ControllerBase
     private object ToResponse(Jadwal j)
     {
         var pembimbing = j.Pembimbing;
+        var kelompok = j.Kelompok;
+        var tahunAjaran = kelompok?.TahunAjaran;
         return new
         {
             j.Id,
@@ -425,6 +427,8 @@ public class JadwalController : ControllerBase
             namaStase = j.Stase.Nama,
             idKelompok = j.Kelompok.Id,
             namaKelompok = j.Kelompok.Nama,
+            idTahunAjaran = tahunAjaran?.Id ?? kelompok?.IdTahunAjaran,
+            tahunAjaran = tahunAjaran != null ? $"{tahunAjaran.Tahun} - {tahunAjaran.Semester}" : null,
             idPembimbing = pembimbing?.Id,
             namaPembimbing = pembimbing?.Nama,
             nipPembimbing = pembimbing?.NIP,

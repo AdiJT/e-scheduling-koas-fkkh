@@ -146,29 +146,29 @@ export default function DetailKelompokPage() {
   return (
     <Layout>
       {/* Hero Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-6 sm:p-7 text-white shadow-xl mb-6 animate-fade-in-down">
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
         {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-          <KelompokIcon className="w-64 h-64 text-white" />
+          <KelompokIcon className="w-44 h-44 sm:w-64 sm:h-64 text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/kelompok')}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer flex-shrink-0"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
               title="Kembali ke Kelola Kelompok"
             >
               ←
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-              <KelompokIcon className="w-6 h-6 text-amber-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+              <KelompokIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 {kelompok.nama.toLowerCase().startsWith('kelompok') ? `Detail ${kelompok.nama}` : `Detail Kelompok ${kelompok.nama}`}
               </h1>
-              <p className="text-sm text-amber-100/90 mt-0.5">
+              <p className="text-xs sm:text-sm text-amber-100/90 mt-0.5">
                 Informasi anggota kelompok dan Dosen Pembimbing per stase
               </p>
             </div>
@@ -191,15 +191,15 @@ export default function DetailKelompokPage() {
 
       {/* Anggota Section */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden mb-6 animate-fade-in-up">
-        <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-base sm:text-lg font-bold text-primary-900 flex items-center gap-2">
             <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Anggota Kelompok
-            <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{kelompok.daftarMahasiswa.length} Mahasiswa</span>
+            <span className="ml-1 sm:ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{kelompok.daftarMahasiswa.length} Mahasiswa</span>
           </h2>
           {!isAdmin && !isMahasiswa && !isDosen && (
             <button
               onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); }}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all text-center"
             >
               + Tambah Anggota
             </button>
@@ -262,17 +262,17 @@ export default function DetailKelompokPage() {
 
       {/* Jadwal & Dosen Pembimbing per Stase Section */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-        <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-pink-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-primary-900 flex items-center gap-2">
               <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" /> Jadwal & Dosen Pembimbing per Stase
-              <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">{kelompok.daftarJadwal.length} Stase</span>
+              <span className="ml-1 sm:ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">{kelompok.daftarJadwal.length} Stase</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">Dosen pembimbing melekat langsung pada jadwal stase masing-masing</p>
           </div>
           <button 
             onClick={() => navigate('/jadwal')}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all"
+            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all text-center shrink-0"
           >
             Lihat Kelola Jadwal
           </button>

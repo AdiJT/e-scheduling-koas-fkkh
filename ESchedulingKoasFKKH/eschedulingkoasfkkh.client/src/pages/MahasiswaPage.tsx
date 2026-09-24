@@ -190,27 +190,27 @@ export default function MahasiswaPage() {
   return (
     <Layout>
       {/* Page Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 to-blue-800 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+      <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 to-blue-800 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
         {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-          <MahasiswaIcon className="w-56 h-56 text-white" />
+          <MahasiswaIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
               title="Kembali ke Dashboard"
             >
               ←
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-              <MahasiswaIcon className="w-6 h-6 text-blue-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+              <MahasiswaIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Kelola Mahasiswa</h1>
-              <p className="text-sm text-blue-100/90">Tambah, edit, atau hapus data mahasiswa KOAS</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Kelola Mahasiswa</h1>
+              <p className="text-xs sm:text-sm text-blue-100/90">Tambah, edit, atau hapus data mahasiswa KOAS</p>
             </div>
           </div>
 
@@ -230,58 +230,73 @@ export default function MahasiswaPage() {
       )}
 
       {/* Action Bar */}
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Cari mahasiswa berdasarkan nama atau NIM..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400
                 focus:outline-none focus:border-blue-400 focus:bg-white focus:shadow-sm transition-all duration-200"
               id="search-mahasiswa"
             />
           </div>
 
-          {/* Filter Tahun Ajaran */}
-          <select
-            value={filterTahunAjaran}
-            onChange={(e) => setFilterTahunAjaran(e.target.value)}
-            className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
-              focus:outline-none focus:border-blue-400 focus:bg-white transition-all cursor-pointer"
-            id="filter-tahun-ajaran"
-          >
-            <option value="all">Semua Tahun Ajaran</option>
-            {tahunAjarans.map(ta => (
-              <option key={ta.id} value={ta.id.toString()}>
-                {ta.tahun} - {ta.semester}
-              </option>
-            ))}
-          </select>
-
-          {/* Refresh Button */}
-          <Tooltip content="Muat ulang data" position="bottom">
-            <button
-              onClick={fetchData}
-              className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
+          {/* Filter & Refresh Controls */}
+          <div className="flex items-center gap-2">
+            <select
+              value={filterTahunAjaran}
+              onChange={(e) => setFilterTahunAjaran(e.target.value)}
+              className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700
+                focus:outline-none focus:border-blue-400 focus:bg-white transition-all cursor-pointer font-medium"
+              id="filter-tahun-ajaran"
             >
-              <RefreshIcon className="w-5 h-5" />
-            </button>
-          </Tooltip>
+              <option value="all">Semua Tahun Ajaran</option>
+              {tahunAjarans.map(ta => (
+                <option key={ta.id} value={ta.id.toString()}>
+                  {ta.tahun} - {ta.semester}
+                </option>
+              ))}
+            </select>
 
-          {/* Add Button */}
+            {/* Refresh Button */}
+            <Tooltip content="Muat ulang data" position="bottom">
+              <button
+                onClick={fetchData}
+                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+              >
+                <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </Tooltip>
+
+            {/* Desktop Add Button */}
+            {!isPengelola && (
+              <button
+                onClick={() => navigate('/mahasiswa/tambah')}
+                className="hidden sm:flex px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+                  text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
+                  transition-all duration-300 active:scale-95 text-sm items-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
+                id="btn-tambah-mahasiswa"
+              >
+                <span>+</span> Tambah Mahasiswa
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Add Button */}
           {!isPengelola && (
             <button
               onClick={() => navigate('/mahasiswa/tambah')}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
-                transition-all duration-300 active:scale-95 text-sm flex items-center gap-2 whitespace-nowrap"
-              id="btn-tambah-mahasiswa"
+              className="sm:hidden w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+                text-white font-semibold rounded-xl shadow-md active:scale-[0.99]
+                transition-all duration-200 text-xs flex items-center justify-center gap-2 cursor-pointer"
+              id="btn-tambah-mahasiswa-mobile"
             >
-              <span>+</span> Tambah Mahasiswa
+              <span className="text-sm font-bold leading-none">+</span> Tambah Mahasiswa
             </button>
           )}
         </div>
@@ -307,12 +322,12 @@ export default function MahasiswaPage() {
         ) : (
           <>
             {/* Table Header Info */}
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <p className="text-xs text-slate-500 font-medium">                
+            <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <p className="text-slate-500 font-medium">                
                 Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Mahasiswa
               </p>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                <label className="text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
                 <select
                   value={pageSize}
                   onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
@@ -323,70 +338,152 @@ export default function MahasiswaPage() {
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span className="text-xs text-slate-500 font-medium">data</span>
+                <span className="text-slate-500 font-medium">data</span>
               </div>
             </div>
-            <div className="overflow-x-auto pb-4">
-              <table className="w-full min-w-max" id="table-mahasiswa">
+
+            {/* Mobile View: Card List (Screens < md) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {paginatedData.map((mhs, index) => (
+                <div key={mhs.id} className="p-3.5 hover:bg-slate-50/70 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div
+                      className="flex items-start gap-2.5 flex-1 cursor-pointer"
+                      onClick={() => navigate(`/mahasiswa/${mhs.id}`)}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0 mt-0.5">
+                        {mhs.nama.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                            #{startIndex + index + 1}
+                          </span>
+                          <h3 className="text-sm font-semibold text-primary-900 hover:text-blue-600 transition-colors leading-snug break-words">
+                            {mhs.nama}
+                          </h3>
+                        </div>
+                        <p className="text-xs font-mono text-slate-500 mt-0.5">
+                          NIM: {mhs.nim || '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metadata Row: Tahun Ajaran & Kelompok */}
+                  <div className="pl-10.5 flex flex-wrap items-center gap-1.5 mb-2.5">
+                    {mhs.tahunAjaran ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60 leading-tight">
+                        T.A: {mhs.tahunAjaran.tahun} - {mhs.tahunAjaran.semester}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Belum ada T.A</span>
+                    )}
+
+                    {mhs.idKelompok ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 leading-tight">
+                        Kelompok {mhs.idKelompok}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-500">
+                        Belum ada kelompok
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mobile Actions */}
+                  <div className="pl-10.5 flex items-center gap-2 pt-2 border-t border-slate-100/70">
+                    <button
+                      onClick={() => navigate(`/mahasiswa/${mhs.id}`)}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <DetailIcon className="w-3.5 h-3.5" /> Detail
+                    </button>
+                    {!isPengelola && (
+                      <>
+                        <button
+                          onClick={() => startEdit(mhs)}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <EditIcon className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(mhs.id)}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-red-700 bg-red-50 hover:bg-red-100 active:scale-95 transition-all ml-auto cursor-pointer"
+                        >
+                          <DeleteIcon className="w-3.5 h-3.5" /> Hapus
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Full Table (Screens >= md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full table-auto" id="table-mahasiswa">
                 <thead>
                   <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
-                    <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-16">No</th>
+                    <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-12">No</th>
                     <th
                       onClick={() => handleSort('nim')}
-                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                      className="px-3.5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50 w-28"
                     >
                       NIM {renderSortIndicator('nim')}
                     </th>
                     <th
                       onClick={() => handleSort('nama')}
-                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                      className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:bg-blue-900/50"
                     >
                       Nama Mahasiswa {renderSortIndicator('nama')}
                     </th>
                     <th
                       onClick={() => handleSort('tahunAjaran')}
-                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                      className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50 w-36"
                     >
                       Tahun Ajaran {renderSortIndicator('tahunAjaran')}
                     </th>
                     <th
                       onClick={() => handleSort('idKelompok')}
-                      className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50"
+                      className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-blue-900/50 w-32"
                     >
                       Kelompok {renderSortIndicator('idKelompok')}
                     </th>
-                    <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                    <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-28">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedData.map((mhs, index) => (
                     <tr key={mhs.id} className="hover:bg-blue-50/30 transition-colors duration-150 group">
-                      <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
+                      <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
 
                       {/* NIM */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 whitespace-nowrap">
                         <span className="text-sm font-mono text-slate-600">{mhs.nim}</span>
                       </td>
 
                       {/* Nama */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
                             {mhs.nama.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-primary-900">{mhs.nama}</span>
+                          <span className="text-sm font-medium text-primary-900 leading-snug break-words">
+                            {mhs.nama}
+                          </span>
                         </div>
                       </td>
 
                       {/* Tahun Ajaran */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-700">
                           {mhs.tahunAjaran ? `${mhs.tahunAjaran.tahun} - ${mhs.tahunAjaran.semester}` : 'Belum ditentukan'}
                         </span>
                       </td>
 
                       {/* Kelompok */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         {mhs.idKelompok ? (
                           <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                             Kelompok {mhs.idKelompok}
@@ -399,7 +496,7 @@ export default function MahasiswaPage() {
                       </td>
 
                       {/* Aksi */}
-                      <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-3.5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
                           <Tooltip content="Detail Mahasiswa" position="bottom">
                             <button

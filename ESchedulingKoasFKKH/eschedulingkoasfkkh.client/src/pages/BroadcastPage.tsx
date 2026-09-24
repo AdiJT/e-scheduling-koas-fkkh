@@ -170,27 +170,27 @@ export default function BroadcastPage() {
     <Layout>
       <div className="space-y-6">
         {/* Page Header Card */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl animate-fade-in-down">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-4 sm:p-6 text-white shadow-xl animate-fade-in-down">
           {/* Subtle decorative watermark */}
           <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-            <MegaphoneIcon className="w-56 h-56 text-white" />
+            <MegaphoneIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
           </div>
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+                className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
                 title="Kembali ke Dashboard"
               >
                 ←
               </button>
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-                <MegaphoneIcon className="w-6 h-6 text-amber-300" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+                <MegaphoneIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Pusat Broadcast & Pengumuman</h1>
-                <p className="text-sm text-indigo-100/90">Kirim dan kelola pengumuman resmi ke dosen, mahasiswa, maupun kelompok tertentu</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Pusat Broadcast & Pengumuman</h1>
+                <p className="text-xs sm:text-sm text-indigo-100/90">Kirim dan kelola pengumuman resmi ke dosen, mahasiswa, maupun kelompok tertentu</p>
               </div>
             </div>
 
@@ -219,116 +219,119 @@ export default function BroadcastPage() {
         )}
 
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-              <MegaphoneIcon className="w-6 h-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 animate-fade-in-up">
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 shadow-card border border-slate-100/80 flex items-center gap-2.5 sm:gap-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <MegaphoneIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Broadcast</p>
-              <p className="text-2xl font-bold text-slate-800">{totalBroadcast}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Total Broadcast</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">{totalBroadcast}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 shadow-card border border-slate-100/80 flex items-center gap-2.5 sm:gap-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Semua Pengguna</p>
-              <p className="text-2xl font-bold text-slate-800">{targetSemuaCount}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Semua Pengguna</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">{targetSemuaCount}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 shadow-card border border-slate-100/80 flex items-center gap-2.5 sm:gap-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Dosen</p>
-              <p className="text-2xl font-bold text-slate-800">{targetDosenCount}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Sasaran Dosen</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">{targetDosenCount}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 shadow-card border border-slate-100/80 flex items-center gap-2.5 sm:gap-4">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sasaran Mahasiswa</p>
-              <p className="text-2xl font-bold text-slate-800">{targetMahasiswaCount}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Sasaran Mahasiswa</p>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">{targetMahasiswaCount}</p>
             </div>
           </div>
         </div>
 
         {/* Action Bar */}
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 animate-fade-in-up">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
             {/* Search */}
             <div className="relative flex-1">
-              <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Cari judul, pengirim, atau isi pesan broadcast..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400
-                  focus:outline-none focus:border-indigo-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+                placeholder="Cari judul, pengirim, atau isi pesan..."
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:bg-white focus:shadow-sm transition-all duration-200"
               />
             </div>
 
-            {/* Filter Sasaran */}
-            <select
-              value={filterTarget}
-              onChange={e => { setFilterTarget(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
-                focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer"
-            >
-              <option value="all">Semua Sasaran</option>
-              <option value="semua">Semua Pengguna</option>
-              <option value="dosen">Dosen Pembimbing</option>
-              <option value="mahasiswa">Seluruh Mahasiswa</option>
-              <option value="kelompok">Kelompok Tertentu</option>
-            </select>
-
-            {/* Filter Prioritas */}
-            <select
-              value={filterPrioritas}
-              onChange={e => { setFilterPrioritas(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
-                focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer"
-            >
-              <option value="all">Semua Prioritas</option>
-              <option value="Normal">Normal</option>
-              <option value="Penting">Penting</option>
-              <option value="Mendesak">Mendesak</option>
-            </select>
-
-            {/* Refresh Button */}
-            <Tooltip content="Muat ulang data" position="bottom">
-              <button
-                onClick={fetchData}
-                disabled={loading}
-                className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer disabled:opacity-50"
+            {/* Filter Group on mobile / inline on desktop */}
+            <div className="flex items-center gap-2">
+              <select
+                value={filterTarget}
+                onChange={e => { setFilterTarget(e.target.value); setCurrentPage(1); }}
+                className="flex-1 sm:w-44 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer font-medium"
               >
-                <RefreshIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-            </Tooltip>
+                <option value="all">Semua Sasaran</option>
+                <option value="semua">Semua Pengguna</option>
+                <option value="dosen">Dosen Pembimbing</option>
+                <option value="mahasiswa">Seluruh Mahasiswa</option>
+                <option value="kelompok">Kelompok Tertentu</option>
+              </select>
 
-            {/* Buat Broadcast Button */}
+              <select
+                value={filterPrioritas}
+                onChange={e => { setFilterPrioritas(e.target.value); setCurrentPage(1); }}
+                className="flex-1 sm:w-40 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer font-medium"
+              >
+                <option value="all">Semua Prioritas</option>
+                <option value="Normal">Normal</option>
+                <option value="Penting">Penting</option>
+                <option value="Mendesak">Mendesak</option>
+              </select>
+
+              <Tooltip content="Muat ulang data" position="bottom">
+                <button
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0"
+                  title="Muat ulang data"
+                >
+                  <RefreshIcon className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </Tooltip>
+
+              <button
+                onClick={handleOpenModal}
+                className="hidden sm:flex px-5 py-2.5 bg-gradient-to-r from-primary-900 to-indigo-800 hover:from-primary-800 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-indigo transition-all duration-300 active:scale-95 text-sm items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
+              >
+                <span>+</span> Buat Broadcast
+              </button>
+            </div>
+
+            {/* Mobile Buat Broadcast Button */}
             <button
               onClick={handleOpenModal}
-              className="px-5 py-2.5 bg-gradient-to-r from-primary-900 to-indigo-800 hover:from-primary-800 hover:to-indigo-700 
-                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-indigo 
-                transition-all duration-300 active:scale-95 text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+              className="sm:hidden w-full py-2.5 bg-gradient-to-r from-primary-900 to-indigo-800 hover:from-primary-800 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md active:scale-[0.99] transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>+</span> Buat Broadcast
+              <span className="text-sm font-bold leading-none">+</span> Buat Broadcast
             </button>
           </div>
         </div>
@@ -515,20 +518,20 @@ export default function BroadcastPage() {
       {/* Modal Buat Broadcast */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl ring-1 ring-black/5 animate-scale-in">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary-100 text-primary-700">
-                  <MegaphoneIcon className="w-6 h-6" />
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-8 shadow-2xl ring-1 ring-black/5 animate-scale-in">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-primary-100 text-primary-700 shrink-0">
+                  <MegaphoneIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Buat Broadcast Pengumuman</h3>
-                  <p className="text-xs text-slate-500">Pemberitahuan akan disiarkan langsung ke notifikasi target pengguna.</p>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">Buat Broadcast Pengumuman</h3>
+                  <p className="text-[11px] sm:text-xs text-slate-500">Pemberitahuan akan disiarkan langsung ke notifikasi target pengguna.</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -703,19 +706,19 @@ export default function BroadcastPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="pt-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs sm:text-sm hover:bg-slate-50 transition-colors text-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
@@ -738,15 +741,15 @@ export default function BroadcastPage() {
       {/* Modal Detail View */}
       {detailBroadcast && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl ring-1 ring-black/5 animate-scale-in space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-8 shadow-2xl ring-1 ring-black/5 animate-scale-in space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
+                <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0">
                   <MegaphoneIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">{detailBroadcast.judul}</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">{detailBroadcast.judul}</h3>
+                  <p className="text-[11px] sm:text-xs text-slate-400">
                     Disiarkan oleh <span className="font-semibold text-slate-600">{detailBroadcast.senderName}</span> pada{' '}
                     {new Date(detailBroadcast.createdAt).toLocaleString('id-ID')}
                   </p>
@@ -754,7 +757,7 @@ export default function BroadcastPage() {
               </div>
               <button
                 onClick={() => setDetailBroadcast(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -775,7 +778,7 @@ export default function BroadcastPage() {
               </span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
+            <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">
               {detailBroadcast.pesan}
             </div>
 
@@ -794,7 +797,7 @@ export default function BroadcastPage() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setDetailBroadcast(null)}
-                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                className="w-full sm:w-auto px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors text-center"
               >
                 Tutup
               </button>

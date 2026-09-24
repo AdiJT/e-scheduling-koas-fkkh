@@ -56,22 +56,25 @@ export default function TambahKelompokPage() {
 
   return (
     <Layout>
-      <div className="mb-6 animate-fade-in-down">
+      <div className="mb-4 sm:mb-6 animate-fade-in-down">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/kelompok')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all">←</button>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md">
-            <KelompokIcon className="w-6 h-6" />
+          <button onClick={() => navigate('/kelompok')} className="p-2 rounded-xl text-slate-400 hover:text-primary-900 hover:bg-white hover:shadow-soft transition-all shrink-0">←</button>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md shrink-0">
+            <KelompokIcon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div><h1 className="text-2xl font-bold text-primary-900">Buat Kelompok</h1><p className="text-sm text-slate-500">Buat kelompok baru</p></div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-primary-900">Buat Kelompok</h1>
+            <p className="text-xs sm:text-sm text-slate-500">Buat kelompok baru</p>
+          </div>
         </div>
       </div>
 
       {showSuccess && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-elevated p-8 text-center animate-scale-in">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"><span className="text-4xl">✅</span></div>
-            <h3 className="text-xl font-bold text-primary-900 mb-2">Berhasil!</h3>
-            <p className="text-slate-500">Kelompok berhasil dibuat</p>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 sm:p-8 text-center animate-scale-in max-w-sm mx-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4"><span className="text-3xl sm:text-4xl">✅</span></div>
+            <h3 className="text-lg sm:text-xl font-bold text-primary-900 mb-2">Berhasil!</h3>
+            <p className="text-slate-500 text-sm">Kelompok berhasil dibuat</p>
           </div>
         </div>
       )}
@@ -87,29 +90,29 @@ export default function TambahKelompokPage() {
 
       <div className="max-w-2xl animate-fade-in-up">
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-kelompok">
-          <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50">
-            <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" /> Data Kelompok</h2>
+          <div className="p-4 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50">
+            <h2 className="text-base sm:text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full" /> Data Kelompok</h2>
           </div>
           
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Kelompok <span className="text-red-500">*</span></label>
             <input
               value={nama}
               onChange={(e) => { setNama(e.target.value); if (errors.nama) setErrors({ ...errors, nama: '' }); }}
               required
               placeholder="Contoh: Kelompok 6"
-              className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all
+              className={`w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all
                 ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
             />
             {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
 
-            <div className="mt-5">
+            <div className="mt-4 sm:mt-5">
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-slate-400 font-normal">(Opsional)</span></label>
               <select
                 value={idTahunAjaran}
                 onChange={(e) => setIdTahunAjaran(e.target.value ? Number(e.target.value) : '')}
                 disabled={isLoadingTahunAjaran}
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-all disabled:opacity-50 !bg-none appearance-auto"
+                className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-orange-400 focus:bg-white transition-all disabled:opacity-50 !bg-none appearance-auto"
               >
                 <option value="">-- Pilih Tahun Ajaran --</option>
                 {tahunAjaranList.map(ta => (
@@ -118,8 +121,8 @@ export default function TambahKelompokPage() {
               </select>
             </div>
             
-            <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-orange-800 mb-2 flex items-center gap-1.5">
+            <div className="mt-5 sm:mt-6 bg-orange-50 border border-orange-200 rounded-xl p-3.5 sm:p-4">
+              <h4 className="text-xs sm:text-sm font-semibold text-orange-800 mb-1.5 flex items-center gap-1.5">
                 <InfoIcon className="w-4 h-4" />
                 <span>Informasi</span>
               </h4>
@@ -129,11 +132,11 @@ export default function TambahKelompokPage() {
             </div>
           </div>
           
-          <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-            <button type="button" onClick={() => navigate('/kelompok')} className="px-6 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm">Batal</button>
+          <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3">
+            <button type="button" onClick={() => navigate('/kelompok')} className="w-full sm:w-auto px-6 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-xs sm:text-sm text-center">Batal</button>
             <button type="submit" disabled={isSubmitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm disabled:opacity-70 flex items-center gap-2" id="btn-submit-kelompok">
-              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</> : <><SaveIcon className="w-5 h-5" /> Simpan Kelompok</>}
+              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-xs sm:text-sm disabled:opacity-70 flex items-center justify-center gap-2" id="btn-submit-kelompok">
+              {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</> : <><SaveIcon className="w-4 h-4 sm:w-5 sm:h-5" /> Simpan Kelompok</>}
             </button>
           </div>
         </form>

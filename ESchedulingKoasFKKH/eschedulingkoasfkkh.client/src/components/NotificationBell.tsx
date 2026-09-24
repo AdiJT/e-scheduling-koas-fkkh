@@ -180,7 +180,13 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in origin-top-right">
+        <>
+          {/* Mobile Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-[1px] z-40 sm:hidden animate-fade-in"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed right-3 sm:right-0 sm:absolute top-16 sm:top-auto sm:mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 sm:max-w-none rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in origin-top-right">
           {/* Header */}
           <div className="p-4 pb-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -315,6 +321,7 @@ export default function NotificationBell() {
             </button>
           </div>
         </div>
+      </>
       )}
     </div>
   );

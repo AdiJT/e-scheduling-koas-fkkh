@@ -121,9 +121,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout } = useAuth();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -131,7 +130,6 @@ export default function Sidebar({
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
   const handleOpenProfile = () => {
-    setNewUsername(user?.username || '');
     setNewPassword('');
     setConfirmPassword('');
     setProfileError(null);
@@ -141,11 +139,11 @@ export default function Sidebar({
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername.trim()) {
-      setProfileError('Username tidak boleh kosong');
+    if (!newPassword) {
+      setProfileError('Masukkan password baru terlebih dahulu');
       return;
     }
-    if (newPassword && newPassword !== confirmPassword) {
+    if (newPassword !== confirmPassword) {
       setProfileError('Konfirmasi password tidak cocok');
       return;
     }
@@ -155,17 +153,16 @@ export default function Sidebar({
       setProfileError(null);
       setProfileSuccess(null);
       await userApi.updateProfile({
-        newUsername: newUsername.trim(),
-        newPassword: newPassword || undefined
+        newUsername: user?.username || '',
+        newPassword: newPassword
       });
-      updateUser(newUsername.trim());
-      setProfileSuccess('Profil berhasil diperbarui!');
+      setProfileSuccess('Password berhasil diperbarui!');
       setTimeout(() => {
         setShowProfileModal(false);
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      setProfileError(err.message || 'Gagal memperbarui profil. Username mungkin sudah digunakan.');
+      setProfileError(err.message || 'Gagal memperbarui password.');
     } finally {
       setUpdating(false);
     }
@@ -340,15 +337,20 @@ export default function Sidebar({
             {/* Form */}
             <form onSubmit={handleSaveProfile} className="space-y-4 mb-4 overflow-y-auto pr-1 flex-1">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Username Baru</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Username</label>
+                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                    Read-only
+                  </span>
+                </div>
                 <input
                   type="text"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all text-slate-800 font-semibold"
-                  placeholder="Masukkan username baru"
-                  required
+                  value={user?.username || ''}
+                  readOnly
+                  disabled
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 font-semibold cursor-not-allowed select-none focus:outline-none"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">Username bersifat permanen dan tidak dapat diubah.</p>
               </div>
 
               <div>
@@ -358,7 +360,8 @@ export default function Sidebar({
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all"
-                  placeholder="Isi jika ingin ganti password"
+                  placeholder="Masukkan password baru"
+                  required
                 />
               </div>
 
@@ -370,6 +373,7 @@ export default function Sidebar({
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition-all"
                   placeholder="Ketik ulang password baru"
+                  required
                 />
               </div>
 

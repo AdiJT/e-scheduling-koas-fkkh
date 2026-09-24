@@ -126,27 +126,27 @@ export default function KelompokPage() {
   return (
     <Layout>
       {/* Page Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
         {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-          <KelompokIcon className="w-56 h-56 text-white" />
+          <KelompokIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
               title="Kembali ke Dashboard"
             >
               ←
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-              <KelompokIcon className="w-6 h-6 text-amber-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+              <KelompokIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Kelompok' : 'Kelola Kelompok'}</h1>
-              <p className="text-sm text-amber-100/90">{isMahasiswa || isDosen ? 'Lihat daftar semua kelompok' : 'Buat dan kelola kelompok mahasiswa'}</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Kelompok' : 'Kelola Kelompok'}</h1>
+              <p className="text-xs sm:text-sm text-amber-100/90">{isMahasiswa || isDosen ? 'Lihat daftar semua kelompok' : 'Buat dan kelola kelompok mahasiswa'}</p>
             </div>
           </div>
 
@@ -166,36 +166,60 @@ export default function KelompokPage() {
       )}
 
       {/* Action Bar */}
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input type="text" placeholder="Cari kelompok..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 transition-all" id="search-kelompok" />
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
+            <input
+              type="text"
+              placeholder="Cari kelompok..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-orange-400 transition-all"
+              id="search-kelompok"
+            />
           </div>
-          <div className="w-full sm:w-48">
+
+          <div className="flex items-center gap-2">
             <select
               value={filterTahunAjaran}
               onChange={(e) => setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 transition-all cursor-pointer"
+              className="flex-1 sm:w-48 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-orange-400 transition-all cursor-pointer font-medium"
             >
               <option value="">Semua Tahun Ajaran</option>
               {tahunAjaranList.map(ta => (
                 <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
               ))}
             </select>
+
+            <Tooltip content="Muat ulang data" position="bottom">
+              <button
+                onClick={fetchData}
+                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                title="Muat ulang data"
+              >
+                <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </Tooltip>
+
+            {!isPengelola && !isMahasiswa && !isDosen && (
+              <button
+                onClick={() => navigate('/kelompok/tambah')}
+                className="hidden sm:flex px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange active:scale-95 transition-all text-sm items-center gap-2 shrink-0 cursor-pointer whitespace-nowrap"
+                id="btn-tambah-kelompok"
+              >
+                <span>+</span> Buat Kelompok
+              </button>
+            )}
           </div>
-          <Tooltip content="Muat ulang data" position="bottom">
-            <button
-              onClick={fetchData}
-              className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
-            >
-              <RefreshIcon className="w-5 h-5" />
-            </button>
-          </Tooltip>
+
           {!isPengelola && !isMahasiswa && !isDosen && (
-            <button onClick={() => navigate('/kelompok/tambah')} className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-orange transition-all text-sm flex items-center gap-2" id="btn-tambah-kelompok">
-            <span>+</span> Buat Kelompok
+            <button
+              onClick={() => navigate('/kelompok/tambah')}
+              className="sm:hidden w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-md active:scale-[0.99] transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
+              id="btn-tambah-kelompok-mobile"
+            >
+              <span className="text-sm font-bold leading-none">+</span> Buat Kelompok
             </button>
           )}
         </div>
@@ -244,10 +268,10 @@ export default function KelompokPage() {
                 return (
                   <div key={kel.id} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 group animate-fade-in-up flex flex-col" style={{ animationDelay: `${i * 80}ms` }}>
                     <div className={`h-2 bg-gradient-to-r ${colors[i % colors.length]} shrink-0`} />
-                    <div className="p-5 flex-1 flex flex-col">
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform shrink-0`}>
-                          <KelompokIcon className="w-6 h-6" />
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${colors[i % colors.length]} flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform shrink-0`}>
+                          <KelompokIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div className="flex-1 min-w-0">
                           {editingId === kel.id ? (

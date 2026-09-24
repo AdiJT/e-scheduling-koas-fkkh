@@ -705,6 +705,8 @@ export interface Jadwal {
   tanggalSelesai: string;
   idKelompok: number;
   namaKelompok: string;
+  idTahunAjaran?: number | null;
+  tahunAjaran?: string | null;
   idStase: number;
   namaStase: string;
   idPembimbing?: number | null;

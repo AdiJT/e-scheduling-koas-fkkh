@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
 import {
@@ -10,8 +10,22 @@ import {
   StaseIcon,
   KelompokIcon,
   JadwalIcon,
+  TahunAjaranIcon,
+  HistoryIcon,
+  MegaphoneIcon,
+  BellIcon,
+  UsersIcon,
 } from '../components/Icons';
-import { mahasiswaApi, pembimbingApi, staseApi, kelompokApi, jadwalApi, type Jadwal } from '../services/api';
+import {
+  mahasiswaApi,
+  pembimbingApi,
+  staseApi,
+  kelompokApi,
+  jadwalApi,
+  tahunAjaranApi,
+  riwayatKelompokApi,
+  type Jadwal,
+} from '../services/api';
 import { getHolidays } from '../utils/holidays';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -57,98 +71,267 @@ const eventStyleGetter = (event: any) => {
     }
   };
 };
-interface MenuItem {
-  id: string;
-  label: string;
-  icon: string;
-  path: string;
-  description: string;
-  gradient: string;
-  shadowColor: string;
-}
-
-const menuItems: MenuItem[] = [
-  { id: 'mahasiswa', label: 'Kelola Mahasiswa', icon: '👨‍🎓', path: '/mahasiswa', description: 'Kelola data mahasiswa KOAS', gradient: 'from-blue-500 to-blue-600', shadowColor: 'shadow-glow-blue' },
-  { id: 'dosen', label: 'Kelola Dosen', icon: '👨‍🏫', path: '/dosen', description: 'Kelola data dosen pembimbing', gradient: 'from-emerald-500 to-green-600', shadowColor: 'shadow-glow-green' },
-  { id: 'stase', label: 'Kelola Stase', icon: '🏥', path: '/stase', description: 'Kelola rotasi klinik', gradient: 'from-purple-500 to-purple-600', shadowColor: 'shadow-glow-purple' },
-  { id: 'kelompok', label: 'Kelola Kelompok', icon: '👥', path: '/kelompok', description: 'Kelola kelompok mahasiswa', gradient: 'from-orange-500 to-orange-600', shadowColor: 'shadow-glow-orange' },
-  { id: 'jadwal', label: 'Kelola Jadwal', icon: '📅', path: '/jadwal', description: 'Generate & kelola jadwal', gradient: 'from-rose-500 to-red-600', shadowColor: 'shadow-glow-red' },
-];
 
 interface Stats {
   mahasiswa: number;
   dosen: number;
   stase: number;
   kelompok: number;
+  tahunAjaran: number;
+  activeTahunAjaranText: string;
+  jadwalTotal: number;
+  jadwalBerlangsung: number;
+  jadwalAkanDatang: number;
+  jadwalSelesai: number;
+  riwayatCount: number;
+  userKelompokNama?: string;
 }
+
+export interface MenuItem {
+  id: string;
+  label: string;
+  category: 'master' | 'penjadwalan' | 'komunikasi' | 'sistem';
+  categoryLabel: string;
+  path: string;
+  description: string;
+  gradient: string;
+  statValue: (stats: Stats, isMahasiswa?: boolean, isDosen?: boolean) => string | number;
+  statLabel: (stats: Stats, isMahasiswa?: boolean, isDosen?: boolean) => string;
+  icon: (props: React.SVGProps<SVGSVGElement>) => React.ReactElement;
+  adminOnly?: boolean;
+}
+
+const allMenuItems: MenuItem[] = [
+  {
+    id: 'tahun-ajaran',
+    label: 'Tahun Ajaran',
+    category: 'master',
+    categoryLabel: 'Data Master',
+    path: '/tahun-ajaran',
+    description: 'Atur kalender & semester akademik',
+    gradient: 'from-sky-500 to-indigo-600',
+    statValue: (stats) => stats.tahunAjaran,
+    statLabel: (stats) => stats.activeTahunAjaranText ? `T.A. (${stats.activeTahunAjaranText})` : 'Periode',
+    icon: TahunAjaranIcon,
+  },
+  {
+    id: 'stase',
+    label: 'Stase KOAS',
+    category: 'master',
+    categoryLabel: 'Data Master',
+    path: '/stase',
+    description: 'Kelola rotasi klinik & koordinator stase',
+    gradient: 'from-purple-500 to-purple-600',
+    statValue: (stats) => stats.stase,
+    statLabel: () => 'Departemen Klinik',
+    icon: StaseIcon,
+  },
+  {
+    id: 'dosen',
+    label: 'Dosen Pembimbing',
+    category: 'master',
+    categoryLabel: 'Data Master',
+    path: '/dosen',
+    description: 'Data dokter spesialis & dosen pembimbing',
+    gradient: 'from-emerald-500 to-green-600',
+    statValue: (stats) => stats.dosen,
+    statLabel: () => 'Dokter Spesialis',
+    icon: DosenIcon,
+  },
+  {
+    id: 'mahasiswa',
+    label: 'Mahasiswa KOAS',
+    category: 'master',
+    categoryLabel: 'Data Master',
+    path: '/mahasiswa',
+    description: 'Data dokter muda & mahasiswa KOAS',
+    gradient: 'from-blue-500 to-blue-600',
+    statValue: (stats) => stats.mahasiswa,
+    statLabel: () => 'Mahasiswa Terdaftar',
+    icon: MahasiswaIcon,
+  },
+  {
+    id: 'kelompok',
+    label: 'Kelompok KOAS',
+    category: 'penjadwalan',
+    categoryLabel: 'Penjadwalan',
+    path: '/kelompok',
+    description: 'Pembagian & struktur anggota kelompok',
+    gradient: 'from-amber-500 to-orange-600',
+    statValue: (stats, isMahasiswa) => isMahasiswa ? (stats.userKelompokNama ? `Kelompok ${stats.userKelompokNama}` : '-') : stats.kelompok,
+    statLabel: (_, isMahasiswa) => isMahasiswa ? 'Kelompok Anda' : 'Kelompok Aktif',
+    icon: KelompokIcon,
+  },
+  {
+    id: 'jadwal',
+    label: 'Kelola Jadwal',
+    category: 'penjadwalan',
+    categoryLabel: 'Penjadwalan',
+    path: '/jadwal',
+    description: 'Generate & kelola matriks jadwal rotasi',
+    gradient: 'from-rose-500 to-red-600',
+    statValue: (stats) => stats.jadwalTotal,
+    statLabel: (stats) => stats.jadwalBerlangsung > 0 ? `Jadwal (${stats.jadwalBerlangsung} Berlangsung)` : 'Total Jadwal',
+    icon: JadwalIcon,
+  },
+  {
+    id: 'riwayat-kelompok',
+    label: 'Riwayat Kelompok',
+    category: 'penjadwalan',
+    categoryLabel: 'Penjadwalan',
+    path: '/riwayat-kelompok',
+    description: 'Arsip & histori rotasi stase selesai',
+    gradient: 'from-teal-500 to-emerald-600',
+    statValue: (stats) => stats.riwayatCount,
+    statLabel: () => 'Stase Selesai',
+    icon: HistoryIcon,
+  },
+  {
+    id: 'broadcast',
+    label: 'Broadcast Pesan',
+    category: 'komunikasi',
+    categoryLabel: 'Komunikasi',
+    path: '/broadcast',
+    description: 'Kirim pengumuman siaran mahasiswa/dosen',
+    gradient: 'from-pink-500 to-rose-600',
+    statValue: () => 'Siaran',
+    statLabel: () => 'Pesan Massal',
+    icon: MegaphoneIcon,
+  },
+  {
+    id: 'notifikasi',
+    label: 'Pusat Notifikasi',
+    category: 'komunikasi',
+    categoryLabel: 'Komunikasi',
+    path: '/notifikasi',
+    description: 'Pemberitahuan aktivitas & jadwal kegiatan',
+    gradient: 'from-violet-500 to-purple-600',
+    statValue: () => 'Pusat',
+    statLabel: () => 'Pemberitahuan',
+    icon: BellIcon,
+  },
+  {
+    id: 'manajemen-pengguna',
+    label: 'Manajemen Pengguna',
+    category: 'sistem',
+    categoryLabel: 'Pengaturan',
+    path: '/manajemen-pengguna',
+    description: 'Kelola akun user & hak akses sistem',
+    gradient: 'from-slate-700 to-slate-900',
+    statValue: () => 'Akses',
+    statLabel: () => 'Kontrol User',
+    icon: UsersIcon,
+    adminOnly: true,
+  },
+];
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const getMenuIcon = (id: string) => {
-    const props = { className: "w-6 h-6 text-white" };
-    switch (id) {
-      case 'mahasiswa': return <MahasiswaIcon {...props} />;
-      case 'dosen': return <DosenIcon {...props} />;
-      case 'stase': return <StaseIcon {...props} />;
-      case 'kelompok': return <KelompokIcon {...props} />;
-      case 'jadwal': return <JadwalIcon {...props} />;
-      default: return null;
-    }
-  };
+  const role = user?.role?.toLowerCase();
+  const isMahasiswa = role === 'mahasiswa';
+  const isDosen = role === 'dosen';
+  const isAdmin = role === 'admin' || role === 'administrator';
 
-  const getStatIcon = (label: string) => {
-    const props = { className: "w-6 h-6 text-white" };
-    if (label.includes('Mahasiswa')) return <MahasiswaIcon {...props} />;
-    if (label.includes('Dosen')) return <DosenIcon {...props} />;
-    if (label.includes('Stase')) return <StaseIcon {...props} />;
-    if (label.includes('Kelompok')) return <KelompokIcon {...props} />;
-    return null;
-  };
+  const [stats, setStats] = useState<Stats>({
+    mahasiswa: 0,
+    dosen: 0,
+    stase: 0,
+    kelompok: 0,
+    tahunAjaran: 0,
+    activeTahunAjaranText: '',
+    jadwalTotal: 0,
+    jadwalBerlangsung: 0,
+    jadwalAkanDatang: 0,
+    jadwalSelesai: 0,
+    riwayatCount: 0,
+  });
 
-  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
-  const isDosen = user?.role?.toLowerCase() === 'dosen';
-  const [stats, setStats] = useState<Stats>({ mahasiswa: 0, dosen: 0, stase: 0, kelompok: 0 });
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
   const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [calendarView, setCalendarView] = useState<View>('month');
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const [mhs, pemb, stase, kel, jadwal] = await Promise.all([
-        mahasiswaApi.getAll(),
-        pembimbingApi.getAll(),
-        staseApi.getAll(),
-        kelompokApi.getAll(),
-        jadwalApi.getAll(),
+      const [mhs, pemb, stase, kel, jadwal, taList, riwayatList] = await Promise.all([
+        mahasiswaApi.getAll().catch(() => []),
+        pembimbingApi.getAll().catch(() => []),
+        staseApi.getAll().catch(() => []),
+        kelompokApi.getAll().catch(() => []),
+        jadwalApi.getAll().catch(() => []),
+        tahunAjaranApi.getAll().catch(() => []),
+        riwayatKelompokApi.getAll().catch(() => []),
       ]);
 
+      let userKelId: number | null = null;
+      let userKelNama = '';
       if (isMahasiswa) {
         const myKel = kel.find((k: any) => 
-          k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
+          k.daftarMahasiswa && k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
         );
-        if (myKel) setUserKelompokId(myKel.id);
+        if (myKel) {
+          userKelId = myKel.id;
+          userKelNama = myKel.nama;
+          setUserKelompokId(myKel.id);
+        }
       }
+
+      // Live Schedule Calculation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const relevantJadwal = jadwal.filter((j: any) => {
+        if (isMahasiswa) return j.idKelompok === userKelId;
+        if (isDosen) return j.idPembimbing === user?.profileId;
+        return true;
+      });
+
+      let berlangsung = 0;
+      let akanDatang = 0;
+      let selesai = 0;
+
+      relevantJadwal.forEach((j: any) => {
+        const start = new Date(j.tanggalMulai + 'T00:00:00');
+        const end = new Date(j.tanggalSelesai + 'T00:00:00');
+        if (today > end) selesai++;
+        else if (today >= start && today <= end) berlangsung++;
+        else akanDatang++;
+      });
+
+      const sortedTa = [...taList].sort((a: any, b: any) => b.tahun - a.tahun);
+      const latestTa = sortedTa[0];
+      const activeTaStr = latestTa ? `${latestTa.tahun} - ${latestTa.semester}` : '';
 
       setStats({
         mahasiswa: mhs.length,
         dosen: pemb.length,
         stase: stase.length,
         kelompok: kel.length,
+        tahunAjaran: taList.length,
+        activeTahunAjaranText: activeTaStr,
+        jadwalTotal: relevantJadwal.length,
+        jadwalBerlangsung: berlangsung,
+        jadwalAkanDatang: akanDatang,
+        jadwalSelesai: selesai,
+        riwayatCount: riwayatList.length,
+        userKelompokNama: userKelNama,
       });
       setJadwalList(jadwal);
     } catch {
-      // Silently fail — stats will show 0
+      // Silently fail
     } finally {
       setLoading(false);
     }
-  }, [isMahasiswa, user?.username]);
+  }, [isMahasiswa, isDosen, user?.username, user?.profileId]);
 
-  useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -158,22 +341,70 @@ export default function DashboardPage() {
     return 'Selamat Malam';
   };
 
-  const statCards = [
-    { label: 'Total Mahasiswa', value: stats.mahasiswa, icon: '👨‍🎓', gradient: 'from-blue-500 to-blue-600' },
-    { label: 'Total Dosen', value: stats.dosen, icon: '👨‍🏫', gradient: 'from-emerald-500 to-green-600' },
-    { label: 'Total Stase', value: stats.stase, icon: '🏥', gradient: 'from-purple-500 to-purple-600' },
-    { label: 'Kelompok', value: stats.kelompok, icon: '👥', gradient: 'from-orange-500 to-orange-600' },
-  ];
+  const getFirstName = (name: string) => {
+    if (!name) return '';
+    return name.split(' ')[0];
+  };
+
+  // Filter menu items by role and category
+  const filteredMenuItems = useMemo(() => {
+    return allMenuItems.filter(item => {
+      // Role restrictions
+      if (item.adminOnly && !isAdmin) return false;
+      if (isMahasiswa || isDosen) {
+        if (!['stase', 'kelompok', 'jadwal', 'riwayat-kelompok', 'notifikasi'].includes(item.id)) {
+          return false;
+        }
+      }
+
+      // Category filter
+      if (selectedCategory !== 'all' && item.category !== selectedCategory) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [isAdmin, isMahasiswa, isDosen, selectedCategory]);
+
+  // Categories list for filter tabs
+  const categoryTabs = useMemo(() => {
+    if (isMahasiswa || isDosen) {
+      return [
+        { id: 'all', label: 'Semua Modul' },
+        { id: 'master', label: 'Stase' },
+        { id: 'penjadwalan', label: 'Penjadwalan & Riwayat' },
+        { id: 'komunikasi', label: 'Notifikasi' },
+      ];
+    }
+    const tabs = [
+      { id: 'all', label: 'Semua Modul' },
+      { id: 'master', label: 'Data Master' },
+      { id: 'penjadwalan', label: 'Penjadwalan' },
+      { id: 'komunikasi', label: 'Komunikasi' },
+    ];
+    if (isAdmin) {
+      tabs.push({ id: 'sistem', label: 'Pengaturan' });
+    }
+    return tabs;
+  }, [isAdmin, isMahasiswa, isDosen]);
 
   const upcomingJadwal = [...jadwalList]
-    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
+    .filter(j => {
+      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      return true;
+    })
     .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
-    .filter(j => new Date(j.tanggalMulai) >= new Date(new Date().toDateString()))
-    .slice(0, 6);
+    .filter(j => new Date(j.tanggalSelesai) >= new Date(new Date().toDateString()))
+    .slice(0, 5);
 
   // === PREPARE CALENDAR EVENTS ===
   const jadwalEvents = jadwalList
-    .filter(j => !isMahasiswa || j.idKelompok === userKelompokId)
+    .filter(j => {
+      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      return true;
+    })
     .map(j => ({
       id: `jadwal_${j.id}`,
       title: `${j.namaKelompok} - ${j.namaStase}`,
@@ -201,111 +432,137 @@ export default function DashboardPage() {
 
   const calendarEvents = [...jadwalEvents, ...holidayEvents];
 
-  const getFirstName = (name: string) => {
-    if (!name) return '';
-    return name.split(' ')[0];
-  };
-
   return (
     <Layout>
       {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="mb-7">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-primary-900 mb-1">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                {stats.activeTahunAjaranText ? `T.A. ${stats.activeTahunAjaranText}` : 'E-Scheduling FKKH'}
+              </span>
+              <span className="text-xs text-slate-300">•</span>
+              <span className="text-xs font-semibold text-slate-500 capitalize bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                Role: {user?.role || 'Pengguna'}
+              </span>
+              <span className="text-xs text-slate-300">•</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {stats.jadwalBerlangsung} Stase Berlangsung
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-primary-900 tracking-tight">
               {getGreeting()}, {isDosen ? (user?.fullName || user?.username) : getFirstName(user?.fullName || user?.username || 'Admin')}! 👋
             </h1>
-            <p className="text-slate-500">Berikut ringkasan sistem E-Scheduling KOAS hari ini</p>
+            <p className="text-sm text-slate-500 mt-1">Akses modul operasional dan informasi sistem penjadwalan KOAS</p>
           </div>
-          <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white rounded-2xl shadow-soft border border-slate-100">
-            <JadwalIcon className="w-5 h-5 text-slate-500" />
-            <span className="text-sm font-medium text-slate-600">
-              {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </span>
+          <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-2xl shadow-card border border-slate-100/90 text-slate-600 text-xs sm:text-sm font-medium">
+            <JadwalIcon className="w-4 h-4 text-rose-500" />
+            <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
           </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      {!isMahasiswa && !isDosen && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          {statCards.map((stat, index) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 hover:shadow-elevated transition-all duration-300 group animate-fade-in-up cursor-default"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                  {getStatIcon(stat.label)}
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-primary-900 mb-1">
-                {loading ? <span className="inline-block w-10 h-8 bg-slate-200 rounded animate-pulse" /> : stat.value}
-              </p>
-              <p className="text-sm text-slate-500">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Menu Grid */}
+      {/* Unified Modul Cards Section (Stat + Action) */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-primary-900 mb-4 flex items-center gap-2">
-          <span className="w-1 h-6 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
-          Menu Utama
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {menuItems
-            .filter(item => {
-              if (isMahasiswa || isDosen) {
-                return ['stase', 'kelompok', 'jadwal'].includes(item.id);
-              }
-              return true;
-            })
-            .map((item, index) => (
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h2 className="text-xl font-bold text-primary-900 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full" />
+            Modul & Menu Utama
+          </h2>
+
+          {/* Category Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {categoryTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedCategory(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  selectedCategory === tab.id
+                    ? 'bg-primary-900 text-white shadow-sm'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={`grid gap-4 ${isMahasiswa || isDosen ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
+          {filteredMenuItems.map((item, index) => (
             <button
               key={item.id}
               id={`menu-${item.id}`}
               onClick={() => navigate(item.path)}
-              className={`group relative bg-white rounded-2xl p-5 border border-slate-100/80 
-                shadow-card hover:shadow-elevated hover:-translate-y-1 
-                transition-all duration-300 text-left animate-fade-in-up overflow-hidden`}
-              style={{ animationDelay: `${(index + 4) * 80}ms` }}
+              className="group relative bg-white rounded-2xl p-5 border border-slate-100/90 
+                shadow-card hover:shadow-elevated hover:-translate-y-1.5 
+                transition-all duration-300 text-left animate-fade-in-up flex flex-col justify-between overflow-hidden cursor-pointer"
+              style={{ animationDelay: `${(index + 1) * 40}ms` }}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-2xl`} />
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-4 shadow-md group-hover:scale-110 group-hover:${item.shadowColor} transition-all duration-300`}>
-                {getMenuIcon(item.id)}
+              <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-300 rounded-2xl pointer-events-none`} />
+              <div>
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                    <item.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200/80 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors">
+                    {item.categoryLabel}
+                  </span>
+                </div>
+
+                {/* Metric Display */}
+                <div className="mb-2">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-2xl font-extrabold text-primary-900 tracking-tight group-hover:text-blue-700 transition-colors">
+                      {loading ? <span className="inline-block w-8 h-6 bg-slate-200 rounded animate-pulse" /> : item.statValue(stats, isMahasiswa, isDosen)}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500 truncate max-w-[140px]">
+                      {item.statLabel(stats, isMahasiswa, isDosen)}
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-600 transition-colors">
+                  {isMahasiswa || isDosen ? (
+                    item.id === 'stase' ? 'Daftar Stase' :
+                    item.id === 'kelompok' ? (isMahasiswa ? 'Kelompok Saya' : 'Kelompok Bimbingan') :
+                    item.id === 'jadwal' ? 'Jadwal Stase' : item.label
+                  ) : item.label}
+                </h3>
+                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                  {isMahasiswa || isDosen ? (
+                    item.id === 'stase' ? 'Lihat rotasi departemen klinik KOAS' :
+                    item.id === 'kelompok' ? (isMahasiswa ? 'Informasi anggota & pembimbing kelompok' : 'Daftar mahasiswa kelompok bimbingan') :
+                    item.id === 'jadwal' ? 'Kalender jadwal kegiatan KOAS' : item.description
+                  ) : item.description}
+                </p>
               </div>
-              <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-700 transition-colors">
-                {isMahasiswa || isDosen ? (
-                  item.id === 'stase' ? 'Daftar Stase' :
-                  item.id === 'kelompok' ? (isMahasiswa ? 'Kelompok Saya' : 'Kelompok Bimbingan') :
-                  item.id === 'jadwal' ? 'Jadwal Stase' : item.label
-                ) : item.label}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {isMahasiswa || isDosen ? (
-                  item.id === 'stase' ? 'Lihat daftar rotasi klinik' :
-                  item.id === 'kelompok' ? 'Informasi anggota dan pembimbing' :
-                  item.id === 'jadwal' ? 'Lihat jadwal kegiatan KOAS' : item.description
-                ) : item.description}
-              </p>
-              <span className="absolute bottom-4 right-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300 text-lg">→</span>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-blue-600 transition-colors">
+                <span>Buka Modul</span>
+                <span className="text-sm transform group-hover:translate-x-1 transition-transform">→</span>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Bottom Section */}
+      {/* Calendar & Schedule Breakdown Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar View */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2">
               <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
-              Kalender Jadwal
+              Kalender Jadwal Rotasi
             </h2>
+            <button
+              onClick={() => navigate('/jadwal')}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+            >
+              Buka Halaman Jadwal →
+            </button>
           </div>
           <div className="p-5 flex-1 min-h-[500px] overflow-x-auto pb-6">
             <div className="min-w-[800px] h-full">
@@ -342,43 +599,105 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Info */}
-        <div className="space-y-4">
-          {/* System Status */}
+        {/* Right Info Sidebar */}
+        <div className="space-y-5">
+          {/* Status Jadwal Rotasi Card */}
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-primary-900 flex items-center gap-2">
+                <span className="w-1 h-4 bg-rose-500 rounded-full" />
+                Ringkasan Rotasi Stase
+              </h3>
+              {stats.activeTahunAjaranText && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  {stats.activeTahunAjaranText}
+                </span>
+              )}
+            </div>
 
+            <div className="grid grid-cols-3 gap-2.5 mb-4 text-center">
+              <div className="bg-emerald-50/70 border border-emerald-100/80 rounded-xl p-2.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 mx-auto mb-1 animate-pulse" />
+                <span className="text-lg font-bold text-emerald-700 block leading-tight">{stats.jadwalBerlangsung}</span>
+                <span className="text-[10px] font-semibold text-emerald-600">Berlangsung</span>
+              </div>
+              <div className="bg-blue-50/70 border border-blue-100/80 rounded-xl p-2.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500 mx-auto mb-1" />
+                <span className="text-lg font-bold text-blue-700 block leading-tight">{stats.jadwalAkanDatang}</span>
+                <span className="text-[10px] font-semibold text-blue-600">Akan Datang</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5">
+                <div className="w-2 h-2 rounded-full bg-slate-400 mx-auto mb-1" />
+                <span className="text-lg font-bold text-slate-700 block leading-tight">{stats.jadwalSelesai}</span>
+                <span className="text-[10px] font-semibold text-slate-600">Selesai</span>
+              </div>
+            </div>
 
-          {/* Upcoming Schedule */}
-          <div className="bg-gradient-to-br from-primary-900 to-blue-800 rounded-2xl shadow-dark p-5 text-white">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <JadwalIcon className="w-5 h-5 text-white" />
-              Jadwal Mendatang
-            </h3>
-            <div className="space-y-3">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500 flex items-center gap-1.5 font-medium">
+                <HistoryIcon className="w-3.5 h-3.5 text-teal-600" />
+                Riwayat Selesai
+              </span>
+              <button
+                onClick={() => navigate('/riwayat-kelompok')}
+                className="font-bold text-teal-700 hover:text-teal-800 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>{stats.riwayatCount} Arsip</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Upcoming Schedule Card */}
+          <div className="bg-gradient-to-br from-primary-900 via-slate-900 to-indigo-950 rounded-2xl shadow-elevated p-5 text-white">
+            <div className="flex items-center justify-between mb-3.5">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <JadwalIcon className="w-4 h-4 text-rose-400" />
+                Jadwal Mendatang
+              </h3>
+              <span className="text-[10px] font-semibold bg-white/10 px-2 py-0.5 rounded-full text-slate-300">
+                {upcomingJadwal.length} Terdekat
+              </span>
+            </div>
+            
+            <div className="space-y-2.5">
               {loading ? (
                 <div className="bg-white/10 rounded-xl p-3 border border-white/10 animate-pulse">
                   <div className="h-4 bg-white/20 rounded w-3/4 mb-2" />
                   <div className="h-3 bg-white/10 rounded w-1/2" />
                 </div>
               ) : upcomingJadwal.length === 0 ? (
-                <div className="bg-white/10 rounded-xl p-3 border border-white/10 text-center">
-                  <p className="text-sm text-blue-200/80">Tidak ada jadwal mendatang</p>
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
+                  <p className="text-xs text-slate-400">Tidak ada jadwal mendatang</p>
                 </div>
               ) : (
-                upcomingJadwal.map(j => (
-                  <div key={j.id} className="bg-white/10 rounded-xl p-3 border border-white/10">
-                    <p className="text-sm font-medium">{j.namaStase || 'Stase'} - {j.namaKelompok || 'Kelompok'}</p>
-                    <p className="text-xs text-blue-200/60 mt-1">
-                      {new Date(j.tanggalMulai).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                upcomingJadwal.slice(0, 4).map(j => (
+                  <div key={j.id} className="bg-white/10 hover:bg-white/15 transition-colors rounded-xl p-3 border border-white/10">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-bold text-white line-clamp-1">{j.namaStase || 'Stase'}</p>
+                      <span className="text-[10px] font-semibold bg-blue-500/30 text-blue-200 px-1.5 py-0.5 rounded shrink-0">
+                        {j.namaKelompok}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-blue-200/70 mt-1 flex items-center gap-1">
+                      <span>📅</span>
+                      <span>
+                        {new Date(j.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' '}-{' '}
+                        {new Date(j.tanggalSelesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
                     </p>
                   </div>
                 ))
               )}
             </div>
+
             <button 
               onClick={() => navigate('/jadwal')} 
-              className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-medium transition-all border border-white/10 hover:border-white/20"
+              className="mt-4 w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             >
-              Lihat Semua Jadwal →
+              <span>Lihat Kalender Lengkap</span>
+              <span>→</span>
             </button>
           </div>
         </div>

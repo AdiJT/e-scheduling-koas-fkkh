@@ -200,6 +200,9 @@ export default function JadwalPage() {
     if (sortColumn === 'namaKelompok') {
       aVal = a.namaKelompok || '';
       bVal = b.namaKelompok || '';
+    } else if (sortColumn === 'tahunAjaran') {
+      aVal = a.tahunAjaran || '';
+      bVal = b.tahunAjaran || '';
     } else if (sortColumn === 'namaStase') {
       aVal = a.namaStase || '';
       bVal = b.namaStase || '';
@@ -730,43 +733,49 @@ export default function JadwalPage() {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto pb-4">
-                <table className="w-full min-w-max" id="table-jadwal">
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto" id="table-jadwal">
                   <thead>
                     <tr className="bg-gradient-to-r from-rose-600 to-red-700 text-white">
-                      <th className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap w-16">No</th>
+                      <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase whitespace-nowrap w-12">No</th>
                       <th
                         onClick={() => handleSort('namaKelompok')}
-                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                        className="px-3.5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50 w-24"
                       >
                         Kelompok {renderSortIndicator('namaKelompok')}
                       </th>
                       <th
+                        onClick={() => handleSort('tahunAjaran')}
+                        className="px-3.5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50 w-32"
+                      >
+                        Tahun Ajaran {renderSortIndicator('tahunAjaran')}
+                      </th>
+                      <th
                         onClick={() => handleSort('namaStase')}
-                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                        className="px-4 py-3.5 text-left text-xs font-semibold uppercase cursor-pointer select-none hover:bg-rose-700/50"
                       >
                         Stase {renderSortIndicator('namaStase')}
                       </th>
                       <th
                         onClick={() => handleSort('periode')}
-                        className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                        className="px-3.5 py-3.5 text-left text-xs font-semibold uppercase whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50 w-44"
                       >
                         Periode {renderSortIndicator('periode')}
                       </th>
                       <th
                         onClick={() => handleSort('status')}
-                        className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:text-black whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50"
+                        className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase print:text-black whitespace-nowrap cursor-pointer select-none hover:bg-rose-700/50 w-32"
                       >
                         Status {renderSortIndicator('status')}
                       </th>
-                      <th className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase print:hidden whitespace-nowrap">Aksi</th>
+                      <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase print:hidden whitespace-nowrap w-28">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedData.map((j, i) => (
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
-                        <td className="px-4 md:px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap">{startIndex + i + 1}</td>
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + i + 1}</td>
+                        <td className="px-3.5 py-3.5 whitespace-nowrap">
                           <button 
                             onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
                             className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
@@ -774,35 +783,44 @@ export default function JadwalPage() {
                             {j.namaKelompok}
                           </button>
                         </td>
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 whitespace-nowrap">
+                          {j.tahunAjaran ? (
+                            <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                              {j.tahunAjaran}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic font-mono">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
                           {isMahasiswa ? (
-                            <span className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
+                            <span className="inline-block text-left px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium break-words leading-snug max-w-full">
                               {j.namaStase}
                             </span>
                           ) : (
                             <Tooltip content="Lihat Detail Stase" position="bottom">
                               <button
                                 onClick={() => navigate(`/stase/${j.idStase}`)}
-                                className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100"
+                                className="inline-block text-left px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100 break-words leading-snug max-w-full"
                               >
                                 {j.namaStase}
                               </button>
                             </Tooltip>
                           )}
                         </td>
-                        <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 whitespace-nowrap">
                           <div className="text-xs text-slate-600">
                             <span className="font-medium">{formatDateDisplay(j.tanggalMulai)}</span>
                             <span className="text-slate-400 mx-1.5">→</span>
                             <span className="font-medium">{formatDateDisplay(j.tanggalSelesai)}</span>
                           </div>
                         </td>
-                        <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor(j.status)}`}>
                             {renderStatusDot(j.status)} {j.status}
                           </span>
                         </td>
-                        <td className="px-4 md:px-5 py-3.5 print:hidden whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 print:hidden whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
                             <Tooltip content="Lihat Detail Kelompok" position="bottom">
                               <button
@@ -1125,9 +1143,15 @@ export default function JadwalPage() {
             </div>
             
             <div className="space-y-4 mb-6">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <p className="text-xs text-slate-500 mb-1">Kelompok</p>
-                <p className="font-semibold text-slate-800 text-lg">{detailJadwal.namaKelompok}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">Kelompok</p>
+                  <p className="font-semibold text-slate-800 text-base">{detailJadwal.namaKelompok}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">Tahun Ajaran</p>
+                  <p className="font-semibold text-slate-800 text-sm">{detailJadwal.tahunAjaran || '-'}</p>
+                </div>
               </div>
               
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">

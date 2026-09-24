@@ -220,27 +220,27 @@ export default function TahunAjaranPage() {
   return (
     <Layout>
       {/* Page Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-sky-700 to-cyan-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+      <div className="relative overflow-hidden bg-gradient-to-r from-sky-700 to-cyan-700 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
         {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-          <TahunAjaranIcon className="w-56 h-56 text-white" />
+          <TahunAjaranIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
               title="Kembali ke Dashboard"
             >
               ←
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-              <TahunAjaranIcon className="w-6 h-6 text-sky-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+              <TahunAjaranIcon className="w-5 h-5 sm:w-6 sm:h-6 text-sky-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Kelola Tahun Ajaran</h1>
-              <p className="text-sm text-sky-100/90">Atur tahun dan semester untuk data mahasiswa KOAS</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Kelola Tahun Ajaran</h1>
+              <p className="text-xs sm:text-sm text-sky-100/90">Atur tahun dan semester untuk data mahasiswa KOAS</p>
             </div>
           </div>
 
@@ -258,73 +258,79 @@ export default function TahunAjaranPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Cari berdasarkan tahun atau semester..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
-              id="search-tahun-ajaran"
-            />
-          </div>
+      {/* Action Bar */}
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
+              <input
+                type="text"
+                placeholder="Cari berdasarkan tahun atau semester..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+                id="search-tahun-ajaran"
+              />
+            </div>
 
-          <Tooltip content="Muat ulang data" position="bottom">
-            <button
-              onClick={fetchData}
-              className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
-            >
-              <RefreshIcon className="w-5 h-5" />
-            </button>
-          </Tooltip>
+            <Tooltip content="Muat ulang data" position="bottom">
+              <button
+                onClick={fetchData}
+                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                title="Muat ulang data"
+              >
+                <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </Tooltip>
+          </div>
 
           {canManage && (
             <button
               onClick={openCreateModal}
-              className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md transition-all duration-300 active:scale-95 text-sm flex items-center justify-center gap-2 whitespace-nowrap"
+              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
               id="btn-tambah-tahun-ajaran"
             >
-              <span>+</span> Tambah Tahun Ajaran
+              <span className="text-sm font-bold leading-none">+</span> Tambah Tahun Ajaran
             </button>
           )}
         </div>
       </div>
 
+      {/* Summary KPI Cards */}
       {!loading && data.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-md">
-              <TahunAjaranIcon className="w-6 h-6" />
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <TahunAjaranIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.length}</p>
-              <p className="text-xs text-slate-500">Total Tahun Ajaran</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-md">
-              <SemesterGanjilIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Ganjil').length}</p>
-              <p className="text-xs text-slate-500">Semester Ganjil</p>
+            <div className="min-w-0">
+              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.length}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Total T.A</p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white shadow-md">
-              <SemesterGenapIcon className="w-6 h-6" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <SemesterGanjilIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.filter(item => item.semester === 'Genap').length}</p>
-              <p className="text-xs text-slate-500">Semester Genap</p>
+            <div className="min-w-0">
+              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Ganjil').length}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Ganjil</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <SemesterGenapIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Genap').length}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Genap</p>
             </div>
           </div>
         </div>
       )}
 
+      {/* Data Table & Mobile List Container */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {loading ? (
           <div className="p-16 text-center">
@@ -344,12 +350,12 @@ export default function TahunAjaranPage() {
         ) : (
           <>
             {/* Table Header Info */}
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <p className="text-xs text-slate-500 font-medium">
+            <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <p className="text-slate-500 font-medium">
                 Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Tahun Ajaran
               </p>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
+                <label className="text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
                 <select
                   value={pageSize}
                   onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
@@ -360,10 +366,62 @@ export default function TahunAjaranPage() {
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span className="text-xs text-slate-500 font-medium">data</span>
+                <span className="text-slate-500 font-medium">data</span>
               </div>
             </div>
-            <div className="overflow-x-auto pb-4">
+
+            {/* Mobile View: Card List (Screens < md) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {paginatedData.map((tahunAjaran, index) => (
+                <div key={tahunAjaran.id} className="p-3.5 hover:bg-slate-50/70 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-md bg-sky-50 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">
+                        {startIndex + index + 1}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-primary-900">{tahunAjaran.tahun}</span>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getSemesterClass(tahunAjaran.semester)}`}>
+                            {tahunAjaran.semester === 'Ganjil' ? (
+                              <SemesterGanjilIcon className="w-3 h-3" />
+                            ) : (
+                              <SemesterGenapIcon className="w-3 h-3" />
+                            )}
+                            {tahunAjaran.semester}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                          Label: {tahunAjaran.tahun} - {tahunAjaran.semester}
+                        </p>
+                      </div>
+                    </div>
+
+                    {canManage && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => openEditModal(tahunAjaran)}
+                          className="p-2 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                          title="Edit"
+                        >
+                          <EditIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(tahunAjaran.id)}
+                          className="p-2 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 transition-all cursor-pointer"
+                          title="Hapus"
+                        >
+                          <DeleteIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Full Table (Screens >= md) */}
+            <div className="hidden md:block overflow-x-auto pb-4">
               <table className="w-full min-w-max" id="table-tahun-ajaran">
                 <thead>
                   <tr className="bg-gradient-to-r from-sky-700 to-cyan-700 text-white">

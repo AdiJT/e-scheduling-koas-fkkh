@@ -31,6 +31,7 @@ internal class JadwalRepository : IJadwalRepository
 
     public async Task<Jadwal?> Get(int id) => await _appDbContext.Jadwal
         .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
+        .Include(x => x.Kelompok).ThenInclude(y => y.TahunAjaran)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)
         .Include(x => x.DaftarJadwalSubStase).ThenInclude(y => y.SubStase)
@@ -39,6 +40,7 @@ internal class JadwalRepository : IJadwalRepository
 
     public async Task<List<Jadwal>> GetAll() => await _appDbContext.Jadwal
         .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
+        .Include(x => x.Kelompok).ThenInclude(y => y.TahunAjaran)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)
         .Include(x => x.DaftarJadwalSubStase).ThenInclude(y => y.SubStase)

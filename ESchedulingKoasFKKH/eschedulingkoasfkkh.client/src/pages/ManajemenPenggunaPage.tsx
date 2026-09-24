@@ -236,26 +236,26 @@ export default function ManajemenPenggunaPage() {
     <Layout>
       <div className="space-y-6">
         {/* Hero Header Card */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl animate-fade-in">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 rounded-2xl p-4 sm:p-6 text-white shadow-xl animate-fade-in">
           <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none transform translate-x-12 -translate-y-4">
-            <UsersIcon className="w-80 h-80" />
+            <UsersIcon className="w-64 h-64 sm:w-80 sm:h-80" />
           </div>
 
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+                className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
                 title="Kembali ke Dashboard"
               >
                 ←
               </button>
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-                <UsersIcon className="w-6 h-6 text-amber-300" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+                <UsersIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Manajemen Pengguna</h1>
-                <p className="text-sm text-primary-100/90 leading-relaxed mt-0.5">
+                <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Manajemen Pengguna</h1>
+                <p className="text-xs sm:text-sm text-primary-100/90 leading-relaxed mt-0.5">
                   Kelola hak akses dan akun staf sistem dengan peranan Administrator dan Pengelola
                 </p>
               </div>
@@ -289,86 +289,98 @@ export default function ManajemenPenggunaPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 animate-fade-in-up">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 animate-fade-in-up">
           {/* Card 1: Total Staf */}
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Total Pengguna Staf
+          <div className="bg-white rounded-2xl p-3 sm:p-5 shadow-card border border-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
+                Total Staf
               </p>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 mt-0.5 sm:mt-1">
                 {loading ? '...' : totalUsers}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">Admin & Pengelola terdaftar</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 hidden sm:block">Admin & Pengelola</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
-              <UsersIcon className="w-6 h-6" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 self-start sm:self-center">
+              <UsersIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
 
           {/* Card 2: Administrator */}
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <div className="bg-white rounded-2xl p-3 sm:p-5 shadow-card border border-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
                 Administrator
               </p>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-purple-700 mt-1">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-purple-700 mt-0.5 sm:mt-1">
                 {loading ? '...' : totalAdmin}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">Hak akses kontrol penuh</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 hidden sm:block">Akses kontrol penuh</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
-              <ShieldCheckIcon className="w-6 h-6" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0 self-start sm:self-center">
+              <ShieldCheckIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
 
           {/* Card 3: Pengelola */}
-          <div className="bg-white rounded-2xl p-5 shadow-card border border-slate-100/80 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <div className="bg-white rounded-2xl p-3 sm:p-5 shadow-card border border-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
                 Pengelola
               </p>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-teal-700 mt-1">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-teal-700 mt-0.5 sm:mt-1">
                 {loading ? '...' : totalPengelola}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">Manajemen jadwal & data akademik</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 hidden sm:block">Jadwal & akademik</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 flex-shrink-0">
-              <UserIcon className="w-6 h-6" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0 self-start sm:self-center">
+              <UserIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
         </div>
 
         {/* Action Bar */}
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 animate-fade-in-up">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <SearchIcon className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari berdasarkan username..."
-                className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:bg-white transition"
-              />
-              {search && (
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 animate-fade-in-up">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3">
+            {/* Search Input & Refresh Button on Mobile */}
+            <div className="flex items-center gap-2 w-full md:max-w-md">
+              <div className="relative flex-1">
+                <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5 absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari berdasarkan username..."
+                  className="w-full pl-9 sm:pl-10 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:bg-white transition"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <Tooltip content="Muat ulang data" position="bottom">
                 <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold"
+                  onClick={fetchUsers}
+                  disabled={loading}
+                  className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 shrink-0"
                 >
-                  ×
+                  <RefreshIcon className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-              )}
+              </Tooltip>
             </div>
 
-            {/* Filter and Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            {/* Filter and Tambah Button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5">
               {/* Role Filter Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600">
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 overflow-x-auto no-scrollbar">
                 <button
                   onClick={() => setRoleFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     roleFilter === 'all'
                       ? 'bg-white text-slate-900 shadow-sm font-bold'
                       : 'hover:text-slate-900'
@@ -378,7 +390,7 @@ export default function ManajemenPenggunaPage() {
                 </button>
                 <button
                   onClick={() => setRoleFilter('admin')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     roleFilter === 'admin'
                       ? 'bg-white text-purple-700 shadow-sm font-bold'
                       : 'hover:text-slate-900'
@@ -388,7 +400,7 @@ export default function ManajemenPenggunaPage() {
                 </button>
                 <button
                   onClick={() => setRoleFilter('pengelola')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     roleFilter === 'pengelola'
                       ? 'bg-white text-teal-700 shadow-sm font-bold'
                       : 'hover:text-slate-900'
@@ -398,21 +410,10 @@ export default function ManajemenPenggunaPage() {
                 </button>
               </div>
 
-              {/* Refresh Button */}
-              <Tooltip content="Muat ulang data" position="bottom">
-                <button
-                  onClick={fetchUsers}
-                  disabled={loading}
-                  className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-              </Tooltip>
-
               {/* Tambah Pengguna Button */}
               <button
                 onClick={handleOpenAdd}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-semibold text-sm shadow-md hover:shadow-glow-amber transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-glow-amber transition-all cursor-pointer whitespace-nowrap"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -423,14 +424,14 @@ export default function ManajemenPenggunaPage() {
           </div>
         </div>
 
-        {/* Table Section */}
+        {/* Table / List Section */}
         <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up">
           {/* Table Header Info */}
-          <div className="px-5 py-3.5 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
             <p className="text-xs text-slate-500 font-medium">
               Menampilkan <span className="text-primary-900 font-bold">{filteredUsers.length}</span> dari <span className="text-primary-900 font-bold">{totalUsers}</span> pengguna staf
             </p>
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
               <span className="flex items-center gap-1.5 font-medium text-slate-600">
                 <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block" />
                 Administrator ({totalAdmin})
@@ -442,8 +443,134 @@ export default function ManajemenPenggunaPage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
+          {/* Mobile View: Card List (Screens < md) */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {loading ? (
+              <div className="py-10 text-center text-slate-400">
+                <div className="inline-flex items-center gap-2">
+                  <RefreshIcon className="w-5 h-5 animate-spin text-primary-600" />
+                  <span className="text-xs">Memuat data pengguna...</span>
+                </div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 px-4">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <UsersIcon className="w-10 h-10 text-slate-300" />
+                  <p className="font-medium text-slate-600 text-sm">Tidak ada pengguna yang cocok.</p>
+                  <p className="text-xs text-slate-400">
+                    {search ? 'Coba kata kunci pencarian lain.' : 'Belum ada pengguna terdaftar.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredUsers.map((item) => {
+                const isAdmin = item.role === 'admin';
+                const isSelf = item.isCurrentLoggedInUser;
+                const isLastAdmin = isAdmin && totalAdmin <= 1;
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors ${
+                      isSelf ? 'bg-primary-50/20' : ''
+                    }`}
+                  >
+                    {/* Top row: Avatar + Username + Role Badge */}
+                    <div className="flex items-start justify-between gap-3 mb-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shadow-sm flex-shrink-0 ${
+                            isAdmin
+                              ? 'bg-gradient-to-tr from-purple-600 to-indigo-600'
+                              : 'bg-gradient-to-tr from-teal-500 to-emerald-600'
+                          }`}
+                        >
+                          {getInitials(item.username)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm truncate">
+                              {item.username}
+                            </span>
+                            {isSelf && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-100 text-primary-700 border border-primary-200">
+                                Akun Anda
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">ID: #{item.id}</span>
+                        </div>
+                      </div>
+
+                      {/* Role badge */}
+                      <div className="shrink-0">
+                        {isAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            <ShieldCheckIcon className="w-3 h-3 text-purple-600" />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                            <UserIcon className="w-3 h-3 text-teal-600" />
+                            Pengelola
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle row: Scope description */}
+                    <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 mb-3 text-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-slate-700 text-[11px]">
+                          {isAdmin ? 'Akses Penuh Sistem' : 'Pengelolaan Operasional'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Aktif
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        {isAdmin
+                          ? 'Kelola pengguna staf, broadcast pengumuman, data master, dan jadwal.'
+                          : 'Kelola master data koas, kelompok, jadwal stase, dan broadcast.'}
+                      </p>
+                    </div>
+
+                    {/* Bottom row: Action Buttons */}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => handleOpenEdit(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <EditIcon className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        onClick={() => setDeleteConfirmUser(item)}
+                        disabled={isSelf || isLastAdmin || deletingId === item.id}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          isSelf || isLastAdmin || deletingId === item.id
+                            ? 'text-slate-300 bg-slate-50 cursor-not-allowed'
+                            : 'text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 cursor-pointer'
+                        }`}
+                      >
+                        {deletingId === item.id ? (
+                          <RefreshIcon className="w-3.5 h-3.5 animate-spin text-red-500" />
+                        ) : (
+                          <DeleteIcon className="w-3.5 h-3.5" />
+                        )}
+                        <span>Hapus</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table View (Hidden on mobile, screens >= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gradient-to-r from-primary-900 via-primary-800 to-indigo-900 text-white">
@@ -619,13 +746,13 @@ export default function ManajemenPenggunaPage() {
         </div>
 
         {/* Security Note Callout */}
-        <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3.5">
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3 sm:gap-3.5">
           <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0 mt-0.5">
             <LockIcon className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-bold text-amber-950">Informasi Keamanan Akun</h4>
-            <p className="text-amber-800 leading-relaxed">
+            <h4 className="font-bold text-amber-950 text-xs sm:text-sm">Informasi Keamanan Akun</h4>
+            <p className="text-amber-800 leading-relaxed text-xs">
               Halaman ini diperuntukkan khusus untuk pengelolaan kredensial akun staf dengan role{' '}
               <strong>Administrator</strong> dan <strong>Pengelola</strong>. Akun Mahasiswa dan Dosen
               secara otomatis dikelola dan dihubungkan melalui modul <em>Data Master Mahasiswa</em> dan{' '}
@@ -645,26 +772,26 @@ export default function ManajemenPenggunaPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-gradient-to-r from-primary-900 to-indigo-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <UsersIcon className="w-5 h-5 text-amber-300" />
+            <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-primary-900 to-indigo-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shrink-0">
+                  <UsersIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-lg text-white">Tambah Pengguna Baru</h3>
-                  <p className="text-xs text-primary-200">Buat akun untuk Administrator atau Pengelola</p>
+                  <h3 className="font-extrabold text-base sm:text-lg text-white">Tambah Pengguna Baru</h3>
+                  <p className="text-[11px] sm:text-xs text-primary-200">Buat akun untuk Administrator atau Pengelola</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition shrink-0"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitAdd} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitAdd} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
               {addError && (
                 <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
                   {addError}
@@ -684,7 +811,7 @@ export default function ManajemenPenggunaPage() {
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
                     placeholder="Contoh: pengelola_stase"
-                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                    className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -705,7 +832,7 @@ export default function ManajemenPenggunaPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Minimal 6 karakter"
-                    className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                    className="w-full pl-10 pr-10 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
                   />
                   <button
                     type="button"
@@ -722,10 +849,10 @@ export default function ManajemenPenggunaPage() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Pilih Peranan (Role) <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                   {/* Option: Pengelola */}
                   <label
-                    className={`flex flex-col p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 sm:p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                       newRole === 'pengelola'
                         ? 'border-teal-500 bg-teal-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -742,7 +869,7 @@ export default function ManajemenPenggunaPage() {
                         >
                           <UserIcon className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-sm text-slate-800">Pengelola</span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800">Pengelola</span>
                       </div>
                       <input
                         type="radio"
@@ -752,14 +879,14 @@ export default function ManajemenPenggunaPage() {
                         className="text-teal-600 focus:ring-teal-500"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-normal">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 leading-normal">
                       Mengelola jadwal, data stase, kelompok, dan broadcast.
                     </p>
                   </label>
 
                   {/* Option: Administrator */}
                   <label
-                    className={`flex flex-col p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 sm:p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                       newRole === 'admin'
                         ? 'border-purple-500 bg-purple-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -776,7 +903,7 @@ export default function ManajemenPenggunaPage() {
                         >
                           <ShieldCheckIcon className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-sm text-slate-800">Administrator</span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800">Administrator</span>
                       </div>
                       <input
                         type="radio"
@@ -786,7 +913,7 @@ export default function ManajemenPenggunaPage() {
                         className="text-purple-600 focus:ring-purple-500"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-normal">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 leading-normal">
                       Akses sistem penuh termasuk manajemen pengguna.
                     </p>
                   </label>
@@ -794,18 +921,18 @@ export default function ManajemenPenggunaPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-semibold transition"
+                  className="w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs sm:text-sm font-semibold transition text-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingAdd}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-primary-900 to-indigo-900 hover:from-primary-800 hover:to-indigo-800 text-white text-sm font-semibold shadow-md transition disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-primary-900 to-indigo-900 hover:from-primary-800 hover:to-indigo-800 text-white text-xs sm:text-sm font-semibold shadow-md transition disabled:opacity-50 text-center"
                 >
                   {submittingAdd ? 'Menyimpan...' : 'Buat Pengguna'}
                 </button>
@@ -825,28 +952,28 @@ export default function ManajemenPenggunaPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-primary-950 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <UserIcon className="w-5 h-5 text-amber-300" />
+            <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 to-primary-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shrink-0">
+                  <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-lg text-white">Edit Data Pengguna</h3>
-                  <p className="text-xs text-slate-300">
+                  <h3 className="font-extrabold text-base sm:text-lg text-white">Edit Data Pengguna</h3>
+                  <p className="text-[11px] sm:text-xs text-slate-300">
                     ID #{selectedUser.id} - {selectedUser.username}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition shrink-0"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitEdit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
               {editError && (
                 <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
                   {editError}
@@ -865,7 +992,7 @@ export default function ManajemenPenggunaPage() {
                     required
                     value={editUsername}
                     onChange={(e) => setEditUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                    className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
                   />
                 </div>
               </div>
@@ -875,10 +1002,10 @@ export default function ManajemenPenggunaPage() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Peranan (Role) <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                   {/* Option: Pengelola */}
                   <label
-                    className={`flex flex-col p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 sm:p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                       editRole === 'pengelola'
                         ? 'border-teal-500 bg-teal-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -895,7 +1022,7 @@ export default function ManajemenPenggunaPage() {
                         >
                           <UserIcon className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-sm text-slate-800">Pengelola</span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800">Pengelola</span>
                       </div>
                       <input
                         type="radio"
@@ -905,14 +1032,14 @@ export default function ManajemenPenggunaPage() {
                         className="text-teal-600 focus:ring-teal-500"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-normal">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 leading-normal">
                       Mengelola jadwal, data stase, kelompok, dan broadcast.
                     </p>
                   </label>
 
                   {/* Option: Administrator */}
                   <label
-                    className={`flex flex-col p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`flex flex-col p-3 sm:p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                       editRole === 'admin'
                         ? 'border-purple-500 bg-purple-50/50 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
@@ -929,7 +1056,7 @@ export default function ManajemenPenggunaPage() {
                         >
                           <ShieldCheckIcon className="w-4 h-4" />
                         </div>
-                        <span className="font-bold text-sm text-slate-800">Administrator</span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800">Administrator</span>
                       </div>
                       <input
                         type="radio"
@@ -939,7 +1066,7 @@ export default function ManajemenPenggunaPage() {
                         className="text-purple-600 focus:ring-purple-500"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-normal">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 leading-normal">
                       Akses sistem penuh termasuk manajemen pengguna.
                     </p>
                   </label>
@@ -964,7 +1091,7 @@ export default function ManajemenPenggunaPage() {
                     value={editPassword}
                     onChange={(e) => setEditPassword(e.target.value)}
                     placeholder="Kosongkan jika tidak ingin mengubah password"
-                    className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                    className="w-full pl-10 pr-10 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
                   />
                   <button
                     type="button"
@@ -980,18 +1107,18 @@ export default function ManajemenPenggunaPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-semibold transition"
+                  className="w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs sm:text-sm font-semibold transition text-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submittingEdit}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-primary-900 to-indigo-900 hover:from-primary-800 hover:to-indigo-800 text-white text-sm font-semibold shadow-md transition disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-primary-900 to-indigo-900 hover:from-primary-800 hover:to-indigo-800 text-white text-xs sm:text-sm font-semibold shadow-md transition disabled:opacity-50 text-center"
                 >
                   {submittingEdit ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
@@ -1007,18 +1134,18 @@ export default function ManajemenPenggunaPage() {
       {deleteConfirmUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div
-            className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden animate-scale-up p-6"
+            className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden animate-scale-up p-5 sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3.5 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-3 sm:gap-3.5 mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shrink-0">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-extrabold text-lg text-slate-900">Hapus Akun Pengguna</h3>
-                <p className="text-xs text-slate-500">Konfirmasi tindakan penghapusan</p>
+                <h3 className="font-extrabold text-base sm:text-lg text-slate-900">Hapus Akun Pengguna</h3>
+                <p className="text-[11px] sm:text-xs text-slate-500">Konfirmasi tindakan penghapusan</p>
               </div>
             </div>
 
@@ -1041,11 +1168,11 @@ export default function ManajemenPenggunaPage() {
               Apakah Anda yakin ingin menghapus akun ini? Akun yang dihapus tidak akan dapat masuk ke sistem lagi.
             </p>
 
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmUser(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition"
+                className="w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs sm:text-sm font-semibold transition text-center"
               >
                 Batal
               </button>
@@ -1057,7 +1184,7 @@ export default function ManajemenPenggunaPage() {
                   setDeleteConfirmUser(null);
                   if (userToDelete) await executeDelete(userToDelete);
                 }}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-md transition disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-semibold shadow-md transition disabled:opacity-50 text-center"
               >
                 {deletingId !== null ? 'Menghapus...' : 'Ya, Hapus Akun'}
               </button>

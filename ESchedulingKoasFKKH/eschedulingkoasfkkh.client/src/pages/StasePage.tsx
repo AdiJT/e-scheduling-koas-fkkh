@@ -177,27 +177,27 @@ export default function StasePage() {
   return (
     <Layout>
       {/* Page Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-purple-800 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6 animate-fade-in-down">
+      <div className="relative overflow-hidden bg-gradient-to-r from-purple-800 to-purple-700 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
         {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
-          <StaseIcon className="w-56 h-56 text-white" />
+          <StaseIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
               title="Kembali ke Dashboard"
             >
               ←
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md flex-shrink-0">
-              <StaseIcon className="w-6 h-6 text-purple-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-md shrink-0">
+              <StaseIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
-              <p className="text-sm text-purple-100/90">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Stase' : 'Kelola Stase'}</h1>
+              <p className="text-xs sm:text-sm text-purple-100/90">{isMahasiswa || isDosen ? 'Lihat daftar stase KOAS' : 'Kelola data stase/rotasi klinik KOAS'}</p>
             </div>
           </div>
 
@@ -217,54 +217,69 @@ export default function StasePage() {
       )}
 
       {/* Action Bar */}
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+          {/* Search Input */}
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Cari stase..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-400 transition-all"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-purple-400 transition-all"
               id="search-stase"
             />
           </div>
 
-          {/* Filter Jenis */}
-          {!isMahasiswa && !isDosen && (
-            <select
-              value={filterJenis}
-              onChange={(e) => setFilterJenis(e.target.value)}
-              className="px-6.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700
-                focus:outline-none focus:border-purple-400 transition-all cursor-pointer"
-              id="filter-jenis"
-            >
-              <option value="all">Semua Jenis</option>
-              <option value="Terpisah">Terpisah</option>
-              <option value="Bersamaan">Bersamaan</option>
-            </select>
-          )}
+          {/* Filter & Refresh Controls */}
+          <div className="flex items-center gap-2">
+            {!isMahasiswa && !isDosen && (
+              <select
+                value={filterJenis}
+                onChange={(e) => setFilterJenis(e.target.value)}
+                className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-purple-400 transition-all cursor-pointer font-medium"
+                id="filter-jenis"
+              >
+                <option value="all">Semua Jenis</option>
+                <option value="Terpisah">Terpisah</option>
+                <option value="Bersamaan">Bersamaan</option>
+              </select>
+            )}
 
-          {/* Refresh */}
-          <Tooltip content="Muat ulang data" position="bottom">
-            <button
-              onClick={fetchData}
-              className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center"
-            >
-              <RefreshIcon className="w-5 h-5" />
-            </button>
-          </Tooltip>
+            {/* Refresh */}
+            <Tooltip content="Muat ulang data" position="bottom">
+              <button
+                onClick={fetchData}
+                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                title="Muat ulang"
+              >
+                <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </Tooltip>
 
-          {/* Add Button */}
+            {/* Desktop Add Button */}
+            {!isPengelola && !isMahasiswa && !isDosen && (
+              <button
+                onClick={() => navigate('/stase/tambah')}
+                className="hidden sm:flex px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
+                  text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple active:scale-95 transition-all text-sm items-center gap-2 shrink-0 cursor-pointer whitespace-nowrap"
+                id="btn-tambah-stase"
+              >
+                <span>+</span> Tambah Stase
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Add Button */}
           {!isPengelola && !isMahasiswa && !isDosen && (
             <button
               onClick={() => navigate('/stase/tambah')}
-              className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
-                text-white font-semibold rounded-xl shadow-md hover:shadow-glow-purple transition-all text-sm flex items-center gap-2"
-              id="btn-tambah-stase"
+              className="sm:hidden w-full py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700
+                text-white font-semibold rounded-xl shadow-md active:scale-[0.99] transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
+              id="btn-tambah-stase-mobile"
             >
-              <span>+</span> Tambah Stase
+              <span className="text-sm font-bold leading-none">+</span> Tambah Stase
             </button>
           )}
         </div>
@@ -272,34 +287,34 @@ export default function StasePage() {
 
       {/* Summary Cards */}
       {!loading && data.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up">
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-              <StaseIcon className="w-6 h-6" />
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <StaseIcon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-primary-900">{data.length}</p>
-              <p className="text-xs text-slate-500">Total Stase</p>
+            <div className="min-w-0">
+              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.length}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Total Stase</p>
             </div>
           </div>
           {!isMahasiswa && !isDosen && (
             <>
-              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-md">
-                  <StaseTerpisahIcon className="w-6 h-6" />
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+                  <StaseTerpisahIcon className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Terpisah').length}</p>
-                  <p className="text-xs text-slate-500">Stase Terpisah</p>
+                <div className="min-w-0">
+                  <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(s => s.jenis === 'Terpisah').length}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Terpisah</p>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-md">
-                  <StaseBersamaanIcon className="w-6 h-6" />
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+                  <StaseBersamaanIcon className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary-900">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
-                  <p className="text-xs text-slate-500">Stase Bersamaan</p>
+                <div className="min-w-0">
+                  <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(s => s.jenis === 'Bersamaan').length}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Bersamaan</p>
                 </div>
               </div>
             </>
@@ -307,7 +322,7 @@ export default function StasePage() {
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Data Table & Mobile List Container */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {loading ? (
           <div className="p-16 text-center">
@@ -327,11 +342,11 @@ export default function StasePage() {
         ) : (
           <>
             {/* Table Header Info */}
-            <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-xs text-slate-500 font-medium">
                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Stase
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
                 <select
                   value={pageSize}
@@ -349,7 +364,93 @@ export default function StasePage() {
                 </span>
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile View: Card List (Screens < md) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {paginatedData.map((stase, index) => (
+                <div key={stase.id} className="p-3.5 hover:bg-slate-50/70 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div
+                      className="flex items-start gap-2.5 flex-1 cursor-pointer"
+                      onClick={() => navigate(`/stase/${stase.id}`)}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0 mt-0.5">
+                        {stase.nama.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                            #{startIndex + index + 1}
+                          </span>
+                          <h3 className="text-sm font-semibold text-primary-900 hover:text-purple-600 transition-colors leading-snug break-words">
+                            {stase.nama}
+                          </h3>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">
+                            <ClockIcon className="w-3 h-3" /> {stase.waktu} Minggu
+                          </span>
+                          {!isMahasiswa && !isDosen && (
+                            <>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getJenisColor(stase.jenis)}`}>
+                                {renderJenisIcon(stase.jenis, "w-3 h-3")} {stase.jenis}
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${stase.daftarJadwal.length > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {stase.daftarJadwal.length > 0 ? `${stase.daftarJadwal.length} Jadwal` : 'Belum ada jadwal'}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Koordinator Info */}
+                  <div className="pl-10.5 text-xs text-slate-600 mb-2.5">
+                    <span className="text-slate-400 font-medium">Koordinator: </span>
+                    {stase.namaKoordinator ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        <KoordinatorIcon className="w-3 h-3 text-indigo-500 shrink-0" />
+                        {stase.namaKoordinator}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic font-mono">- Belum ditunjuk -</span>
+                    )}
+                  </div>
+
+                  {/* Mobile Actions */}
+                  {!isMahasiswa && (
+                    <div className="pl-10.5 flex items-center gap-2 pt-2 border-t border-slate-100/70">
+                      <button
+                        onClick={() => navigate(`/stase/${stase.id}`)}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-purple-700 bg-purple-50 hover:bg-purple-100 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <DetailIcon className="w-3.5 h-3.5" /> Detail
+                      </button>
+                      {!isPengelola && !isDosen && (
+                        <>
+                          <button
+                            onClick={() => startEdit(stase)}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <EditIcon className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(stase.id)}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-red-700 bg-red-50 hover:bg-red-100 active:scale-95 transition-all ml-auto cursor-pointer"
+                          >
+                            <DeleteIcon className="w-3.5 h-3.5" /> Hapus
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Full Table (Screens >= md) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full table-auto" id="table-stase">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-800 to-purple-700 text-white">
