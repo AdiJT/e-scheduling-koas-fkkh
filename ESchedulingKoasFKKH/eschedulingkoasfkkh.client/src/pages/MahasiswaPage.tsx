@@ -2,9 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran } from '../services/api';
+import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type ExcelImportResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
+import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function MahasiswaPage() {
@@ -20,6 +20,16 @@ export default function MahasiswaPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Export & Import Excel state
+  const [exporting, setExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importTahunAjaran, setImportTahunAjaran] = useState<string>('');
+  const [importing, setImporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -185,6 +195,72 @@ export default function MahasiswaPage() {
     }
   };
 
+  // === EXPORT & IMPORT ===
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const taId = filterTahunAjaran !== 'all' ? parseInt(filterTahunAjaran) : undefined;
+      await mahasiswaApi.exportExcel(taId);
+    } catch (err: unknown) {
+      const errorObj = err as Error;
+      setError(errorObj.message || 'Gagal mengekspor data mahasiswa.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const openImportModal = () => {
+    setImportFile(null);
+    setImportResult(null);
+    setImportError(null);
+    if (filterTahunAjaran !== 'all') {
+      setImportTahunAjaran(filterTahunAjaran);
+    } else {
+      const activeTa = tahunAjarans.find(t => t.status === 'Berjalan') || tahunAjarans[0];
+      setImportTahunAjaran(activeTa ? activeTa.id.toString() : '');
+    }
+    setShowImportModal(true);
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      setDownloadingTemplate(true);
+      await mahasiswaApi.downloadTemplate();
+    } catch (err: unknown) {
+      const errorObj = err as Error;
+      setImportError(errorObj.message || 'Gagal mengunduh template Excel.');
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      setImportError('Silakan pilih file Excel (.xlsx) yang akan diimpor.');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      setImportError(null);
+      setImportResult(null);
+
+      const taId = importTahunAjaran ? parseInt(importTahunAjaran) : undefined;
+      const res = await mahasiswaApi.importExcel(importFile, taId);
+      setImportResult(res);
+
+      if (res.successCount > 0) {
+        fetchData();
+      }
+    } catch (err: unknown) {
+      const errorObj = err as Error;
+      setImportError(errorObj.message || 'Terjadi kesalahan saat memproses import file.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const selectedMahasiswa = data.find(m => m.id === selectedId);
 
   return (
@@ -231,7 +307,7 @@ export default function MahasiswaPage() {
 
       {/* Action Bar */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+        <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3">
           {/* Search */}
           <div className="relative flex-1">
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
@@ -246,8 +322,8 @@ export default function MahasiswaPage() {
             />
           </div>
 
-          {/* Filter & Refresh Controls */}
-          <div className="flex items-center gap-2">
+          {/* Filter & Actions */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <select
               value={filterTahunAjaran}
               onChange={(e) => setFilterTahunAjaran(e.target.value)}
@@ -273,13 +349,44 @@ export default function MahasiswaPage() {
               </button>
             </Tooltip>
 
+            {/* Export Excel Button (Admin & Pengelola) */}
+            <Tooltip content="Ekspor data mahasiswa ke file Excel (.xlsx)" position="bottom">
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="px-3.5 py-2 sm:py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 
+                  font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+                id="btn-export-mahasiswa"
+              >
+                <ExportIcon className="w-4 h-4 text-emerald-600" />
+                <span className="hidden sm:inline">{exporting ? 'Mengekspor...' : 'Export Excel'}</span>
+                <span className="sm:hidden">{exporting ? '...' : 'Export'}</span>
+              </button>
+            </Tooltip>
+
+            {/* Import Excel Button (Admin Only) */}
+            {!isPengelola && (
+              <Tooltip content="Impor data mahasiswa dari file Excel (.xlsx)" position="bottom">
+                <button
+                  onClick={openImportModal}
+                  className="px-3.5 py-2 sm:py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 
+                    font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                  id="btn-import-mahasiswa"
+                >
+                  <ImportIcon className="w-4 h-4 text-blue-600" />
+                  <span className="hidden sm:inline">Import Excel</span>
+                  <span className="sm:hidden">Import</span>
+                </button>
+              </Tooltip>
+            )}
+
             {/* Desktop Add Button */}
             {!isPengelola && (
               <button
                 onClick={() => navigate('/mahasiswa/tambah')}
-                className="hidden sm:flex px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+                className="hidden sm:flex px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
                   text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
-                  transition-all duration-300 active:scale-95 text-sm items-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
+                  transition-all duration-300 active:scale-95 text-xs sm:text-sm items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
                 id="btn-tambah-mahasiswa"
               >
                 <span>+</span> Tambah Mahasiswa
@@ -293,7 +400,7 @@ export default function MahasiswaPage() {
               onClick={() => navigate('/mahasiswa/tambah')}
               className="sm:hidden w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
                 text-white font-semibold rounded-xl shadow-md active:scale-[0.99]
-                transition-all duration-200 text-xs flex items-center justify-center gap-2 cursor-pointer"
+                transition-all duration-200 text-xs flex items-center justify-center gap-2 cursor-pointer mt-1"
               id="btn-tambah-mahasiswa-mobile"
             >
               <span className="text-sm font-bold leading-none">+</span> Tambah Mahasiswa
@@ -682,6 +789,201 @@ export default function MahasiswaPage() {
         </div>
       )}
 
+      {/* Import Excel Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <FileSpreadsheetIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Import Data Mahasiswa</h3>
+                  <p className="text-xs text-blue-100 mt-0.5">Unggah data mahasiswa secara massal via file Excel</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!importing) {
+                    setShowImportModal(false);
+                    setImportResult(null);
+                    setImportError(null);
+                  }
+                }}
+                disabled={importing}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Template Download Card */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-700">
+                  <span className="font-semibold text-blue-900 block mb-0.5">Gunakan Template Resmi</span>
+                  Format file harus sesuai template agar data terbaca dengan benar.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={downloadingTemplate}
+                  className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 font-medium rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
+                >
+                  <DownloadIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{downloadingTemplate ? 'Mengunduh...' : 'Unduh Template'}</span>
+                </button>
+              </div>
+
+              {/* Form Import */}
+              <form onSubmit={handleImportSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Tahun Ajaran Default <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={importTahunAjaran}
+                    onChange={(e) => setImportTahunAjaran(e.target.value)}
+                    required
+                    disabled={importing}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-400 focus:bg-white transition-all font-medium cursor-pointer"
+                  >
+                    <option value="">Pilih Tahun Ajaran Default</option>
+                    {tahunAjarans.map(ta => (
+                      <option key={ta.id} value={ta.id}>
+                        {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Digunakan untuk baris mahasiswa yang kolom Tahun Ajaran-nya tidak diisi pada file Excel.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Pilih File Excel (.xlsx) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setImportFile(file);
+                      setImportResult(null);
+                      setImportError(null);
+                    }}
+                    disabled={importing}
+                    className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-2"
+                  />
+                  {importFile && (
+                    <div className="mt-1 text-xs text-slate-500 flex items-center justify-between">
+                      <span>📄 {importFile.name}</span>
+                      <span>{(importFile.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Important Notes */}
+                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                  <p className="font-semibold text-amber-800 flex items-center gap-1.5">
+                    <span>💡</span> Ketentuan Import:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
+                    <li>Kolom wajib: <strong>NIM</strong> dan <strong>Nama Mahasiswa</strong>.</li>
+                    <li>Akun login mahasiswa akan otomatis dibuat dengan <strong>username</strong> dan <strong>password awal</strong> sama dengan NIM.</li>
+                    <li>NIM yang sudah terdaftar di sistem atau ganda di dalam file akan dilewati dengan pesan keterangan.</li>
+                  </ul>
+                </div>
+
+                {/* Error Banner */}
+                {importError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">⚠️</span>
+                    <span className="flex-1">{importError}</span>
+                  </div>
+                )}
+
+                {/* Import Result Feedback */}
+                {importResult && (
+                  <div className="space-y-2.5">
+                    <div className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs ${
+                      importResult.successCount > 0
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      <span className="text-base">{importResult.successCount > 0 ? '✅' : '❌'}</span>
+                      <div className="flex-1">
+                        <span className="font-semibold block">
+                          {importResult.successCount > 0
+                            ? `Berhasil mengimpor ${importResult.successCount} data mahasiswa.`
+                            : 'Tidak ada data mahasiswa yang berhasil diimpor.'}
+                        </span>
+                        <span className="text-[11px] opacity-80">
+                          Total baris yang diproses: {importResult.totalRows} baris.
+                        </span>
+                      </div>
+                    </div>
+
+                    {importResult.errors && importResult.errors.length > 0 && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center justify-between">
+                          <span>Catatan / Kesalahan ({importResult.errors.length} baris):</span>
+                        </p>
+                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
+                          {importResult.errors.map((err, idx) => (
+                            <div key={idx} className="bg-amber-100/70 p-1.5 rounded text-amber-900 leading-tight">
+                              • {err}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer Controls */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportResult(null);
+                      setImportError(null);
+                    }}
+                    disabled={importing}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                  >
+                    {importResult ? 'Selesai' : 'Batal'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={importing || !importFile || !importTahunAjaran}
+                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    {importing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Memproses Import...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImportIcon className="w-4 h-4" />
+                        <span>Mulai Import</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -702,14 +1004,14 @@ export default function MahasiswaPage() {
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deleting}
-                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all duration-200 text-sm"
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all duration-200 text-sm cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md hover:shadow-glow-red transition-all duration-200 text-sm disabled:opacity-70 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md hover:shadow-glow-red transition-all duration-200 text-sm disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
                 id="btn-confirm-delete"
               >
                 {deleting ? (

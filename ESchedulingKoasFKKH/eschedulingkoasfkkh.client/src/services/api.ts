@@ -63,6 +63,44 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
     });
 }
 
+async function downloadBlob(response: Response, defaultFilename: string): Promise<void> {
+    if (!response.ok) {
+        let errMessage = `Gagal mengunduh file (${response.status})`;
+        try {
+            const errJson = await response.json();
+            if (errJson.message) errMessage = errJson.message;
+        } catch { }
+        throw new Error(errMessage);
+    }
+
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = defaultFilename;
+    if (disposition && disposition.indexOf('filename=') !== -1) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+        if (matches != null && matches[1]) {
+            filename = matches[1].replace(/['"]/g, '');
+        }
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+export interface ExcelImportResult {
+    success: boolean;
+    totalRows: number;
+    successCount: number;
+    errors: string[];
+}
+
+
 // ============================================================
 // TAHUN AJARAN API
 // ============================================================
@@ -277,6 +315,39 @@ export const mahasiswaApi = {
         });
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
     },
+
+    downloadTemplate: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/template`);
+        await downloadBlob(res, 'Template_Mahasiswa.xlsx');
+    },
+
+    exportExcel: async (idTahunAjaran?: number): Promise<void> => {
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/export${query}`);
+        await downloadBlob(res, `Data_Mahasiswa_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    importExcel: async (file: File, idTahunAjaran?: number): Promise<ExcelImportResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/import${query}`, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (data.errors && Array.isArray(data.errors)) {
+                return data as ExcelImportResult;
+            }
+            if (data.errors && typeof data.errors === 'object') {
+                const msgs = Object.values(data.errors).flat() as string[];
+                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
+            }
+            throw new Error(data.message || `Import gagal (${res.status})`);
+        }
+        return data as ExcelImportResult;
+    },
 };
 
 // ============================================================
@@ -413,6 +484,37 @@ export const pembimbingApi = {
             body: JSON.stringify({ password }),
         });
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
+    },
+
+    downloadTemplate: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/template`);
+        await downloadBlob(res, 'Template_Dosen.xlsx');
+    },
+
+    exportExcel: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/export`);
+        await downloadBlob(res, `Data_Dosen_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    importExcel: async (file: File): Promise<ExcelImportResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiFetch(`${BASE_URL}/pembimbing/import`, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (data.errors && Array.isArray(data.errors)) {
+                return data as ExcelImportResult;
+            }
+            if (data.errors && typeof data.errors === 'object') {
+                const msgs = Object.values(data.errors).flat() as string[];
+                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
+            }
+            throw new Error(data.message || `Import gagal (${res.status})`);
+        }
+        return data as ExcelImportResult;
     },
 };
 

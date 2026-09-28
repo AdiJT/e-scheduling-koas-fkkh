@@ -37,6 +37,7 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 builder.Services.AddScoped<IAutoArchiveService, AutoArchiveService>();
 builder.Services.AddScoped<INotifikasiService, NotifikasiService>();
+builder.Services.AddScoped<ExcelService>();
 
 var app = builder.Build();
 
