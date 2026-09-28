@@ -150,7 +150,7 @@ export default function TambahMahasiswaPage() {
                 <option value="">{isLoadingTahun ? 'Memuat tahun ajaran...' : 'Pilih tahun ajaran'}</option>
                 {tahunAjarans.map((ta) => (
                   <option key={ta.id} value={ta.id}>
-                    {ta.tahun} - {ta.semester}
+                    {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
                   </option>
                 ))}
               </select>

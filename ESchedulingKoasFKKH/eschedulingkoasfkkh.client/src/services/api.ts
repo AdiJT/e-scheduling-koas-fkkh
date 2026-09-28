@@ -70,22 +70,26 @@ export interface TahunAjaran {
     id: number;
     tahun: number;
     semester: string;
+    status?: 'Selesai' | 'Berjalan' | 'Akan Datang' | string;
 }
 
 export interface CreateTahunAjaran {
     tahun: number;
     semester: string;
+    status?: string;
 }
 
 export interface UpdateTahunAjaran {
     id: number;
     tahun: number;
     semester: string;
+    status?: string;
 }
 
 export const tahunAjaranApi = {
-    getAll: async (): Promise<TahunAjaran[]> => {
-        const res = await apiFetch(`${BASE_URL}/tahun-ajaran`);
+    getAll: async (status?: string): Promise<TahunAjaran[]> => {
+        const query = status ? `?status=${encodeURIComponent(status)}` : '';
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran${query}`);
         return handleResponse<TahunAjaran[]>(res);
     },
 

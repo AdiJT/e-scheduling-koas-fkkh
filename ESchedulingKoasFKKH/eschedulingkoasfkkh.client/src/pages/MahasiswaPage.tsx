@@ -258,7 +258,7 @@ export default function MahasiswaPage() {
               <option value="all">Semua Tahun Ajaran</option>
               {tahunAjarans.map(ta => (
                 <option key={ta.id} value={ta.id.toString()}>
-                  {ta.tahun} - {ta.semester}
+                  {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
                 </option>
               ))}
             </select>
@@ -648,7 +648,7 @@ export default function MahasiswaPage() {
                   <option value={0} disabled>Pilih Tahun Ajaran</option>
                   {tahunAjarans.map(ta => (
                     <option key={ta.id} value={ta.id}>
-                      {ta.tahun} - {ta.semester}
+                      {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
                     </option>
                   ))}
                 </select>

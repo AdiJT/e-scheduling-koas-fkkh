@@ -8,6 +8,7 @@ import { TahunAjaranIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, Semeste
 import Tooltip from '../components/Tooltip';
 
 const semesterOptions = ['Ganjil', 'Genap'];
+const statusOptions = ['Berjalan', 'Akan Datang', 'Selesai'];
 
 export default function TahunAjaranPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function TahunAjaranPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,14 +26,14 @@ export default function TahunAjaranPage() {
   const [sortColumn, setSortColumn] = useState<string>('tahun');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Reset pagination on search change
+  // Reset pagination on search or status change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filterStatus]);
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-  const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '' });
+  const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Berjalan' });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -59,8 +61,10 @@ export default function TahunAjaranPage() {
   }, [fetchData]);
 
   const filteredData = data.filter(item => {
-    const label = `${item.tahun} ${item.semester}`.toLowerCase();
-    return label.includes(searchTerm.toLowerCase());
+    const label = `${item.tahun} ${item.semester} ${item.status || ''}`.toLowerCase();
+    const matchSearch = label.includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'all' || item.status === filterStatus;
+    return matchSearch && matchStatus;
   });
 
   const sortedData = [...filteredData].sort((a, b) => {
@@ -73,6 +77,9 @@ export default function TahunAjaranPage() {
     } else if (sortColumn === 'semester') {
       aVal = a.semester || '';
       bVal = b.semester || '';
+    } else if (sortColumn === 'status') {
+      aVal = a.status || '';
+      bVal = b.status || '';
     } else if (sortColumn === 'label') {
       aVal = `${a.tahun} - ${a.semester}`;
       bVal = `${b.tahun} - ${b.semester}`;
@@ -105,7 +112,7 @@ export default function TahunAjaranPage() {
 
   const openCreateModal = () => {
     setFormMode('create');
-    setForm({ id: 0, tahun: new Date().getFullYear().toString(), semester: '' });
+    setForm({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Berjalan' });
     setFormErrors({});
     setShowFormModal(true);
   };
@@ -116,6 +123,7 @@ export default function TahunAjaranPage() {
       id: tahunAjaran.id,
       tahun: tahunAjaran.tahun.toString(),
       semester: tahunAjaran.semester,
+      status: tahunAjaran.status || 'Berjalan',
     });
     setFormErrors({});
     setShowFormModal(true);
@@ -141,6 +149,7 @@ export default function TahunAjaranPage() {
       const payload = {
         tahun: parseInt(form.tahun) || 0,
         semester: form.semester,
+        status: form.status,
       };
 
       if (formMode === 'create') {
@@ -217,6 +226,38 @@ export default function TahunAjaranPage() {
       : 'bg-emerald-100 text-emerald-700 border-emerald-200';
   };
 
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'Berjalan':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Berjalan
+          </span>
+        );
+      case 'Akan Datang':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+            Akan Datang
+          </span>
+        );
+      case 'Selesai':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            Selesai
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+            {status || '-'}
+          </span>
+        );
+    }
+  };
+
   return (
     <Layout>
       {/* Page Header Card */}
@@ -240,7 +281,7 @@ export default function TahunAjaranPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Kelola Tahun Ajaran</h1>
-              <p className="text-xs sm:text-sm text-sky-100/90">Atur tahun dan semester untuk data mahasiswa KOAS</p>
+              <p className="text-xs sm:text-sm text-sky-100/90">Atur tahun, semester, dan status periode akademik mahasiswa KOAS</p>
             </div>
           </div>
 
@@ -258,20 +299,43 @@ export default function TahunAjaranPage() {
         </div>
       )}
 
-      {/* Action Bar */}
+      {/* Action Bar & Filter */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
-          <div className="flex items-center gap-2 flex-1">
+        <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
-                placeholder="Cari berdasarkan tahun atau semester..."
+                placeholder="Cari tahun, semester, atau status..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
                 id="search-tahun-ajaran"
               />
+            </div>
+
+            {/* Filter Status Selector */}
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto shrink-0">
+              {[
+                { id: 'all', label: 'Semua Status' },
+                { id: 'Berjalan', label: 'Berjalan' },
+                { id: 'Akan Datang', label: 'Akan Datang' },
+                { id: 'Selesai', label: 'Selesai' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterStatus(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    filterStatus === tab.id
+                      ? 'bg-white text-sky-700 shadow-sm border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             <Tooltip content="Muat ulang data" position="bottom">
@@ -288,7 +352,7 @@ export default function TahunAjaranPage() {
           {canManage && (
             <button
               onClick={openCreateModal}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
+              className="w-full lg:w-auto px-5 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-600 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-md active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shrink-0"
               id="btn-tambah-tahun-ajaran"
             >
               <span className="text-sm font-bold leading-none">+</span> Tambah Tahun Ajaran
@@ -299,32 +363,41 @@ export default function TahunAjaranPage() {
 
       {/* Summary KPI Cards */}
       {!loading && data.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <TahunAjaranIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <TahunAjaranIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
               <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Total T.A</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Total T.A</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <SemesterGanjilIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full bg-white animate-pulse" />
             </div>
             <div className="min-w-0">
-              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Ganjil').length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Ganjil</p>
+              <p className="text-base sm:text-2xl font-bold text-emerald-700 leading-tight">{data.filter(item => item.status === 'Berjalan').length}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Sedang Berjalan</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <SemesterGenapIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Genap').length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Genap</p>
+              <p className="text-base sm:text-2xl font-bold text-sky-700 leading-tight">{data.filter(item => item.status === 'Akan Datang').length}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Akan Datang</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="text-xs font-bold">✓</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-base sm:text-2xl font-bold text-slate-700 leading-tight">{data.filter(item => item.status === 'Selesai').length}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Telah Selesai</p>
             </div>
           </div>
         </div>
@@ -380,7 +453,7 @@ export default function TahunAjaranPage() {
                         {startIndex + index + 1}
                       </span>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-primary-900">{tahunAjaran.tahun}</span>
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getSemesterClass(tahunAjaran.semester)}`}>
                             {tahunAjaran.semester === 'Ganjil' ? (
@@ -390,6 +463,7 @@ export default function TahunAjaranPage() {
                             )}
                             {tahunAjaran.semester}
                           </span>
+                          {getStatusBadge(tahunAjaran.status)}
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5 font-medium">
                           Label: {tahunAjaran.tahun} - {tahunAjaran.semester}
@@ -439,6 +513,12 @@ export default function TahunAjaranPage() {
                       Semester {renderSortIndicator('semester')}
                     </th>
                     <th
+                      onClick={() => handleSort('status')}
+                      className="px-4 md:px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-sky-800/50"
+                    >
+                      Status {renderSortIndicator('status')}
+                    </th>
+                    <th
                       onClick={() => handleSort('label')}
                       className="px-4 md:px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-sky-800/50"
                     >
@@ -465,6 +545,9 @@ export default function TahunAjaranPage() {
                           )}
                           {tahunAjaran.semester}
                         </span>
+                      </td>
+                      <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
+                        {getStatusBadge(tahunAjaran.status)}
                       </td>
                       <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-700">
@@ -590,6 +673,20 @@ export default function TahunAjaranPage() {
                   ))}
                 </select>
                 {formErrors.semester && <p className="text-xs text-red-500 mt-1">{formErrors.semester}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status <span className="text-red-500">*</span></label>
+                <select
+                  name="status"
+                  value={form.status}
+                  onChange={handleFormChange}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.status ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                >
+                  {statusOptions.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+                {formErrors.status && <p className="text-xs text-red-500 mt-1">{formErrors.status}</p>}
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">

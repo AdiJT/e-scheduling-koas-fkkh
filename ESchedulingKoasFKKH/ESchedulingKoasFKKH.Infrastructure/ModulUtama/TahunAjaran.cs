@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -17,25 +17,29 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
             {
                 Id = 1,
                 Tahun = 2025,
-                Semester = Semester.Ganjil
+                Semester = Semester.Ganjil,
+                Status = StatusTahunAjaran.Selesai
             },
             new TahunAjaran
             {
                 Id = 2,
                 Tahun = 2025,
-                Semester = Semester.Genap
+                Semester = Semester.Genap,
+                Status = StatusTahunAjaran.Selesai
             },
             new TahunAjaran
             {
                 Id = 3,
                 Tahun = 2026,
-                Semester = Semester.Ganjil
+                Semester = Semester.Ganjil,
+                Status = StatusTahunAjaran.Berjalan
             },
             new TahunAjaran
             {
                 Id = 4,
                 Tahun = 2026,
-                Semester = Semester.Genap
+                Semester = Semester.Genap,
+                Status = StatusTahunAjaran.AkanDatang
             }
         );
     }

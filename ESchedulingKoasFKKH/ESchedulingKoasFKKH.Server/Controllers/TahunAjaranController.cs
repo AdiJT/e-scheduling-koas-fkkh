@@ -37,9 +37,14 @@ public class TahunAjaranController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? status = null)
     {
         var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(status) && TryParseStatus(status, out var filterStatus))
+        {
+            daftarTahunAjaran = daftarTahunAjaran.Where(x => x.Status == filterStatus).ToList();
+        }
 
         return Ok(daftarTahunAjaran
             .OrderByDescending(x => x.Tahun)
@@ -57,6 +62,13 @@ public class TahunAjaranController : ControllerBase
         if (!TryParseSemester(create.Semester, out var semester))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["semester"] = GetInvalidSemesterMessage(create.Semester) });
 
+        var statusTahunAjaran = StatusTahunAjaran.Berjalan;
+        if (!string.IsNullOrWhiteSpace(create.Status))
+        {
+            if (!TryParseStatus(create.Status, out statusTahunAjaran))
+                return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["status"] = "Status tahun ajaran tidak valid. Nilai valid: Selesai, Berjalan, Akan Datang" });
+        }
+
         var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
         if (daftarTahunAjaran.Any(x => x.Tahun == create.Tahun && x.Semester == semester))
             return HelpersFunctions.BadRequest(new Dictionary<string, string>
@@ -67,7 +79,8 @@ public class TahunAjaranController : ControllerBase
         var tahunAjaran = new TahunAjaran
         {
             Tahun = create.Tahun,
-            Semester = semester
+            Semester = semester,
+            Status = statusTahunAjaran
         };
 
         _tahunAjaranRepository.Add(tahunAjaran);
@@ -93,6 +106,14 @@ public class TahunAjaranController : ControllerBase
         if (!TryParseSemester(update.Semester, out var semester))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["semester"] = GetInvalidSemesterMessage(update.Semester) });
 
+        StatusTahunAjaran? statusTahunAjaran = null;
+        if (!string.IsNullOrWhiteSpace(update.Status))
+        {
+            if (!TryParseStatus(update.Status, out var parsedStatus))
+                return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["status"] = "Status tahun ajaran tidak valid. Nilai valid: Selesai, Berjalan, Akan Datang" });
+            statusTahunAjaran = parsedStatus;
+        }
+
         var tahunAjaran = await _tahunAjaranRepository.Get(id);
         if (tahunAjaran is null) return NotFound();
 
@@ -105,6 +126,10 @@ public class TahunAjaranController : ControllerBase
 
         tahunAjaran.Tahun = update.Tahun;
         tahunAjaran.Semester = semester;
+        if (statusTahunAjaran.HasValue)
+        {
+            tahunAjaran.Status = statusTahunAjaran.Value;
+        }
 
         _tahunAjaranRepository.Update(tahunAjaran);
 
@@ -146,8 +171,29 @@ public class TahunAjaranController : ControllerBase
         {
             tahunAjaran.Id,
             tahunAjaran.Tahun,
-            semester = tahunAjaran.Semester.ToString()
+            semester = tahunAjaran.Semester.ToString(),
+            status = FormatStatus(tahunAjaran.Status)
         };
+    }
+
+    private static string FormatStatus(StatusTahunAjaran status) => status switch
+    {
+        StatusTahunAjaran.Selesai => "Selesai",
+        StatusTahunAjaran.Berjalan => "Berjalan",
+        StatusTahunAjaran.AkanDatang => "Akan Datang",
+        _ => status.ToString()
+    };
+
+    private static bool TryParseStatus(string? statusStr, out StatusTahunAjaran status)
+    {
+        if (string.IsNullOrWhiteSpace(statusStr))
+        {
+            status = StatusTahunAjaran.Berjalan;
+            return false;
+        }
+
+        var clean = statusStr.Replace(" ", "").Replace("_", "").Replace("-", "");
+        return Enum.TryParse(clean, true, out status) && Enum.IsDefined(status);
     }
 
     private static bool TryParseSemester(string semester, out Semester parsedSemester)
@@ -168,6 +214,8 @@ public class CreateTahunAjaran
 
     [Required]
     public string Semester { get; set; } = string.Empty;
+
+    public string? Status { get; set; }
 }
 
 public class UpdateTahunAjaran
@@ -180,4 +228,6 @@ public class UpdateTahunAjaran
 
     [Required]
     public string Semester { get; set; } = string.Empty;
+
+    public string? Status { get; set; }
 }

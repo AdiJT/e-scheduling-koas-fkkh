@@ -6,6 +6,7 @@ public class TahunAjaran : Entity<int>
 {
     public int Tahun { get; set; }
     public Semester Semester { get; set; }
+    public StatusTahunAjaran Status { get; set; } = StatusTahunAjaran.Berjalan;
 
     public List<Mahasiswa> DaftarSiswa { get; set; } = [];
     public List<Kelompok> DaftarKelompok { get; set; } = [];
@@ -14,6 +15,13 @@ public class TahunAjaran : Entity<int>
 public enum Semester
 {
     Ganjil = 1, Genap = 2
+}
+
+public enum StatusTahunAjaran
+{
+    Selesai = 1,
+    Berjalan = 2,
+    AkanDatang = 3
 }
 
 public interface ITahunAjaranRepository

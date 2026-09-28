@@ -631,7 +631,7 @@ export default function JadwalPage() {
             >
               <option value="">Semua Tahun Ajaran</option>
               {tahunAjaranList.map(ta => (
-                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
+                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}</option>
               ))}
             </select>
           </div>
