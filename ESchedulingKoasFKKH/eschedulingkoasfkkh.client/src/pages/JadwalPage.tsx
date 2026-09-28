@@ -3,7 +3,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
+import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, kelompokApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran, type Kelompok } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { useAuth } from '../contexts/AuthContext';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
@@ -114,6 +114,9 @@ export default function JadwalPage() {
   const [generateResult, setGenerateResult] = useState<GenerateJadwalResult | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateStartDate, setGenerateStartDate] = useState(getDefaultGenerateDate);
+  const [generateTahunAjaran, setGenerateTahunAjaran] = useState<number | ''>('');
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
   
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
@@ -124,9 +127,10 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const [result, taData] = await Promise.all([
+      const [result, taData, kData] = await Promise.all([
         jadwalApi.getAll(undefined, undefined, filterTahunAjaran ? Number(filterTahunAjaran) : undefined),
-        tahunAjaranApi.getAll()
+        tahunAjaranApi.getAll(),
+        kelompokApi.getAll()
       ]);
       
       if (isMahasiswa) {
@@ -137,6 +141,7 @@ export default function JadwalPage() {
       
       setData(result);
       setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
+      setKelompokList(kData);
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
     } finally {
@@ -334,22 +339,53 @@ export default function JadwalPage() {
 
   const openGenerateModal = () => {
     setGenerateStartDate((current) => current || getDefaultGenerateDate());
+    setGenerateError(null);
+    if (filterTahunAjaran) {
+      setGenerateTahunAjaran(Number(filterTahunAjaran));
+    } else {
+      const activeTa = tahunAjaranList.find(t => t.status === 'Berjalan') || tahunAjaranList[0];
+      setGenerateTahunAjaran(activeTa ? activeTa.id : '');
+    }
     setShowGenerateModal(true);
   };
 
   const handleGenerate = async () => {
+    if (!generateTahunAjaran) {
+      setGenerateError('Tahun ajaran target wajib dipilih.');
+      return;
+    }
+
+    const countInTa = kelompokList.filter(k => k.idTahunAjaran === Number(generateTahunAjaran)).length;
+    if (countInTa === 0) {
+      setGenerateError('Tidak ditemukan kelompok terdaftar pada tahun ajaran ini. Silakan hubungkan kelompok ke tahun ajaran ini di menu Kelompok terlebih dahulu.');
+      return;
+    }
+
     try {
       setIsGenerating(true);
       setError(null);
+      setGenerateError(null);
       const result = await jadwalApi.generate({
+        idTahunAjaran: Number(generateTahunAjaran),
         tanggalMulai: generateStartDate,
       });
       setGenerateResult(result);
       setShowGenerateModal(false);
       await fetchData();
     } catch (err: unknown) {
-      const apiErr = err as { message?: string };
-      setError(apiErr?.message || 'Gagal menjalankan generate jadwal otomatis.');
+      const apiErr = err as { message?: string; errors?: string[] | Record<string, string> };
+      let errMsg = apiErr?.message || 'Gagal menjalankan generate jadwal otomatis.';
+      if (apiErr?.errors) {
+        if (Array.isArray(apiErr.errors) && apiErr.errors.length > 0) {
+          errMsg = apiErr.errors[0];
+        } else if (typeof apiErr.errors === 'object') {
+          const vals = Object.values(apiErr.errors);
+          if (vals.length > 0 && typeof vals[0] === 'string') {
+            errMsg = vals[0];
+          }
+        }
+      }
+      setGenerateError(errMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -426,13 +462,18 @@ export default function JadwalPage() {
   const confirmDeleteAll = async () => {
     try {
       setDeletingAll(true);
-      await jadwalApi.deleteAll();
-      setData([]);
+      const targetTaId = filterTahunAjaran ? Number(filterTahunAjaran) : undefined;
+      await jadwalApi.deleteAll(targetTaId);
+      if (targetTaId) {
+        setData(prev => prev.filter(j => j.idTahunAjaran !== targetTaId));
+      } else {
+        setData([]);
+      }
+      setShowDeleteAllModal(false);
     } catch {
       setError('Gagal menghapus semua jadwal.');
     } finally {
       setDeletingAll(false);
-      setShowDeleteAllModal(false);
     }
   };
 
@@ -1231,20 +1272,81 @@ export default function JadwalPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
           <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
             <div className="mb-5">
-              <h3 className="text-lg font-bold text-primary-900 mb-1">Tanggal Mulai Generate</h3>
+              <h3 className="text-lg font-bold text-primary-900 mb-1">Generate Jadwal Otomatis</h3>
               <p className="text-sm text-slate-500">
-                Pilih tanggal mulai KOAS. Jika tanggal yang dipilih adalah hari libur, sistem akan otomatis menggeser ke hari kerja berikutnya.
+                Pilih tahun ajaran dan tanggal mulai KOAS. Sistem akan menjadwalkan seluruh kelompok pada tahun ajaran yang dipilih secara optimal.
               </p>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal Mulai</label>
-              <input
-                type="date"
-                value={generateStartDate}
-                onChange={(e) => setGenerateStartDate(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
-              />
+            {generateError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-red-700 text-xs font-medium animate-fade-in">
+                <InfoIcon className="w-4 h-4 text-red-500 shrink-0" />
+                <span>{generateError}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Tahun Ajaran Target <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={generateTahunAjaran}
+                  onChange={(e) => {
+                    setGenerateTahunAjaran(e.target.value ? Number(e.target.value) : '');
+                    setGenerateError(null);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto"
+                >
+                  <option value="">-- Pilih Tahun Ajaran --</option>
+                  {tahunAjaranList.map((ta) => (
+                    <option key={ta.id} value={ta.id}>
+                      {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Reactive Kelompok Count Info */}
+                {generateTahunAjaran && (() => {
+                  const count = kelompokList.filter(k => k.idTahunAjaran === Number(generateTahunAjaran)).length;
+                  return count > 0 ? (
+                    <p className="mt-2 text-xs text-emerald-700 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span>Tersedia <strong>{count} kelompok</strong> siap dijadwalkan pada tahun ajaran ini.</span>
+                    </p>
+                  ) : (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                      <p className="font-semibold flex items-center gap-1.5 text-amber-900">
+                        <span>⚠️</span>
+                        <span>Belum Ada Kelompok Terdaftar (0 Kelompok)</span>
+                      </p>
+                      <p className="text-amber-700">
+                        Tahun ajaran ini belum memiliki kelompok yang terhubung. Sistem tidak dapat menyusun jadwal tanpa adanya kelompok.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setShowGenerateModal(false); navigate('/kelompok'); }}
+                        className="text-amber-900 font-bold underline hover:text-amber-700 cursor-pointer pt-0.5 block"
+                      >
+                        Buka Kelola Kelompok untuk Mengatur Tahun Ajaran →
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Tanggal Mulai KOAS <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={generateStartDate}
+                  onChange={(e) => setGenerateStartDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all"
+                />
+                <p className="text-xs text-slate-400 mt-1">Jika hari libur, sistem otomatis menggeser ke hari kerja berikutnya.</p>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -1257,8 +1359,13 @@ export default function JadwalPage() {
               </button>
               <button
                 onClick={handleGenerate}
-                disabled={isGenerating || !generateStartDate}
-                className="flex-1 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+                disabled={
+                  isGenerating || 
+                  !generateStartDate || 
+                  !generateTahunAjaran || 
+                  kelompokList.filter(k => k.idTahunAjaran === Number(generateTahunAjaran)).length === 0
+                }
+                className="flex-1 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 {isGenerating ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Memproses...</>
@@ -1297,8 +1404,24 @@ export default function JadwalPage() {
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <InfoIcon className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Semua Jadwal?</h3>
-              <p className="text-sm text-slate-500">Anda yakin ingin menghapus <strong>seluruh jadwal</strong>? Data yang dihapus tidak dapat dikembalikan.</p>
+              <h3 className="text-lg font-bold text-primary-900 mb-1">
+                {filterTahunAjaran ? 'Hapus Jadwal Tahun Ajaran Ini?' : 'Hapus Semua Jadwal?'}
+              </h3>
+              <p className="text-sm text-slate-500">
+                {filterTahunAjaran ? (
+                  <>
+                    Anda yakin ingin menghapus jadwal untuk Tahun Ajaran{' '}
+                    <strong>
+                      {tahunAjaranList.find(t => t.id === Number(filterTahunAjaran))?.tahun} - {tahunAjaranList.find(t => t.id === Number(filterTahunAjaran))?.semester}
+                    </strong>
+                    ? Jadwal tahun ajaran lain tidak akan terpengaruh.
+                  </>
+                ) : (
+                  <>
+                    Anda yakin ingin menghapus <strong>seluruh jadwal dari semua tahun ajaran</strong>? Data yang dihapus tidak dapat dikembalikan.
+                  </>
+                )}
+              </p>
             </div>
             <div className="flex gap-3">
               <button
@@ -1311,11 +1434,11 @@ export default function JadwalPage() {
               <button
                 onClick={confirmDeleteAll}
                 disabled={deletingAll}
-                className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
+                className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-70 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 {deletingAll ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
-                ) : 'Ya, Hapus Semua'}
+                ) : 'Ya, Hapus'}
               </button>
             </div>
           </div>

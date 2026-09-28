@@ -26,6 +26,7 @@ public class JadwalController : ControllerBase
     private readonly ISubStaseRepository _subStaseRepository;
     private readonly IJadwalSubStaseRepository _jadwalSubStaseRepository;
     private readonly INotifikasiService _notifikasiService;
+    private readonly ITahunAjaranRepository _tahunAjaranRepository;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
@@ -38,7 +39,8 @@ public class JadwalController : ControllerBase
         IPembimbingRepository pembimbingRepository,
         ISubStaseRepository subStaseRepository,
         IJadwalSubStaseRepository jadwalSubStaseRepository,
-        INotifikasiService notifikasiService)
+        INotifikasiService notifikasiService,
+        ITahunAjaranRepository tahunAjaranRepository)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
@@ -51,6 +53,7 @@ public class JadwalController : ControllerBase
         _subStaseRepository = subStaseRepository;
         _jadwalSubStaseRepository = jadwalSubStaseRepository;
         _notifikasiService = notifikasiService;
+        _tahunAjaranRepository = tahunAjaranRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -278,6 +281,8 @@ public class JadwalController : ControllerBase
         }
         catch { /* Notifikasi tidak boleh menggagalkan response */ }
 
+        await SinkronkanStatusTahunAjaran(kelompok.IdTahunAjaran ?? kelompok.TahunAjaran?.Id);
+
         return Created(
             $"/api/jadwal/{jadwal.Id}",
             ToResponse(jadwal));
@@ -285,15 +290,29 @@ public class JadwalController : ControllerBase
 
     [HttpPost("generate")]
     [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> Generate(GenerateJadwalOtomatis? generate, CancellationToken cancellationToken)
+    public async Task<IActionResult> Generate(GenerateJadwalOtomatis generate, CancellationToken cancellationToken)
     {
-        var result = await _jadwalAutoScheduler.GenerateAsync(generate?.TanggalMulai, cancellationToken);
+        if (generate == null || generate.IdTahunAjaran <= 0)
+        {
+            return BadRequest(new
+            {
+                message = "Tahun ajaran wajib dipilih untuk generate jadwal.",
+                errors = new Dictionary<string, string>
+                {
+                    ["idTahunAjaran"] = "Tahun ajaran wajib dipilih."
+                }
+            });
+        }
+
+        var result = await _jadwalAutoScheduler.GenerateAsync(generate.IdTahunAjaran, generate.TanggalMulai, cancellationToken);
         if (result.IsFailure)
-            return StatusCode(StatusCodes.Status500InternalServerError, new
+            return StatusCode(StatusCodes.Status400BadRequest, new
             {
                 message = "Generate jadwal otomatis gagal.",
                 errors = result.Errors.Select(x => x.Message),
             });
+
+        await SinkronkanStatusTahunAjaran(generate.IdTahunAjaran);
 
         return Ok(result.Value);
     }
@@ -379,6 +398,8 @@ public class JadwalController : ControllerBase
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
 
+        await SinkronkanStatusTahunAjaran(jadwal.Kelompok?.IdTahunAjaran ?? jadwal.Kelompok?.TahunAjaran?.Id);
+
         var responseObj = (IDictionary<string, object?>)new System.Dynamic.ExpandoObject();
         var baseRes = ToResponse(jadwal);
         foreach (var prop in baseRes.GetType().GetProperties())
@@ -397,20 +418,53 @@ public class JadwalController : ControllerBase
         var jadwal = await _jadwalRepository.Get(id);
         if (jadwal is null) return NotFound();
 
+        var idTahunAjaran = jadwal.Kelompok?.IdTahunAjaran ?? jadwal.Kelompok?.TahunAjaran?.Id;
+
         _jadwalRepository.Delete(jadwal);
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
             return StatusCode(StatusCodes.Status500InternalServerError);
+
+        await SinkronkanStatusTahunAjaran(idTahunAjaran);
 
         return NoContent();
     }
 
     [HttpDelete("all")]
     [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> DeleteAll()
+    public async Task<IActionResult> DeleteAll([FromQuery] int? idTahunAjaran = null)
     {
-        await _jadwalRepository.DeleteAll();
+        await _jadwalRepository.DeleteAll(idTahunAjaran);
+        if (idTahunAjaran.HasValue)
+        {
+            await SinkronkanStatusTahunAjaran(idTahunAjaran.Value);
+        }
+        else
+        {
+            var allTa = await _tahunAjaranRepository.GetAll();
+            foreach (var ta in allTa)
+            {
+                await SinkronkanStatusTahunAjaran(ta.Id);
+            }
+        }
         return NoContent();
+    }
+
+    private async Task SinkronkanStatusTahunAjaran(int? idTahunAjaran)
+    {
+        if (!idTahunAjaran.HasValue) return;
+        var ta = await _tahunAjaranRepository.Get(idTahunAjaran.Value);
+        if (ta is null) return;
+
+        var semuaJadwal = await _jadwalRepository.GetAll();
+        var jadwalTa = semuaJadwal.Where(j => j.Kelompok?.IdTahunAjaran == ta.Id || j.Kelompok?.TahunAjaran?.Id == ta.Id).ToList();
+        var calculated = TahunAjaranStatusCalculator.HitungStatus(jadwalTa, _hariLiburService);
+        if (ta.Status != calculated)
+        {
+            ta.Status = calculated;
+            _tahunAjaranRepository.Update(ta);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 
     private object ToResponse(Jadwal j)

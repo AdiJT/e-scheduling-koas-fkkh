@@ -43,7 +43,12 @@ export default function TambahJadwalPage() {
         setKelompokList(kelompokData);
         setStaseList(staseData);
         setPembimbingList(pembimbingData);
-        setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
+        const sortedTa = taData.sort((a, b) => b.tahun - a.tahun);
+        setTahunAjaranList(sortedTa);
+        const activeTa = sortedTa.find(t => t.status === 'Berjalan') || sortedTa[0];
+        if (activeTa) {
+          setFilterTahunAjaran(activeTa.id);
+        }
       } catch (err) {
         console.error("Failed to load initial data for TambahJadwal:", err);
       } finally {
@@ -101,6 +106,12 @@ export default function TambahJadwalPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
+
+    if (!filterTahunAjaran) {
+      setErrors({ filterTahunAjaran: 'Tahun ajaran wajib dipilih terlebih dahulu.' });
+      setIsSubmitting(false);
+      return;
+    }
 
     const daftarSubStasePembimbing = selectedStase?.daftarSubStase && selectedStase.daftarSubStase.length > 0
       ? selectedStase.daftarSubStase.map(sub => ({
@@ -180,25 +191,33 @@ export default function TambahJadwalPage() {
                 <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-rose-500 to-red-500 rounded-full" /> Data Jadwal</h2>
               </div>
               <div className="p-6 space-y-5">
-                {/* Tahun Ajaran Filter (Optional) */}
+                {/* Tahun Ajaran (Wajib) */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran Kelompok (Opsional)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Tahun Ajaran Kelompok <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={filterTahunAjaran}
                     onChange={(e) => {
                       setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '');
                       setForm(prev => ({ ...prev, idKelompok: '' }));
+                      if (errors.filterTahunAjaran) {
+                        setErrors(prev => ({ ...prev, filterTahunAjaran: '' }));
+                      }
                     }}
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto"
+                    required
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
+                      ${errors.filterTahunAjaran ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                   >
-                    <option value="">Semua Tahun Ajaran</option>
+                    <option value="">-- Pilih Tahun Ajaran --</option>
                     {tahunAjaranList.map(ta => (
                       <option key={ta.id} value={ta.id}>
                         {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-slate-500 mt-1">Pilih tahun ajaran untuk memfilter daftar kelompok di bawah ini.</p>
+                  {errors.filterTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.filterTahunAjaran}</p>}
+                  <p className="text-xs text-slate-500 mt-1">Pilih tahun ajaran untuk memuat daftar kelompok yang terdaftar.</p>
                 </div>
 
                 {/* Kelompok */}
@@ -209,12 +228,15 @@ export default function TambahJadwalPage() {
                     value={form.idKelompok}
                     onChange={handleChange}
                     required
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
+                    disabled={!filterTahunAjaran}
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto disabled:opacity-50
                       ${errors.idKelompok ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                   >
-                    <option value="">Pilih kelompok</option>
+                    <option value="">
+                      {!filterTahunAjaran ? '-- Pilih Tahun Ajaran terlebih dahulu --' : 'Pilih kelompok'}
+                    </option>
                     {kelompokList
-                      .filter(k => filterTahunAjaran === '' || k.idTahunAjaran === filterTahunAjaran)
+                      .filter(k => k.idTahunAjaran === filterTahunAjaran)
                       .map(k => (
                       <option key={k.id} value={k.id}>
                         {k.nama} {k.tahunAjaran ? `(${k.tahunAjaran})` : ''}
@@ -222,6 +244,18 @@ export default function TambahJadwalPage() {
                     ))}
                   </select>
                   {errors.idKelompok && <p className="text-xs text-red-500 mt-1">{errors.idKelompok}</p>}
+                  {filterTahunAjaran && kelompokList.filter(k => k.idTahunAjaran === filterTahunAjaran).length === 0 && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between">
+                      <span>⚠️ Belum ada kelompok terdaftar pada tahun ajaran ini.</span>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/kelompok/tambah')}
+                        className="font-bold underline text-amber-900 hover:text-amber-700 cursor-pointer ml-2"
+                      >
+                        Buat Kelompok Baru →
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stase */}

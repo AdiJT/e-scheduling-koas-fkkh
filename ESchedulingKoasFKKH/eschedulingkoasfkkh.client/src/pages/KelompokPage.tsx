@@ -32,6 +32,7 @@ export default function KelompokPage() {
   // Inline edit state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editNama, setEditNama] = useState('');
+  const [editIdTahunAjaran, setEditIdTahunAjaran] = useState<number | ''>('');
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -87,12 +88,14 @@ export default function KelompokPage() {
   const startEdit = (kel: Kelompok) => {
     setEditingId(kel.id);
     setEditNama(kel.nama);
+    setEditIdTahunAjaran(kel.idTahunAjaran ?? '');
     setEditErrors({});
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditNama('');
+    setEditIdTahunAjaran('');
     setEditErrors({});
   };
 
@@ -101,13 +104,18 @@ export default function KelompokPage() {
     try {
       setSaving(true);
       setEditErrors({});
-      const kel = data.find(k => k.id === editingId);
       await kelompokApi.update(editingId, { 
         id: editingId, 
         nama: editNama,
-        idTahunAjaran: kel?.idTahunAjaran ?? undefined
+        idTahunAjaran: editIdTahunAjaran ? Number(editIdTahunAjaran) : undefined
       });
-      setData(prev => prev.map(k => k.id === editingId ? { ...k, nama: editNama } : k));
+      const updatedTaObj = tahunAjaranList.find(t => t.id === Number(editIdTahunAjaran));
+      setData(prev => prev.map(k => k.id === editingId ? { 
+        ...k, 
+        nama: editNama,
+        idTahunAjaran: editIdTahunAjaran ? Number(editIdTahunAjaran) : undefined,
+        tahunAjaran: updatedTaObj ? `${updatedTaObj.tahun} - ${updatedTaObj.semester}` : (editIdTahunAjaran ? k.tahunAjaran : undefined)
+      } : k));
       setEditingId(null);
     } catch (err: unknown) {
       const apiErr = err as { status?: number; errors?: Record<string, string> };
@@ -275,7 +283,7 @@ export default function KelompokPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           {editingId === kel.id ? (
-                            <div>
+                            <div className="space-y-1.5">
                               <input
                                 value={editNama}
                                 onChange={(e) => setEditNama(e.target.value)}
@@ -284,7 +292,19 @@ export default function KelompokPage() {
                                   ${editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                                 placeholder="Nama Kelompok"
                               />
-                              {editErrors.nama && <p className="text-[10px] text-red-500 mt-1">{editErrors.nama}</p>}
+                              <select
+                                value={editIdTahunAjaran}
+                                onChange={(e) => setEditIdTahunAjaran(e.target.value ? Number(e.target.value) : '')}
+                                className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:border-orange-500 transition-all cursor-pointer !bg-none appearance-auto"
+                              >
+                                <option value="">-- Pilih Tahun Ajaran --</option>
+                                {tahunAjaranList.map(ta => (
+                                  <option key={ta.id} value={ta.id}>
+                                    {ta.tahun} - {ta.semester}
+                                  </option>
+                                ))}
+                              </select>
+                              {editErrors.nama && <p className="text-[10px] text-red-500">{editErrors.nama}</p>}
                             </div>
                           ) : (
                             <div>

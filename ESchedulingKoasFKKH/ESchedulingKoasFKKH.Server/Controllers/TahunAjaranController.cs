@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
+using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,15 +16,21 @@ public class TahunAjaranController : ControllerBase
 {
     private readonly ITahunAjaranRepository _tahunAjaranRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
+    private readonly IJadwalRepository _jadwalRepository;
+    private readonly IHariLiburService _hariLiburService;
     private readonly IUnitOfWork _unitOfWork;
 
     public TahunAjaranController(
         ITahunAjaranRepository tahunAjaranRepository,
         IMahasiswaRepository mahasiswaRepository,
+        IJadwalRepository jadwalRepository,
+        IHariLiburService hariLiburService,
         IUnitOfWork unitOfWork)
     {
         _tahunAjaranRepository = tahunAjaranRepository;
         _mahasiswaRepository = mahasiswaRepository;
+        _jadwalRepository = jadwalRepository;
+        _hariLiburService = hariLiburService;
         _unitOfWork = unitOfWork;
     }
 
@@ -33,6 +40,17 @@ public class TahunAjaranController : ControllerBase
         var tahunAjaran = await _tahunAjaranRepository.Get(id);
         if (tahunAjaran is null) return NotFound();
 
+        var semuaJadwal = await _jadwalRepository.GetAll();
+        var jadwalTa = semuaJadwal.Where(j => j.Kelompok?.IdTahunAjaran == id || j.Kelompok?.TahunAjaran?.Id == id).ToList();
+        var calculatedStatus = TahunAjaranStatusCalculator.HitungStatus(jadwalTa, _hariLiburService);
+
+        if (tahunAjaran.Status != calculatedStatus)
+        {
+            tahunAjaran.Status = calculatedStatus;
+            _tahunAjaranRepository.Update(tahunAjaran);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         return Ok(ToResponse(tahunAjaran));
     }
 
@@ -40,6 +58,26 @@ public class TahunAjaranController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] string? status = null)
     {
         var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
+        var semuaJadwal = await _jadwalRepository.GetAll();
+
+        var anyChanged = false;
+        foreach (var ta in daftarTahunAjaran)
+        {
+            var jadwalTa = semuaJadwal.Where(j => j.Kelompok?.IdTahunAjaran == ta.Id || j.Kelompok?.TahunAjaran?.Id == ta.Id).ToList();
+            var calculatedStatus = TahunAjaranStatusCalculator.HitungStatus(jadwalTa, _hariLiburService);
+
+            if (ta.Status != calculatedStatus)
+            {
+                ta.Status = calculatedStatus;
+                _tahunAjaranRepository.Update(ta);
+                anyChanged = true;
+            }
+        }
+
+        if (anyChanged)
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         if (!string.IsNullOrWhiteSpace(status) && TryParseStatus(status, out var filterStatus))
         {
@@ -62,7 +100,7 @@ public class TahunAjaranController : ControllerBase
         if (!TryParseSemester(create.Semester, out var semester))
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["semester"] = GetInvalidSemesterMessage(create.Semester) });
 
-        var statusTahunAjaran = StatusTahunAjaran.Berjalan;
+        var statusTahunAjaran = StatusTahunAjaran.AkanDatang;
         if (!string.IsNullOrWhiteSpace(create.Status))
         {
             if (!TryParseStatus(create.Status, out statusTahunAjaran))
@@ -130,6 +168,12 @@ public class TahunAjaranController : ControllerBase
         {
             tahunAjaran.Status = statusTahunAjaran.Value;
         }
+        else
+        {
+            var semuaJadwal = await _jadwalRepository.GetAll();
+            var jadwalTa = semuaJadwal.Where(j => j.Kelompok?.IdTahunAjaran == id || j.Kelompok?.TahunAjaran?.Id == id).ToList();
+            tahunAjaran.Status = TahunAjaranStatusCalculator.HitungStatus(jadwalTa, _hariLiburService);
+        }
 
         _tahunAjaranRepository.Update(tahunAjaran);
 
@@ -188,7 +232,7 @@ public class TahunAjaranController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(statusStr))
         {
-            status = StatusTahunAjaran.Berjalan;
+            status = StatusTahunAjaran.AkanDatang;
             return false;
         }
 

@@ -24,14 +24,27 @@ async function handleResponse<T>(response: Response): Promise<T> {
             
             // Normalize errors to lowercase keys and string values
             const normalizedErrors: Record<string, string> = {};
-            if (errorData.errors) {
+            let firstErrorMessage = '';
+
+            if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+                firstErrorMessage = errorData.errors[0];
+                errorData.errors.forEach((err: string, idx: number) => {
+                    normalizedErrors[idx.toString()] = err;
+                });
+            } else if (errorData.errors && typeof errorData.errors === 'object') {
                 for (const [key, value] of Object.entries(errorData.errors)) {
                     const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
-                    normalizedErrors[lowerKey] = Array.isArray(value) ? value[0] : (value as string);
+                    const msg = Array.isArray(value) ? value[0] : (value as string);
+                    normalizedErrors[lowerKey] = msg;
+                    if (!firstErrorMessage) firstErrorMessage = msg;
                 }
             }
             
-            throw { status: 400, errors: normalizedErrors, message: errorData.message || 'Validasi gagal' };
+            throw { 
+                status: 400, 
+                errors: normalizedErrors, 
+                message: firstErrorMessage || errorData.message || 'Validasi gagal' 
+            };
         }
         if (response.status === 404) {
             throw { status: 404, message: 'Data tidak ditemukan' };
@@ -726,8 +739,9 @@ export interface UpdateKelompok {
 }
 
 export const kelompokApi = {
-    getAll: async (): Promise<Kelompok[]> => {
-        const res = await apiFetch(`${BASE_URL}/kelompok`);
+    getAll: async (idTahunAjaran?: number): Promise<Kelompok[]> => {
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/kelompok${query}`);
         return handleResponse<Kelompok[]>(res);
     },
 
@@ -857,6 +871,7 @@ export interface GenerateJadwalKelompokSummary {
 }
 
 export interface GenerateJadwalRequest {
+  idTahunAjaran: number;
   tanggalMulai?: string;
 }
 
@@ -919,8 +934,9 @@ export const jadwalApi = {
     });
     return handleResponse<void>(res);
   },
-  deleteAll: async (): Promise<void> => {
-    const res = await apiFetch(`${BASE_URL}/Jadwal/all`, {
+  deleteAll: async (idTahunAjaran?: number): Promise<void> => {
+    const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+    const res = await apiFetch(`${BASE_URL}/Jadwal/all${query}`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);

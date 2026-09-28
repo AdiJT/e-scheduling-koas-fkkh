@@ -7,7 +7,7 @@ namespace ESchedulingKoasFKKH.Server.Services;
 
 public interface IJadwalAutoScheduler
 {
-    Task<Result<GenerateJadwalResult>> GenerateAsync(DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default);
+    Task<Result<GenerateJadwalResult>> GenerateAsync(int idTahunAjaran, DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class GenerateJadwalResult
@@ -54,11 +54,17 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
         _hariLiburService = hariLiburService;
     }
 
-    public async Task<Result<GenerateJadwalResult>> GenerateAsync(DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default)
+    public async Task<Result<GenerateJadwalResult>> GenerateAsync(int idTahunAjaran, DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default)
     {
         var staseList = await _staseRepository.GetAll();
-        var kelompokList = await _kelompokRepository.GetAll();
+        var semuaKelompok = await _kelompokRepository.GetAll();
+        var kelompokList = semuaKelompok.Where(x => x.IdTahunAjaran == idTahunAjaran).ToList();
         var allPembimbing = await _pembimbingRepository.GetAll();
+
+        if (kelompokList.Count == 0)
+        {
+            return new Error("Jadwal.Generate", "Tidak ditemukan kelompok terdaftar pada tahun ajaran yang dipilih. Pastikan kelompok sudah dibuat dan dihubungkan ke tahun ajaran ini.");
+        }
 
         var tanggalMulaiAcuanFinal = GeserKeHariKerja(tanggalMulaiAcuan ?? CultureInfos.DateOnlyNow);
         var result = new GenerateJadwalResult
@@ -67,7 +73,7 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             KelompokDiproses = kelompokList.Count,
         };
 
-        if (staseList.Count == 0 || kelompokList.Count == 0)
+        if (staseList.Count == 0)
             return result;
 
         var pemakaianStaseTerpisah = BangunPetaPemakaianStaseTerpisah(staseList);

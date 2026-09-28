@@ -33,7 +33,7 @@ export default function TahunAjaranPage() {
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-  const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Berjalan' });
+  const [form, setForm] = useState({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Akan Datang' });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -112,7 +112,7 @@ export default function TahunAjaranPage() {
 
   const openCreateModal = () => {
     setFormMode('create');
-    setForm({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Berjalan' });
+    setForm({ id: 0, tahun: new Date().getFullYear().toString(), semester: '', status: 'Akan Datang' });
     setFormErrors({});
     setShowFormModal(true);
   };
@@ -123,7 +123,7 @@ export default function TahunAjaranPage() {
       id: tahunAjaran.id,
       tahun: tahunAjaran.tahun.toString(),
       semester: tahunAjaran.semester,
-      status: tahunAjaran.status || 'Berjalan',
+      status: tahunAjaran.status || 'Akan Datang',
     });
     setFormErrors({});
     setShowFormModal(true);
@@ -674,20 +674,38 @@ export default function TahunAjaranPage() {
                 </select>
                 {formErrors.semester && <p className="text-xs text-red-500 mt-1">{formErrors.semester}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status <span className="text-red-500">*</span></label>
-                <select
-                  name="status"
-                  value={form.status}
-                  onChange={handleFormChange}
-                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.status ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                >
-                  {statusOptions.map(st => (
-                    <option key={st} value={st}>{st}</option>
-                  ))}
-                </select>
-                {formErrors.status && <p className="text-xs text-red-500 mt-1">{formErrors.status}</p>}
-              </div>
+              {formMode === 'create' ? (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status Awal</label>
+                  <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-sky-900">
+                      <span className="w-2 h-2 rounded-full bg-sky-500" />
+                      <span>Otomatis: Akan Datang</span>
+                    </div>
+                    <p className="text-sky-700 text-[11px] leading-relaxed">
+                      Status tahun ajaran baru otomatis <strong>Akan Datang</strong>. Sistem akan otomatis memperbarui status menjadi <strong>Berjalan</strong> saat tanggal mulai jadwal tiba, dan <strong>Selesai</strong> setelah seluruh jadwal stase berakhir.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status <span className="text-red-500">*</span></label>
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleFormChange}
+                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.status ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                  >
+                    {statusOptions.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    *Status dikelola otomatis berdasarkan siklus jadwal, namun admin dapat menyesuaikannya jika diperlukan.
+                  </p>
+                  {formErrors.status && <p className="text-xs text-red-500 mt-1">{formErrors.status}</p>}
+                </div>
+              )}
             </div>
             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
               <button

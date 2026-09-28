@@ -6,7 +6,7 @@ public class TahunAjaran : Entity<int>
 {
     public int Tahun { get; set; }
     public Semester Semester { get; set; }
-    public StatusTahunAjaran Status { get; set; } = StatusTahunAjaran.Berjalan;
+    public StatusTahunAjaran Status { get; set; } = StatusTahunAjaran.AkanDatang;
 
     public List<Mahasiswa> DaftarSiswa { get; set; } = [];
     public List<Kelompok> DaftarKelompok { get; set; } = [];

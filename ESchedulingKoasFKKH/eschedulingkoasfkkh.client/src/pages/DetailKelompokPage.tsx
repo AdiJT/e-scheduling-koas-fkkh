@@ -63,8 +63,10 @@ export default function DetailKelompokPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Available mahasiswa (not in any kelompok)
-  const availableMahasiswa = allMahasiswa.filter(m => !m.idKelompok);
+  // Available mahasiswa (belum terdaftar di kelompok mana pun & sesuai tahun ajaran kelompok)
+  const availableMahasiswa = allMahasiswa
+    .filter(m => !m.idKelompok)
+    .filter(m => !kelompok?.idTahunAjaran || !m.idTahunAjaran || m.idTahunAjaran === kelompok.idTahunAjaran);
 
   // === ADD MEMBER ===
   const handleCheckboxChange = (id: number) => {
