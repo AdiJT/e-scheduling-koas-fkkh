@@ -17,17 +17,24 @@ public class Broadcast : Entity<int>, IAuditableEntity
     public int CreatedByUserId { get; set; }
     public string CreatedByName { get; set; } = string.Empty;
     public int JumlahPenerima { get; set; }
+    public bool IsActive { get; set; } = true;
 
     public List<Notifikasi> DaftarNotifikasi { get; set; } = [];
+    public List<NotifikasiDibaca> DaftarDibaca { get; set; } = [];
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
 
 public interface IBroadcastRepository
 {
     Task<Broadcast?> Get(int id);
     Task<List<Broadcast>> GetAll(int limit = 50);
+    Task<List<Broadcast>> GetActiveBroadcasts();
+    Task<int> GetActiveCount();
+    Task<int> GetTotalCount();
+    Task<int> GetCountThisMonth();
     void Add(Broadcast broadcast);
+    void Update(Broadcast broadcast);
     void Delete(Broadcast broadcast);
 }

@@ -74,7 +74,7 @@ export default function NotificationBell() {
   const handleNotificationClick = async (notif: NotifikasiItem) => {
     if (!notif.isRead) {
       try {
-        await notifikasiApi.markAsRead(notif.id);
+        await notifikasiApi.markAsRead(notif.id, notif.isBroadcast);
         setUnreadCount(prev => Math.max(0, prev - 1));
         setNotifications(prev =>
           prev.map(n => (n.id === notif.id ? { ...n, isRead: true } : n))
@@ -85,9 +85,7 @@ export default function NotificationBell() {
     }
 
     setIsOpen(false);
-    if (notif.tautan) {
-      navigate(notif.tautan);
-    }
+    navigate(`/notifikasi?detailId=${notif.id}`);
   };
 
   const formatRelativeTime = (dateStr: string) => {

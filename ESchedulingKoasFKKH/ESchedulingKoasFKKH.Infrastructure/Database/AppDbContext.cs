@@ -48,4 +48,5 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<RiwayatKelompok> RiwayatKelompok { get; set; }
     public DbSet<Notifikasi> Notifikasi { get; set; }
     public DbSet<Broadcast> Broadcast { get; set; }
+    public DbSet<NotifikasiDibaca> NotifikasiDibaca { get; set; }
 }
