@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, kelompokApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran, type Kelompok } from '../services/api';
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
+import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { useAuth } from '../contexts/AuthContext';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
@@ -193,7 +194,7 @@ export default function JadwalPage() {
       return matchStatus && j.idKelompok === userKelompokId;
     }
     if (isDosen) {
-      return matchStatus && (j as any).idPembimbing === user?.profileId;
+      return matchStatus && isDosenSupervising(j, user?.profileId);
     }
     return matchStatus;
   });
@@ -254,18 +255,24 @@ export default function JadwalPage() {
   const jadwalEvents = data
     .filter(j => {
       if (isMahasiswa) return j.idKelompok === userKelompokId;
-      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
-    .map(j => ({
-      id: `jadwal_${j.id}`,
-      title: `${j.namaKelompok} - ${j.namaStase}`,
-      start: new Date(j.tanggalMulai + 'T00:00:00'),
-      end: new Date(j.tanggalSelesai + 'T23:59:59'),
-      type: 'jadwal',
-      idKelompok: j.idKelompok,
-      jadwalId: j.id,
-    }));
+    .map(j => {
+      const sub = isDosen ? getDosenSubStase(j, user?.profileId) : null;
+      const title = sub
+        ? `${j.namaKelompok} - ${j.namaStase} (${sub.namaSubStase})`
+        : `${j.namaKelompok} - ${j.namaStase}`;
+      return {
+        id: `jadwal_${j.id}`,
+        title,
+        start: new Date(j.tanggalMulai + 'T00:00:00'),
+        end: new Date(j.tanggalSelesai + 'T23:59:59'),
+        type: 'jadwal',
+        idKelompok: j.idKelompok,
+        jadwalId: j.id,
+      };
+    });
 
   // 2. Holidays
   // Get holidays for the current year (can extend to previous/next year based on current view date)
@@ -848,6 +855,15 @@ export default function JadwalPage() {
                               </button>
                             </Tooltip>
                           )}
+                          {isDosen && (() => {
+                            const sub = getDosenSubStase(j, user?.profileId);
+                            if (!sub) return null;
+                            return (
+                              <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
+                                <span>🔬</span> Sub: {sub.namaSubStase}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-3.5 py-3.5 whitespace-nowrap">
                           <div className="text-xs text-slate-600">

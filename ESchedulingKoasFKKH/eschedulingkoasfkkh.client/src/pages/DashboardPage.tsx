@@ -27,6 +27,7 @@ import {
   type Jadwal,
 } from '../services/api';
 import { getHolidays } from '../utils/holidays';
+import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -287,7 +288,7 @@ export default function DashboardPage() {
 
       const relevantJadwal = jadwal.filter((j: any) => {
         if (isMahasiswa) return j.idKelompok === userKelId;
-        if (isDosen) return j.idPembimbing === user?.profileId;
+        if (isDosen) return isDosenSupervising(j, user?.profileId);
         return true;
       });
 
@@ -391,7 +392,7 @@ export default function DashboardPage() {
   const upcomingJadwal = [...jadwalList]
     .filter(j => {
       if (isMahasiswa) return j.idKelompok === userKelompokId;
-      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
     .sort((a, b) => new Date(a.tanggalMulai).getTime() - new Date(b.tanggalMulai).getTime())
@@ -402,18 +403,24 @@ export default function DashboardPage() {
   const jadwalEvents = jadwalList
     .filter(j => {
       if (isMahasiswa) return j.idKelompok === userKelompokId;
-      if (isDosen) return (j as any).idPembimbing === user?.profileId;
+      if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
-    .map(j => ({
-      id: `jadwal_${j.id}`,
-      title: `${j.namaKelompok} - ${j.namaStase}`,
-      start: new Date(j.tanggalMulai + 'T00:00:00'),
-      end: new Date(j.tanggalSelesai + 'T23:59:59'),
-      type: 'jadwal',
-      idKelompok: j.idKelompok,
-      jadwalId: j.id,
-    }));
+    .map(j => {
+      const sub = isDosen ? getDosenSubStase(j, user?.profileId) : null;
+      const title = sub
+        ? `${j.namaKelompok} - ${j.namaStase} (${sub.namaSubStase})`
+        : `${j.namaKelompok} - ${j.namaStase}`;
+      return {
+        id: `jadwal_${j.id}`,
+        title,
+        start: new Date(j.tanggalMulai + 'T00:00:00'),
+        end: new Date(j.tanggalSelesai + 'T23:59:59'),
+        type: 'jadwal',
+        idKelompok: j.idKelompok,
+        jadwalId: j.id,
+      };
+    });
 
   const currentYear = calendarDate.getFullYear();
   const holidaysCurrentYear = getHolidays(currentYear);
@@ -671,24 +678,34 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-400">Tidak ada jadwal mendatang</p>
                 </div>
               ) : (
-                upcomingJadwal.slice(0, 4).map(j => (
-                  <div key={j.id} className="bg-white/10 hover:bg-white/15 transition-colors rounded-xl p-3 border border-white/10">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-bold text-white line-clamp-1">{j.namaStase || 'Stase'}</p>
-                      <span className="text-[10px] font-semibold bg-blue-500/30 text-blue-200 px-1.5 py-0.5 rounded shrink-0">
-                        {j.namaKelompok}
-                      </span>
+                upcomingJadwal.slice(0, 4).map(j => {
+                  const sub = isDosen ? getDosenSubStase(j, user?.profileId) : null;
+                  return (
+                    <div key={j.id} className="bg-white/10 hover:bg-white/15 transition-colors rounded-xl p-3 border border-white/10">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white line-clamp-1">{j.namaStase || 'Stase'}</p>
+                          {sub && (
+                            <p className="text-[10px] font-semibold text-purple-300 mt-0.5 truncate">
+                              Sub-Stase: {sub.namaSubStase}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-semibold bg-blue-500/30 text-blue-200 px-1.5 py-0.5 rounded shrink-0">
+                          {j.namaKelompok}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-blue-200/70 mt-1 flex items-center gap-1">
+                        <span>📅</span>
+                        <span>
+                          {new Date(j.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {' '}-{' '}
+                          {new Date(j.tanggalSelesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </p>
                     </div>
-                    <p className="text-[11px] text-blue-200/70 mt-1 flex items-center gap-1">
-                      <span>📅</span>
-                      <span>
-                        {new Date(j.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {' '}-{' '}
-                        {new Date(j.tanggalSelesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    </p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

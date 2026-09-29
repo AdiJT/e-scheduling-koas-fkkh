@@ -52,7 +52,7 @@ internal class PembimbingRepository : IPembimbingRepository
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
         .Include(x => x.DaftarStase)
         .Include(x => x.User)
-        .FirstOrDefaultAsync(x => x.NIP == nip);
+        .FirstOrDefaultAsync(x => x.NIP == nip || (x.User != null && x.User.Name == nip));
 
     public async Task<List<Pembimbing>> GetAll() => await _appDbContext.Pembimbing
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
