@@ -22,6 +22,7 @@ import {
   EyeOffIcon,
 } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function DetailMahasiswaPage() {
   const navigate = useNavigate();
@@ -1254,18 +1255,17 @@ export default function DetailMahasiswaPage() {
               {/* Tahun Ajaran */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran</label>
-                <select
-                  value={editForm.idTahunAjaran}
-                  onChange={(e) => setEditForm({ ...editForm, idTahunAjaran: Number(e.target.value) })}
-                  className="w-full px-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
-                >
-                  <option value={0}>Pilih Tahun Ajaran...</option>
-                  {tahunAjarans.map(ta => (
-                    <option key={ta.id} value={ta.id}>
-                      {ta.tahun} - {ta.semester}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={editForm.idTahunAjaran || ''}
+                  onChange={(val) => setEditForm({ ...editForm, idTahunAjaran: Number(val) })}
+                  options={tahunAjarans.map(ta => ({
+                    value: ta.id,
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined
+                  }))}
+                  placeholder="Pilih Tahun Ajaran..."
+                  className={editErrors.idTahunAjaran ? 'border-red-400 bg-red-50' : ''}
+                />
                 {editErrors.idTahunAjaran && <p className="text-xs text-red-500 mt-1">{editErrors.idTahunAjaran}</p>}
               </div>
 

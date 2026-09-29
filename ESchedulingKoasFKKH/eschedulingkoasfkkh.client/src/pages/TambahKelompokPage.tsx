@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { KelompokIcon, SaveIcon, InfoIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahKelompokPage() {
   const navigate = useNavigate();
@@ -121,22 +122,24 @@ export default function TambahKelompokPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Tahun Ajaran <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchableSelect
                 value={idTahunAjaran}
-                onChange={(e) => {
-                  setIdTahunAjaran(e.target.value ? Number(e.target.value) : '');
+                onChange={(val) => {
+                  setIdTahunAjaran(val ? Number(val) : '');
                   if (errors.idTahunAjaran) setErrors(prev => ({ ...prev, idTahunAjaran: '' }));
                 }}
                 disabled={isLoadingTahunAjaran}
                 required
-                className={`w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-orange-400 focus:bg-white transition-all disabled:opacity-50 !bg-none appearance-auto
-                  ${errors.idTahunAjaran ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-              >
-                <option value="">-- Pilih Tahun Ajaran --</option>
-                {tahunAjaranList.map(ta => (
-                  <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}</option>
-                ))}
-              </select>
+                error={errors.idTahunAjaran}
+                options={tahunAjaranList.map(ta => ({
+                  value: ta.id,
+                  label: `${ta.tahun} - ${ta.semester}`,
+                  badge: ta.status || undefined,
+                }))}
+                placeholder="-- Pilih Tahun Ajaran --"
+                searchPlaceholder="Cari tahun ajaran..."
+                accentColor="orange"
+              />
               {errors.idTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.idTahunAjaran}</p>}
             </div>
             

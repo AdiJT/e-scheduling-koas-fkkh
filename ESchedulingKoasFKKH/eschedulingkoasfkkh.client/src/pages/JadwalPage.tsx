@@ -7,6 +7,7 @@ import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, kelompokApi, type G
 import { formatDateDisplay, getHolidays } from '../utils/holidays';
 import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { useAuth } from '../contexts/AuthContext';
+import SearchableSelect from '../components/SearchableSelect';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -671,17 +672,24 @@ export default function JadwalPage() {
           )}
 
           {/* Tahun Ajaran Filter */}
-          <div className="w-full sm:w-48">
-            <select
+          <div className="w-full sm:w-56">
+            <SearchableSelect
               value={filterTahunAjaran}
-              onChange={(e) => setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all cursor-pointer"
-            >
-              <option value="">Semua Tahun Ajaran</option>
-              {tahunAjaranList.map(ta => (
-                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}</option>
-              ))}
-            </select>
+              onChange={(val) => setFilterTahunAjaran(val ? Number(val) : '')}
+              options={[
+                { value: '', label: 'Semua Tahun Ajaran' },
+                ...tahunAjaranList.map(ta => ({
+                  value: ta.id,
+                  label: `${ta.tahun} - ${ta.semester}`,
+                  badge: ta.status || undefined,
+                }))
+              ]}
+              placeholder="Semua Tahun Ajaran"
+              searchPlaceholder="Cari T.A..."
+              size="sm"
+              isClearable={false}
+              accentColor="red"
+            />
           </div>
         </div>
       </div>
@@ -1036,19 +1044,21 @@ export default function JadwalPage() {
                   {(!selectedStase.daftarSubStase || selectedStase.daftarSubStase.length === 0) ? (
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">Dosen Pembimbing Stase</label>
-                      <select
+                      <SearchableSelect
                         value={editIdPembimbing}
-                        onChange={(e) => setEditIdPembimbing(e.target.value !== '' ? Number(e.target.value) : '')}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer"
-                      >
-                        <option value="">Pilih Dosen Pembimbing (opsional)</option>
-                        {(selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0
+                        onChange={(val) => setEditIdPembimbing(val !== '' && val !== null ? Number(val) : '')}
+                        options={(selectedStase.daftarPembimbing && selectedStase.daftarPembimbing.length > 0
                           ? pembimbingList.filter(p => selectedStase.daftarPembimbing?.some(sp => sp.id === p.id))
                           : pembimbingList
-                        ).map(p => (
-                          <option key={p.id} value={p.id}>{p.nama} (NIP: {p.nip || '-'})</option>
-                        ))}
-                      </select>
+                        ).map(p => ({
+                          value: p.id,
+                          label: p.nama,
+                          subLabel: p.nip ? `NIP: ${p.nip}` : undefined,
+                        }))}
+                        placeholder="Pilih Dosen Pembimbing (opsional)"
+                        searchPlaceholder="Ketik nama dosen atau NIP..."
+                        accentColor="indigo"
+                      />
                     </div>
                   ) : (
                     /* KODIL Sub-stase Advisors */
@@ -1060,18 +1070,21 @@ export default function JadwalPage() {
                           : pembimbingList;
 
                         return (
-                          <div key={sub.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1">
+                          <div key={sub.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1.5">
                             <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Sub-Stase: {sub.nama}</span>
-                            <select
+                            <SearchableSelect
                               value={editSubStaseDosen[sub.id] || ''}
-                              onChange={(e) => setEditSubStaseDosen(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                              className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
-                            >
-                              <option value="">Pilih Pembimbing Sub-Stase (opsional)</option>
-                              {subAvailableDosen.map(p => (
-                                <option key={p.id} value={p.id}>{p.nama}</option>
-                              ))}
-                            </select>
+                              onChange={(val) => setEditSubStaseDosen(prev => ({ ...prev, [sub.id]: val ? String(val) : '' }))}
+                              options={subAvailableDosen.map(p => ({
+                                value: p.id,
+                                label: p.nama,
+                                subLabel: p.nip ? `NIP: ${p.nip}` : undefined,
+                              }))}
+                              placeholder="Pilih Pembimbing Sub-Stase (opsional)"
+                              searchPlaceholder="Ketik nama dosen..."
+                              size="sm"
+                              accentColor="purple"
+                            />
                           </div>
                         );
                       })}
@@ -1306,21 +1319,21 @@ export default function JadwalPage() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   Tahun Ajaran Target <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableSelect
                   value={generateTahunAjaran}
-                  onChange={(e) => {
-                    setGenerateTahunAjaran(e.target.value ? Number(e.target.value) : '');
+                  onChange={(val) => {
+                    setGenerateTahunAjaran(val ? Number(val) : '');
                     setGenerateError(null);
                   }}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto"
-                >
-                  <option value="">-- Pilih Tahun Ajaran --</option>
-                  {tahunAjaranList.map((ta) => (
-                    <option key={ta.id} value={ta.id}>
-                      {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  options={tahunAjaranList.map((ta) => ({
+                    value: ta.id,
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined,
+                  }))}
+                  placeholder="-- Pilih Tahun Ajaran Target --"
+                  searchPlaceholder="Cari tahun ajaran..."
+                  accentColor="red"
+                />
 
                 {/* Reactive Kelompok Count Info */}
                 {generateTahunAjaran && (() => {

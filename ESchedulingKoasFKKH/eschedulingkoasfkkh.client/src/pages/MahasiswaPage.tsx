@@ -6,6 +6,7 @@ import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type Ex
 import { useAuth } from '../contexts/AuthContext';
 import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function MahasiswaPage() {
   const navigate = useNavigate();
@@ -324,20 +325,21 @@ export default function MahasiswaPage() {
 
           {/* Filter & Actions */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <select
-              value={filterTahunAjaran}
-              onChange={(e) => setFilterTahunAjaran(e.target.value)}
-              className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700
-                focus:outline-none focus:border-blue-400 focus:bg-white transition-all cursor-pointer font-medium"
-              id="filter-tahun-ajaran"
-            >
-              <option value="all">Semua Tahun Ajaran</option>
-              {tahunAjarans.map(ta => (
-                <option key={ta.id} value={ta.id.toString()}>
-                  {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 sm:w-64">
+              <SearchableSelect
+                value={filterTahunAjaran}
+                onChange={(val) => setFilterTahunAjaran(String(val))}
+                options={[
+                  { value: 'all', label: 'Semua Tahun Ajaran' },
+                  ...tahunAjarans.map(ta => ({
+                    value: ta.id.toString(),
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined
+                  }))
+                ]}
+                placeholder="Semua Tahun Ajaran"
+              />
+            </div>
 
             {/* Refresh Button */}
             <Tooltip content="Muat ulang data" position="bottom">
@@ -747,18 +749,17 @@ export default function MahasiswaPage() {
               {/* Tahun Ajaran */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-red-500">*</span></label>
-                <select
-                  value={editForm.idTahunAjaran}
-                  onChange={(e) => setEditForm({ ...editForm, idTahunAjaran: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                >
-                  <option value={0} disabled>Pilih Tahun Ajaran</option>
-                  {tahunAjarans.map(ta => (
-                    <option key={ta.id} value={ta.id}>
-                      {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={editForm.idTahunAjaran || ''}
+                  onChange={(val) => setEditForm({ ...editForm, idTahunAjaran: Number(val) })}
+                  options={tahunAjarans.map(ta => ({
+                    value: ta.id,
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined
+                  }))}
+                  placeholder="Pilih Tahun Ajaran"
+                  className={editErrors.idTahunAjaran ? 'border-red-400 bg-red-50' : ''}
+                />
                 {editErrors.idTahunAjaran && (
                   <p className="text-xs text-red-500 mt-1">{editErrors.idTahunAjaran}</p>
                 )}
@@ -845,20 +846,18 @@ export default function MahasiswaPage() {
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Tahun Ajaran Default <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
                     value={importTahunAjaran}
-                    onChange={(e) => setImportTahunAjaran(e.target.value)}
-                    required
+                    onChange={(val) => setImportTahunAjaran(String(val))}
+                    options={tahunAjarans.map(ta => ({
+                      value: String(ta.id),
+                      label: `${ta.tahun} - ${ta.semester}`,
+                      badge: ta.status || undefined
+                    }))}
+                    placeholder="Pilih Tahun Ajaran Default"
                     disabled={importing}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-blue-400 focus:bg-white transition-all font-medium cursor-pointer"
-                  >
-                    <option value="">Pilih Tahun Ajaran Default</option>
-                    {tahunAjarans.map(ta => (
-                      <option key={ta.id} value={ta.id}>
-                        {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    required
+                  />
                   <p className="text-[11px] text-slate-500 mt-1">
                     Digunakan untuk baris mahasiswa yang kolom Tahun Ajaran-nya tidak diisi pada file Excel.
                   </p>

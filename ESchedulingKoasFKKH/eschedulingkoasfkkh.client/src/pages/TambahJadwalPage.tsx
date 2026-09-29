@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { kelompokApi, staseApi, pembimbingApi, jadwalApi, tahunAjaranApi, type Kelompok, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
 import { calculateEndDate, formatDateDisplay } from '../utils/holidays';
 import { SaveIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahJadwalPage() {
   const navigate = useNavigate();
@@ -196,26 +197,26 @@ export default function TambahJadwalPage() {
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                     Tahun Ajaran Kelompok <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
                     value={filterTahunAjaran}
-                    onChange={(e) => {
-                      setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '');
+                    onChange={(val) => {
+                      setFilterTahunAjaran(val ? Number(val) : '');
                       setForm(prev => ({ ...prev, idKelompok: '' }));
                       if (errors.filterTahunAjaran) {
                         setErrors(prev => ({ ...prev, filterTahunAjaran: '' }));
                       }
                     }}
                     required
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
-                      ${errors.filterTahunAjaran ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                  >
-                    <option value="">-- Pilih Tahun Ajaran --</option>
-                    {tahunAjaranList.map(ta => (
-                      <option key={ta.id} value={ta.id}>
-                        {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    error={errors.filterTahunAjaran}
+                    options={tahunAjaranList.map(ta => ({
+                      value: ta.id,
+                      label: `${ta.tahun} - ${ta.semester}`,
+                      badge: ta.status || undefined,
+                    }))}
+                    placeholder="-- Pilih Tahun Ajaran --"
+                    searchPlaceholder="Cari tahun ajaran..."
+                    accentColor="red"
+                  />
                   {errors.filterTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.filterTahunAjaran}</p>}
                   <p className="text-xs text-slate-500 mt-1">Pilih tahun ajaran untuk memuat daftar kelompok yang terdaftar.</p>
                 </div>
@@ -223,26 +224,26 @@ export default function TambahJadwalPage() {
                 {/* Kelompok */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Kelompok <span className="text-red-500">*</span></label>
-                  <select
-                    name="idKelompok"
+                  <SearchableSelect
                     value={form.idKelompok}
-                    onChange={handleChange}
+                    onChange={(val) => {
+                      setForm(prev => ({ ...prev, idKelompok: val ? String(val) : '' }));
+                      if (errors.idKelompok) setErrors(prev => ({ ...prev, idKelompok: '' }));
+                    }}
                     required
                     disabled={!filterTahunAjaran}
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto disabled:opacity-50
-                      ${errors.idKelompok ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                  >
-                    <option value="">
-                      {!filterTahunAjaran ? '-- Pilih Tahun Ajaran terlebih dahulu --' : 'Pilih kelompok'}
-                    </option>
-                    {kelompokList
+                    error={errors.idKelompok}
+                    options={kelompokList
                       .filter(k => k.idTahunAjaran === filterTahunAjaran)
-                      .map(k => (
-                      <option key={k.id} value={k.id}>
-                        {k.nama} {k.tahunAjaran ? `(${k.tahunAjaran})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                      .map(k => ({
+                        value: k.id,
+                        label: k.nama,
+                        subLabel: k.tahunAjaran || undefined,
+                      }))}
+                    placeholder={!filterTahunAjaran ? '-- Pilih Tahun Ajaran terlebih dahulu --' : 'Pilih kelompok'}
+                    searchPlaceholder="Cari kelompok..."
+                    accentColor="red"
+                  />
                   {errors.idKelompok && <p className="text-xs text-red-500 mt-1">{errors.idKelompok}</p>}
                   {filterTahunAjaran && kelompokList.filter(k => k.idTahunAjaran === filterTahunAjaran).length === 0 && (
                     <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between">
@@ -261,21 +262,24 @@ export default function TambahJadwalPage() {
                 {/* Stase */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Stase <span className="text-red-500">*</span></label>
-                  <select
-                    name="idStase"
+                  <SearchableSelect
                     value={form.idStase}
-                    onChange={handleChange}
+                    onChange={(val) => {
+                      setForm(prev => ({ ...prev, idStase: val ? String(val) : '' }));
+                      if (errors.idStase) setErrors(prev => ({ ...prev, idStase: '' }));
+                    }}
                     required
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer !bg-none appearance-auto
-                      ${errors.idStase ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                  >
-                    <option value="">Pilih stase</option>
-                    {staseList.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.nama} ({s.waktu} minggu - {s.jenis}) {s.daftarSubStase && s.daftarSubStase.length > 0 ? '✨ Has Sub-Stases' : ''}
-                      </option>
-                    ))}
-                  </select>
+                    error={errors.idStase}
+                    options={staseList.map(s => ({
+                      value: s.id,
+                      label: s.nama,
+                      subLabel: `${s.waktu} minggu - ${s.jenis}`,
+                      badge: s.daftarSubStase && s.daftarSubStase.length > 0 ? '✨ 5 Sub-Stase' : undefined,
+                    }))}
+                    placeholder="Pilih stase"
+                    searchPlaceholder="Cari stase..."
+                    accentColor="red"
+                  />
                   {errors.idStase && <p className="text-xs text-red-500 mt-1">{errors.idStase}</p>}
                 </div>
 
@@ -313,19 +317,18 @@ export default function TambahJadwalPage() {
                           </span>
                         )}
                       </label>
-                      <select
-                        name="idPembimbing"
+                      <SearchableSelect
                         value={form.idPembimbing}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:bg-white transition-all cursor-pointer"
-                      >
-                        <option value="">Pilih Dosen Pembimbing (opsional)</option>
-                        {staseDosenList.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.nama} (NIP: {p.nip})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => setForm(prev => ({ ...prev, idPembimbing: val ? String(val) : '' }))}
+                        options={staseDosenList.map(p => ({
+                          value: p.id,
+                          label: p.nama,
+                          subLabel: p.nip ? `NIP: ${p.nip}` : undefined,
+                        }))}
+                        placeholder="Pilih Dosen Pembimbing (opsional)"
+                        searchPlaceholder="Ketik nama dosen atau NIP..."
+                        accentColor="red"
+                      />
                       <p className="text-xs text-slate-400 mt-1">Dosen yang akan membimbing kelompok ini khusus pada stase {selectedStase.nama}</p>
                     </div>
                   );
@@ -366,16 +369,20 @@ export default function TambahJadwalPage() {
                                 <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">{sub.urutan}</span>
                                 <span className="text-sm font-bold text-slate-800">{sub.nama}</span>
                               </div>
-                              <select
+                              <SearchableSelect
                                 value={subStaseDosen[sub.id] || ''}
-                                onChange={(e) => handleSubStaseDosenChange(sub.id, e.target.value)}
-                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500 focus:bg-white cursor-pointer min-w-[220px]"
-                              >
-                                <option value="">Pilih Dosen Spesialis</option>
-                                {subAvailableDosen.map(p => (
-                                  <option key={p.id} value={p.id}>{p.nama}</option>
-                                ))}
-                              </select>
+                                onChange={(val) => handleSubStaseDosenChange(sub.id, val ? String(val) : '')}
+                                options={subAvailableDosen.map(p => ({
+                                  value: p.id,
+                                  label: p.nama,
+                                  subLabel: p.nip ? `NIP: ${p.nip}` : undefined,
+                                }))}
+                                placeholder="Pilih Dosen Spesialis"
+                                searchPlaceholder="Cari dosen..."
+                                size="sm"
+                                accentColor="purple"
+                                className="min-w-[240px]"
+                              />
                             </div>
                           );
                         })}

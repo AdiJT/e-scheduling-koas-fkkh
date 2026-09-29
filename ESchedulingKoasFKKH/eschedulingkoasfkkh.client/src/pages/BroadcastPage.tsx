@@ -10,6 +10,7 @@ import {
 } from '../services/api';
 import { MegaphoneIcon, SearchIcon, RefreshIcon, DetailIcon, DeleteIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function BroadcastPage() {
   const navigate = useNavigate();
@@ -341,38 +342,47 @@ export default function BroadcastPage() {
 
             {/* Filter Group */}
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <select
-                value={filterTarget}
-                onChange={e => { setFilterTarget(e.target.value); setCurrentPage(1); }}
-                className="flex-1 sm:w-36 px-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer font-medium"
-              >
-                <option value="all">Semua Sasaran</option>
-                <option value="semua">Semua Pengguna</option>
-                <option value="dosen">Dosen</option>
-                <option value="mahasiswa">Mahasiswa</option>
-                <option value="kelompok">Kelompok</option>
-              </select>
+              <div className="flex-1 sm:w-40">
+                <SearchableSelect
+                  value={filterTarget}
+                  onChange={val => { setFilterTarget(String(val)); setCurrentPage(1); }}
+                  options={[
+                    { value: 'all', label: 'Semua Sasaran' },
+                    { value: 'semua', label: 'Semua Pengguna' },
+                    { value: 'dosen', label: 'Dosen' },
+                    { value: 'mahasiswa', label: 'Mahasiswa' },
+                    { value: 'kelompok', label: 'Kelompok' },
+                  ]}
+                  placeholder="Semua Sasaran"
+                />
+              </div>
 
-              <select
-                value={filterPrioritas}
-                onChange={e => { setFilterPrioritas(e.target.value); setCurrentPage(1); }}
-                className="flex-1 sm:w-32 px-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer font-medium"
-              >
-                <option value="all">Semua Prioritas</option>
-                <option value="normal">Normal</option>
-                <option value="penting">Penting</option>
-                <option value="mendesak">Mendesak</option>
-              </select>
+              <div className="flex-1 sm:w-36">
+                <SearchableSelect
+                  value={filterPrioritas}
+                  onChange={val => { setFilterPrioritas(String(val)); setCurrentPage(1); }}
+                  options={[
+                    { value: 'all', label: 'Semua Prioritas' },
+                    { value: 'normal', label: 'Normal' },
+                    { value: 'penting', label: 'Penting' },
+                    { value: 'mendesak', label: 'Mendesak' },
+                  ]}
+                  placeholder="Semua Prioritas"
+                />
+              </div>
 
-              <select
-                value={filterStatus}
-                onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-                className="flex-1 sm:w-32 px-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 focus:bg-white transition-all cursor-pointer font-medium"
-              >
-                <option value="all">Semua Status</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </select>
+              <div className="flex-1 sm:w-36">
+                <SearchableSelect
+                  value={filterStatus}
+                  onChange={val => { setFilterStatus(String(val)); setCurrentPage(1); }}
+                  options={[
+                    { value: 'all', label: 'Semua Status' },
+                    { value: 'active', label: 'Aktif' },
+                    { value: 'inactive', label: 'Nonaktif' },
+                  ]}
+                  placeholder="Semua Status"
+                />
+              </div>
 
               <Tooltip content="Muat Ulang Data">
                 <button
@@ -708,18 +718,17 @@ export default function BroadcastPage() {
                   <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1.5">
                     Pilih Kelompok Sasaran <span className="text-rose-500">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formTargetKelompokId || ''}
-                    onChange={e => setFormTargetKelompokId(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500/20 bg-white"
-                  >
-                    <option value="">-- Pilih Kelompok --</option>
-                    {kelompoks.map(k => (
-                      <option key={k.id} value={k.id}>
-                        {k.nama} ({k.daftarMahasiswa?.length || 0} Mahasiswa)
-                      </option>
-                    ))}
-                  </select>
+                    onChange={val => setFormTargetKelompokId(val ? Number(val) : undefined)}
+                    options={kelompoks.map(k => ({
+                      value: k.id,
+                      label: k.nama,
+                      subLabel: `${k.daftarMahasiswa?.length || 0} Mahasiswa`
+                    }))}
+                    placeholder="Pilih Kelompok Sasaran"
+                    required
+                  />
                 </div>
               )}
 
@@ -729,32 +738,34 @@ export default function BroadcastPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     Tingkat Prioritas
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formPrioritas}
-                    onChange={e => setFormPrioritas(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 cursor-pointer"
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="Penting">Penting (Highlight Kuning)</option>
-                    <option value="Mendesak">Mendesak (Highlight Merah)</option>
-                  </select>
+                    onChange={val => setFormPrioritas(val as any)}
+                    options={[
+                      { value: 'Normal', label: 'Normal' },
+                      { value: 'Penting', label: 'Penting', badge: 'Kuning' },
+                      { value: 'Mendesak', label: 'Mendesak', badge: 'Merah' }
+                    ]}
+                    placeholder="Pilih Prioritas"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     Kategori
                   </label>
-                  <select
+                  <SearchableSelect
                     value={formKategori}
-                    onChange={e => setFormKategori(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 cursor-pointer"
-                  >
-                    <option value="Pengumuman">Pengumuman Umum</option>
-                    <option value="Akademik">Akademik & Perkuliahan</option>
-                    <option value="Jadwal">Jadwal & Stase</option>
-                    <option value="Kegiatan">Kegiatan Lapangan</option>
-                    <option value="Urgent">Darurat / Mendesak</option>
-                  </select>
+                    onChange={val => setFormKategori(String(val))}
+                    options={[
+                      { value: 'Pengumuman', label: 'Pengumuman Umum' },
+                      { value: 'Akademik', label: 'Akademik & Perkuliahan' },
+                      { value: 'Jadwal', label: 'Jadwal & Stase' },
+                      { value: 'Kegiatan', label: 'Kegiatan Lapangan' },
+                      { value: 'Urgent', label: 'Darurat / Mendesak' }
+                    ]}
+                    placeholder="Pilih Kategori"
+                  />
                 </div>
               </div>
 

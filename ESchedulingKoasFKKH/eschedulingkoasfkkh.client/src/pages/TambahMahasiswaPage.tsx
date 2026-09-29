@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { mahasiswaApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { MahasiswaIcon, SaveIcon, InfoIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahMahasiswaPage() {
   const navigate = useNavigate();
@@ -138,22 +139,23 @@ export default function TambahMahasiswaPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-red-500">*</span></label>
-              <select
-                name="idTahunAjaran"
+              <SearchableSelect
                 value={form.idTahunAjaran}
-                onChange={handleChange}
-                required
+                onChange={(val) => {
+                  setForm(prev => ({ ...prev, idTahunAjaran: String(val) }));
+                  if (errors.idTahunAjaran) setErrors(e => ({ ...e, idTahunAjaran: '' }));
+                }}
+                options={tahunAjarans.map(ta => ({
+                  value: String(ta.id),
+                  label: `${ta.tahun} - ${ta.semester}`,
+                  badge: ta.status || undefined
+                }))}
+                placeholder={isLoadingTahun ? "Memuat tahun ajaran..." : "Pilih tahun ajaran"}
                 disabled={isLoadingTahun}
-                className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer
-                  ${errors.idTahunAjaran ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-              >
-                <option value="">{isLoadingTahun ? 'Memuat tahun ajaran...' : 'Pilih tahun ajaran'}</option>
-                {tahunAjarans.map((ta) => (
-                  <option key={ta.id} value={ta.id}>
-                    {ta.tahun} - {ta.semester} {ta.status ? `(${ta.status})` : ''}
-                  </option>
-                ))}
-              </select>
+                name="idTahunAjaran"
+                required
+                className={errors.idTahunAjaran ? 'border-red-400 bg-red-50' : ''}
+              />
               {errors.idTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.idTahunAjaran}</p>}
             </div>
           </div>

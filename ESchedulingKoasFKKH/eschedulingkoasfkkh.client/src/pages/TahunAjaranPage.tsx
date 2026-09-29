@@ -6,6 +6,7 @@ import { tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { TahunAjaranIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, SemesterGanjilIcon, SemesterGenapIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 const semesterOptions = ['Ganjil', 'Genap'];
 const statusOptions = ['Berjalan', 'Akan Datang', 'Selesai'];
@@ -661,17 +662,18 @@ export default function TahunAjaranPage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Semester <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
                   name="semester"
                   value={form.semester}
-                  onChange={handleFormChange}
-                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.semester ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                >
-                  <option value="">Pilih semester</option>
-                  {semesterOptions.map(semester => (
-                    <option key={semester} value={semester}>{semester}</option>
-                  ))}
-                </select>
+                  onChange={(val) => {
+                    setForm(prev => ({ ...prev, semester: String(val) }));
+                    if (formErrors.semester) setFormErrors(e => ({ ...e, semester: '' }));
+                  }}
+                  options={semesterOptions.map(semester => ({ value: semester, label: semester }))}
+                  placeholder="Pilih semester"
+                  required
+                  className={formErrors.semester ? 'border-red-400 bg-red-50' : ''}
+                />
                 {formErrors.semester && <p className="text-xs text-red-500 mt-1">{formErrors.semester}</p>}
               </div>
               {formMode === 'create' ? (
@@ -690,16 +692,22 @@ export default function TahunAjaranPage() {
               ) : (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Status <span className="text-red-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     name="status"
                     value={form.status}
-                    onChange={handleFormChange}
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-cyan-500 focus:bg-white transition-all cursor-pointer ${formErrors.status ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                  >
-                    {statusOptions.map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      setForm(prev => ({ ...prev, status: String(val) }));
+                      if (formErrors.status) setFormErrors(e => ({ ...e, status: '' }));
+                    }}
+                    options={statusOptions.map(st => ({
+                      value: st,
+                      label: st,
+                      badge: st === 'Berjalan' ? 'Aktif' : undefined
+                    }))}
+                    placeholder="Pilih status"
+                    required
+                    className={formErrors.status ? 'border-red-400 bg-red-50' : ''}
+                  />
                   <p className="text-[11px] text-slate-500 mt-1">
                     *Status dikelola otomatis berdasarkan siklus jadwal, namun admin dapat menyesuaikannya jika diperlukan.
                   </p>
