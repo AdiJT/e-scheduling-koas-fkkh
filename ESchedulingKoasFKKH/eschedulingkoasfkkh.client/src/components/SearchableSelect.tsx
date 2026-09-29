@@ -13,8 +13,9 @@ export interface SearchableSelectProps {
   id?: string;
   name?: string;
   value: string | number | null | undefined;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   onChange: (value: any) => void;
-  options: (SelectOption | string | number)[];
+  options?: (SelectOption | string | number)[];
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
@@ -35,7 +36,7 @@ export default function SearchableSelect({
   name,
   value,
   onChange,
-  options,
+  options = [],
   placeholder = 'Pilih opsi...',
   searchPlaceholder = 'Ketik untuk mencari...',
   disabled = false,
@@ -66,16 +67,25 @@ export default function SearchableSelect({
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Normalize options to SelectOption[]
-  const normalizedOptions: SelectOption[] = useMemo(() => {
-    return options.map((opt) => {
-      if (typeof opt === 'object' && opt !== null) {
-        return opt as SelectOption;
-      }
-      return {
-        value: opt,
-        label: String(opt),
-      };
-    });
+  const normalizedOptions = useMemo<SelectOption[]>(() => {
+    if (!options || !Array.isArray(options)) return [];
+    return options
+      .filter((opt): opt is SelectOption | string | number => opt !== null && opt !== undefined)
+      .map((opt): SelectOption => {
+        if (typeof opt === 'object') {
+          return {
+            value: opt.value ?? '',
+            label: String(opt.label ?? opt.value ?? ''),
+            subLabel: opt.subLabel,
+            badge: opt.badge,
+            disabled: opt.disabled,
+          };
+        }
+        return {
+          value: opt,
+          label: String(opt),
+        };
+      });
   }, [options]);
 
   // Selected Option
