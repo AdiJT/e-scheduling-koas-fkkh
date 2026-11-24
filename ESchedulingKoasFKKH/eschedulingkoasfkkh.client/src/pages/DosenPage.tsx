@@ -2,8 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { pembimbingApi, type Pembimbing, type ExcelImportResult } from '../services/api';
+import { pembimbingApi, type Pembimbing, type ExcelImportResult, type DosenDeleteConflictError } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateDisplay } from '../utils/holidays';
 import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
@@ -18,6 +19,7 @@ export default function DosenPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteBlockInfo, setDeleteBlockInfo] = useState<DosenDeleteConflictError | null>(null);
 
   // Export & Import Excel state
   const [exporting, setExporting] = useState(false);
@@ -117,12 +119,33 @@ export default function DosenPage() {
 
   const confirmDelete = async () => {
     if (!selectedId) return;
+    const targetDosen = data.find(d => d.id === selectedId);
     try {
       setDeleting(true);
       await pembimbingApi.delete(selectedId);
       setData(prev => prev.filter(d => d.id !== selectedId));
-    } catch {
-      setError('Gagal menghapus data dosen.');
+    } catch (err: unknown) {
+      const apiErr = err as Partial<DosenDeleteConflictError> & { status?: number; message?: string };
+      if (
+        apiErr?.status === 409 &&
+        (Array.isArray(apiErr.koordinatorStase) ||
+          Array.isArray(apiErr.jadwalUtama) ||
+          Array.isArray(apiErr.jadwalSubStase))
+      ) {
+        setError(null);
+        setDeleteBlockInfo({
+          status: 409,
+          message: apiErr.message || 'Dosen tidak dapat dihapus karena masih aktif bertugas.',
+          namaDosen: apiErr.namaDosen || targetDosen?.nama || '-',
+          nip: apiErr.nip || targetDosen?.nip || '-',
+          koordinatorStase: apiErr.koordinatorStase || [],
+          jadwalUtama: apiErr.jadwalUtama || [],
+          jadwalSubStase: apiErr.jadwalSubStase || [],
+          langkahPenyelesaian: apiErr.langkahPenyelesaian || [],
+        });
+      } else {
+        setError(apiErr?.message || 'Gagal menghapus data dosen.');
+      }
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -765,6 +788,168 @@ export default function DosenPage() {
                 {deleting ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
                 ) : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Blocked Modal (409 Conflict) */}
+      {deleteBlockInfo && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-500 to-red-600 text-white flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+                  ⚠️
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-lg leading-tight">Dosen Tidak Dapat Dihapus</h3>
+                  <p className="text-xs text-amber-50 mt-0.5 truncate">
+                    {deleteBlockInfo.namaDosen} ({deleteBlockInfo.nip})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteBlockInfo(null)}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                title="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 leading-relaxed">
+                {deleteBlockInfo.message}
+              </div>
+
+              {deleteBlockInfo.koordinatorStase.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Koordinator Stase ({deleteBlockInfo.koordinatorStase.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.koordinatorStase.map(item => (
+                      <div
+                        key={`koordinator-${item.idStase}`}
+                        className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3"
+                      >
+                        <div className="text-sm font-semibold text-indigo-950">
+                          Stase {item.namaStase}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteBlockInfo(null);
+                            navigate(`/stase/${item.idStase}`);
+                          }}
+                          className="px-2.5 py-1 bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium rounded-lg text-xs shrink-0 transition-colors cursor-pointer"
+                        >
+                          Detail Stase →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.jadwalUtama.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Pembimbing Utama Jadwal ({deleteBlockInfo.jadwalUtama.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.jadwalUtama.map(item => (
+                      <div
+                        key={`jadwal-${item.idJadwal}`}
+                        className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-sm"
+                      >
+                        <div className="font-semibold text-slate-800">
+                          Stase {item.namaStase}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-0.5">
+                          Kelompok: <span className="font-medium text-slate-800">{item.namaKelompok}</span>
+                          {item.tahunAjaran ? ` (${item.tahunAjaran})` : ''} • Mulai {formatDateDisplay(item.tanggalMulai)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.jadwalSubStase.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Pembimbing Sub-Stase ({deleteBlockInfo.jadwalSubStase.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.jadwalSubStase.map((item, idx) => (
+                      <div
+                        key={`substase-${item.idJadwal}-${idx}`}
+                        className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-sm"
+                      >
+                        <div className="font-semibold text-slate-800">
+                          Sub-Stase {item.namaSubStase} <span className="font-normal text-slate-500">(Stase {item.namaStase})</span>
+                        </div>
+                        <div className="text-xs text-slate-600 mt-0.5">
+                          Kelompok: <span className="font-medium text-slate-800">{item.namaKelompok}</span>
+                          {item.tahunAjaran ? ` (${item.tahunAjaran})` : ''} • Mulai {formatDateDisplay(item.tanggalMulai)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.langkahPenyelesaian.length > 0 && (
+                <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-sky-900">
+                    Cara Agar Dosen Bisa Dihapus
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs text-sky-900 leading-relaxed">
+                    {deleteBlockInfo.langkahPenyelesaian.map((step, idx) => (
+                      <li key={idx}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/70 flex flex-wrap justify-end gap-2.5">
+              {(deleteBlockInfo.jadwalUtama.length > 0 || deleteBlockInfo.jadwalSubStase.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteBlockInfo(null);
+                    navigate('/jadwal');
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Buka Halaman Jadwal
+                </button>
+              )}
+              {deleteBlockInfo.koordinatorStase.length > 0 &&
+                deleteBlockInfo.jadwalUtama.length === 0 &&
+                deleteBlockInfo.jadwalSubStase.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteBlockInfo(null);
+                    navigate('/stase');
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Buka Halaman Stase
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteBlockInfo(null)}
+                className="px-5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow-sm text-sm transition-all cursor-pointer"
+              >
+                Mengerti
               </button>
             </div>
           </div>

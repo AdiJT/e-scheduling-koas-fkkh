@@ -9,6 +9,7 @@ interface ApiError {
     errors?: Record<string, string>;
     message?: string;
     requiresConfirmation?: boolean;
+    [key: string]: unknown;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -55,6 +56,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
         if (response.status === 409) {
             const errorData: ApiError = await response.json().catch(() => ({}));
             throw {
+                ...errorData,
                 status: 409,
                 errors: errorData.errors || {},
                 message: errorData.message || 'Perubahan membutuhkan konfirmasi.',
@@ -492,6 +494,43 @@ export interface UpdatePembimbing {
     id: number;
     nip: string;
     nama: string;
+}
+
+export interface DosenDeleteBlockKoordinator {
+    idStase: number;
+    namaStase: string;
+}
+
+export interface DosenDeleteBlockJadwal {
+    idJadwal: number;
+    idKelompok: number;
+    namaKelompok: string;
+    tahunAjaran?: string | null;
+    idStase?: number | null;
+    namaStase: string;
+    tanggalMulai: string;
+}
+
+export interface DosenDeleteBlockSubStase {
+    idJadwal: number;
+    idKelompok: number;
+    namaKelompok: string;
+    tahunAjaran?: string | null;
+    idStase?: number | null;
+    namaStase: string;
+    namaSubStase: string;
+    tanggalMulai: string;
+}
+
+export interface DosenDeleteConflictError {
+    status: 409;
+    message: string;
+    namaDosen: string;
+    nip: string;
+    koordinatorStase: DosenDeleteBlockKoordinator[];
+    jadwalUtama: DosenDeleteBlockJadwal[];
+    jadwalSubStase: DosenDeleteBlockSubStase[];
+    langkahPenyelesaian: string[];
 }
 
 export const pembimbingApi = {

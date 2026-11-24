@@ -491,8 +491,93 @@ public class PembimbingController : ControllerBase
         var pembimbing = await _pembimbingRepository.Get(id);
         if (pembimbing is null) return NotFound();
 
+        await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
+
+        var semuaStase = await _staseRepository.GetAll();
+        var semuaKelompok = await _kelompokRepository.GetAll();
+
+        var koordinatorStase = semuaStase
+            .Where(s => s.Koordinator?.Id == pembimbing.Id)
+            .OrderBy(s => s.Nama)
+            .Select(s => new
+            {
+                idStase = s.Id,
+                namaStase = s.Nama
+            })
+            .ToList();
+
+        var jadwalUtama = semuaKelompok
+            .SelectMany(k => (k.DaftarJadwal ?? Enumerable.Empty<Jadwal>())
+                .Where(j => j.Pembimbing?.Id == pembimbing.Id)
+                .Select(j => new
+                {
+                    idJadwal = j.Id,
+                    idKelompok = k.Id,
+                    namaKelompok = k.Nama,
+                    tahunAjaran = k.TahunAjaran != null ? $"{k.TahunAjaran.Tahun} - {k.TahunAjaran.Semester}" : null,
+                    idStase = j.Stase?.Id,
+                    namaStase = j.Stase?.Nama ?? "-",
+                    tanggalMulai = j.TanggalMulai.ToString("yyyy-MM-dd")
+                }))
+            .OrderBy(x => x.namaKelompok)
+            .ThenBy(x => x.tanggalMulai)
+            .ToList();
+
+        var jadwalSubStase = semuaKelompok
+            .SelectMany(k => (k.DaftarJadwal ?? Enumerable.Empty<Jadwal>())
+                .SelectMany(j => (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>())
+                    .Where(sub => sub.Pembimbing?.Id == pembimbing.Id)
+                    .Select(sub => new
+                    {
+                        idJadwal = j.Id,
+                        idKelompok = k.Id,
+                        namaKelompok = k.Nama,
+                        tahunAjaran = k.TahunAjaran != null ? $"{k.TahunAjaran.Tahun} - {k.TahunAjaran.Semester}" : null,
+                        idStase = j.Stase?.Id,
+                        namaStase = j.Stase?.Nama ?? "-",
+                        namaSubStase = sub.SubStase?.Nama ?? "-",
+                        tanggalMulai = j.TanggalMulai.ToString("yyyy-MM-dd")
+                    })))
+            .OrderBy(x => x.namaKelompok)
+            .ThenBy(x => x.namaStase)
+            .ThenBy(x => x.namaSubStase)
+            .ToList();
+
+        if (koordinatorStase.Count > 0 || jadwalUtama.Count > 0 || jadwalSubStase.Count > 0)
+        {
+            var langkahPenyelesaian = new List<string>();
+            if (koordinatorStase.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka halaman Detail Stase terkait (menu Stase), klik Atur Koordinator, lalu ganti atau kosongkan Koordinator Stase.");
+            }
+            if (jadwalUtama.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka menu Jadwal, cari jadwal stase dan kelompok di atas, klik Edit lalu ganti atau kosongkan Dosen Pembimbing Utama (atau hapus jadwal jika tidak lagi diperlukan).");
+            }
+            if (jadwalSubStase.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka menu Jadwal, cari jadwal stase dan kelompok di atas, klik Edit lalu ganti atau kosongkan Dosen Pembimbing pada Sub-Stase terkait.");
+            }
+            langkahPenyelesaian.Add("Setelah semua penugasan di atas dilepas atau diganti ke dosen lain, kembali ke halaman Dosen untuk menghapus dosen ini.");
+
+            return Conflict(new
+            {
+                status = 409,
+                message = $"Dosen \"{pembimbing.Nama}\" tidak dapat dihapus karena masih ditugaskan pada jadwal atau koordinator stase.",
+                namaDosen = pembimbing.Nama,
+                nip = pembimbing.NIP,
+                koordinatorStase,
+                jadwalUtama,
+                jadwalSubStase,
+                langkahPenyelesaian
+            });
+        }
+
         _pembimbingRepository.Delete(pembimbing);
-        _userRepository.Delete(pembimbing.User);
+        if (pembimbing.User is not null)
+        {
+            _userRepository.Delete(pembimbing.User);
+        }
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
