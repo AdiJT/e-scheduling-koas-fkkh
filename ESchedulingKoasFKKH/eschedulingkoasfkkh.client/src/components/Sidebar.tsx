@@ -16,6 +16,7 @@ import {
   BellIcon,
   MegaphoneIcon,
   UsersIcon,
+  ActivityLogIcon,
 } from './Icons';
 
 interface NavItem {
@@ -98,7 +99,8 @@ const navSections = (userRole?: string): NavSection[] => {
     sections.push({
       title: 'Pengaturan Sistem',
       items: [
-        { id: 'manajemen-pengguna', label: 'Manajemen Pengguna', icon: UsersIcon, path: '/manajemen-pengguna' }
+        { id: 'manajemen-pengguna', label: 'Manajemen Pengguna', icon: UsersIcon, path: '/manajemen-pengguna' },
+        { id: 'log-aktivitas', label: 'Log Aktivitas', icon: ActivityLogIcon, path: '/log-aktivitas' }
       ]
     });
   }

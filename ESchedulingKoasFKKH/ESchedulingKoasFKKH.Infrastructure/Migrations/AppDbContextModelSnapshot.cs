@@ -273,6 +273,128 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.ActivityLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aksi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Deskripsi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Endpoint")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Modul")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NamaPelaku")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetEntitas")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Aksi");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Modul");
+
+                    b.HasIndex("Role");
+
+                    b.ToTable("ActivityLog", (string)null);
+                });
+
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Broadcast", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("JumlahPenerima")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Pesan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Prioritas")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("TargetKelompokId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetKelompokNama")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tautan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tipe")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("Broadcast", (string)null);
+                });
+
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Jadwal", b =>
                 {
                     b.Property<int>("Id")
@@ -551,6 +673,66 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             TahunAjaranId = 3,
                             UserId = 22
                         });
+                });
+
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Notifikasi", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BroadcastId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Kategori")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MetadataKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Pesan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tautan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tipe")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BroadcastId");
+
+                    b.HasIndex("IsRead");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "MetadataKey");
+
+                    b.ToTable("Notifikasi", (string)null);
                 });
 
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", b =>
@@ -900,6 +1082,12 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.Property<int>("Tahun")
                         .HasColumnType("integer");
 
+                    b.Property<DateOnly>("TanggalMulai")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("TanggalSelesai")
+                        .HasColumnType("date");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Tahun", "Semester")
@@ -912,25 +1100,33 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         {
                             Id = 1,
                             Semester = 1,
-                            Tahun = 2025
+                            Tahun = 2025,
+                            TanggalMulai = new DateOnly(2025, 7, 1),
+                            TanggalSelesai = new DateOnly(2027, 7, 1)
                         },
                         new
                         {
                             Id = 2,
                             Semester = 2,
-                            Tahun = 2025
+                            Tahun = 2025,
+                            TanggalMulai = new DateOnly(2026, 1, 1),
+                            TanggalSelesai = new DateOnly(2028, 1, 1)
                         },
                         new
                         {
                             Id = 3,
                             Semester = 1,
-                            Tahun = 2026
+                            Tahun = 2026,
+                            TanggalMulai = new DateOnly(2026, 7, 1),
+                            TanggalSelesai = new DateOnly(2028, 7, 1)
                         },
                         new
                         {
                             Id = 4,
                             Semester = 2,
-                            Tahun = 2026
+                            Tahun = 2026,
+                            TanggalMulai = new DateOnly(2027, 1, 1),
+                            TanggalSelesai = new DateOnly(2029, 1, 1)
                         });
                 });
 
@@ -1048,6 +1244,24 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Notifikasi", b =>
+                {
+                    b.HasOne("ESchedulingKoasFKKH.Domain.ModulUtama.Broadcast", "Broadcast")
+                        .WithMany("DaftarNotifikasi")
+                        .HasForeignKey("BroadcastId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ESchedulingKoasFKKH.Domain.Auth.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Broadcast");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Pembimbing", b =>
                 {
                     b.HasOne("ESchedulingKoasFKKH.Domain.Auth.User", "User")
@@ -1114,6 +1328,11 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.Navigation("Mahasiswa");
 
                     b.Navigation("Pembimbing");
+                });
+
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Broadcast", b =>
+                {
+                    b.Navigation("DaftarNotifikasi");
                 });
 
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Jadwal", b =>

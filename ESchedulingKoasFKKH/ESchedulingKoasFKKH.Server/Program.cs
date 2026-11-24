@@ -1,6 +1,7 @@
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Infrastructure;
 using ESchedulingKoasFKKH.Server.Configurations;
+using ESchedulingKoasFKKH.Server.Filters;
 using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,11 @@ builder.Services.ConfigureOptions<JwtBearerOptionsSetup>();
 // Add services to the container.
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<ActivityLogActionFilter>();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.AddService<ActivityLogActionFilter>();
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApiDocument(o =>
 {

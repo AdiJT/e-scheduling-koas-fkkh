@@ -27,6 +27,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
             
             throw { status: 400, errors: normalizedErrors, message: 'Validasi gagal' };
         }
+        if (response.status === 403) {
+            throw { status: 403, message: 'Anda tidak memiliki hak akses untuk melakukan aksi ini.' };
+        }
         if (response.status === 404) {
             throw { status: 404, message: 'Data tidak ditemukan' };
         }
@@ -66,21 +69,31 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
 // ============================================================
 // TAHUN AJARAN API
 // ============================================================
+export type StatusPeriodeTahunAjaran = 'Aktif' | 'Belum Mulai' | 'Selesai';
+
 export interface TahunAjaran {
     id: number;
     tahun: number;
     semester: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
+    isAktif: boolean;
+    status: StatusPeriodeTahunAjaran;
 }
 
 export interface CreateTahunAjaran {
     tahun: number;
     semester: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
 }
 
 export interface UpdateTahunAjaran {
     id: number;
     tahun: number;
     semester: string;
+    tanggalMulai: string;
+    tanggalSelesai: string;
 }
 
 export const tahunAjaranApi = {
@@ -1012,6 +1025,57 @@ export const userManagementApi = {
       method: 'DELETE',
     });
     return handleResponse<void>(res);
+  },
+};
+
+// ============================================================
+// ACTIVITY LOG API (Admin Only, Read-Only Audit Trail)
+// ============================================================
+export interface ActivityLogItem {
+  id: number;
+  userId?: number | null;
+  username: string;
+  namaPelaku?: string | null;
+  role: string;
+  modul: string;
+  aksi: string;
+  deskripsi: string;
+  targetEntitas?: string | null;
+  endpoint?: string | null;
+  ipAddress?: string | null;
+  createdAt: string;
+}
+
+export interface ActivityLogResponse {
+  totalKeseluruhan: number;
+  totalDitampilkan: number;
+  items: ActivityLogItem[];
+}
+
+export interface ActivityLogQuery {
+  search?: string;
+  modul?: string;
+  aksi?: string;
+  role?: string;
+  tanggalMulai?: string;
+  tanggalSelesai?: string;
+  limit?: number;
+}
+
+export const activityLogApi = {
+  getAll: async (query?: ActivityLogQuery): Promise<ActivityLogResponse> => {
+    const params = new URLSearchParams();
+    if (query?.search) params.append('search', query.search);
+    if (query?.modul) params.append('modul', query.modul);
+    if (query?.aksi) params.append('aksi', query.aksi);
+    if (query?.role) params.append('role', query.role);
+    if (query?.tanggalMulai) params.append('tanggalMulai', query.tanggalMulai);
+    if (query?.tanggalSelesai) params.append('tanggalSelesai', query.tanggalSelesai);
+    if (query?.limit !== undefined) params.append('limit', String(query.limit));
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiFetch(`${BASE_URL}/activity-log${qs}`);
+    return handleResponse<ActivityLogResponse>(res);
   },
 };
 
