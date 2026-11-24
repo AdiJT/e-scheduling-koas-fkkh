@@ -300,6 +300,22 @@ export interface UpdateMahasiswa {
     idTahunAjaran: number;
 }
 
+export interface SiadiknonaSyncResult {
+    success: boolean;
+    idTahunAjaran: number;
+    tahunAjaran: string;
+    idPeriode: string;
+    kodeProdi: string;
+    namaProdi: string;
+    statusMahasiswa: string;
+    jumlahItem: number;
+    jumlahBaru: number;
+    jumlahUpdate: number;
+    jumlahTidakBerubah: number;
+    jumlahGagal: number;
+    errors: string[];
+}
+
 export const mahasiswaApi = {
     getAll: async (): Promise<Mahasiswa[]> => {
         const res = await apiFetch(`${BASE_URL}/mahasiswa`);
@@ -376,6 +392,14 @@ export const mahasiswaApi = {
             throw new Error(data.message || `Import gagal (${res.status})`);
         }
         return data as ExcelImportResult;
+    },
+
+    sinkronSiadiknona: async (idTahunAjaran?: number): Promise<SiadiknonaSyncResult> => {
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/sinkron-siadiknona${query}`, {
+            method: 'POST',
+        });
+        return handleResponse<SiadiknonaSyncResult>(res);
     },
 };
 

@@ -6,6 +6,7 @@ using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,7 @@ public class MahasiswaController : ControllerBase
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ExcelService _excelService;
+    private readonly SiadiknonaApi _siadiknonaApi;
 
     public MahasiswaController(
         IMahasiswaRepository mahasiswaRepository,
@@ -39,7 +41,8 @@ public class MahasiswaController : ControllerBase
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
-        ExcelService excelService)
+        ExcelService excelService,
+        SiadiknonaApi siadiknonaApi)
     {
         _mahasiswaRepository = mahasiswaRepository;
         _tahunAjaranRepository = tahunAjaranRepository;
@@ -51,6 +54,7 @@ public class MahasiswaController : ControllerBase
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _excelService = excelService;
+        _siadiknonaApi = siadiknonaApi;
     }
 
     [HttpGet("template")]
@@ -209,6 +213,176 @@ public class MahasiswaController : ControllerBase
             Success = successCount > 0,
             TotalRows = rows.Count,
             SuccessCount = successCount,
+            Errors = errors
+        });
+    }
+
+    [HttpPost("sinkron-siadiknona")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SinkronSiadiknona(
+        [FromQuery] int? idTahunAjaran = null,
+        CancellationToken cancellationToken = default)
+    {
+        TahunAjaran? targetTa;
+        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        {
+            targetTa = await _tahunAjaranRepository.Get(idTahunAjaran.Value);
+            if (targetTa is null)
+            {
+                return HelpersFunctions.NotFound(new Dictionary<string, string>
+                {
+                    ["idTahunAjaran"] = $"Tahun ajaran dengan id '{idTahunAjaran.Value}' tidak ditemukan"
+                });
+            }
+        }
+        else
+        {
+            var semuaTahunAjaran = (await _tahunAjaranRepository.GetAll())
+                .OrderByDescending(t => t.Tahun)
+                .ThenByDescending(t => t.Semester)
+                .ThenByDescending(t => t.TanggalMulai)
+                .ToList();
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            targetTa = semuaTahunAjaran.FirstOrDefault(t => t.IsAktif(today))
+                ?? semuaTahunAjaran.FirstOrDefault(t => t.Status == StatusTahunAjaran.Berjalan)
+                ?? semuaTahunAjaran.FirstOrDefault();
+
+            if (targetTa is null)
+            {
+                return HelpersFunctions.BadRequest(new Dictionary<string, string>
+                {
+                    ["idTahunAjaran"] = "Belum ada data Tahun Ajaran yang terdaftar di sistem."
+                });
+            }
+        }
+
+        var idPeriode = $"{targetTa.Tahun}{(int)targetTa.Semester}";
+        var apiResult = await _siadiknonaApi.GetAllMahasiswaProfesiDokterHewanAktifAsync(idPeriode, cancellationToken);
+        if (apiResult.IsFailure)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                message = apiResult.Error.Message
+            });
+        }
+
+        var existingMahasiswaList = await _mahasiswaRepository.GetAll();
+        var existingByNim = existingMahasiswaList
+            .GroupBy(m => m.NIM, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingUsernames = new HashSet<string>(
+            (await _userRepository.GetAll()).Select(u => u.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        var seenNims = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var errors = new List<string>();
+        var jumlahItem = 0;
+        var jumlahBaru = 0;
+        var jumlahUpdate = 0;
+        var jumlahTidakBerubah = 0;
+        var jumlahGagal = 0;
+
+        foreach (var item in apiResult.Value)
+        {
+            var attr = item.Attributes;
+            if (attr is null || string.Equals(attr.is_deleted?.Trim(), "1", StringComparison.Ordinal))
+                continue;
+
+            var nim = attr.nim?.Trim() ?? string.Empty;
+            var nama = attr.nama?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(nim) || string.IsNullOrWhiteSpace(nama))
+            {
+                jumlahItem++;
+                jumlahGagal++;
+                errors.Add("Terdapat data mahasiswa SIADIKNONA dengan NIM atau Nama kosong.");
+                continue;
+            }
+
+            if (!seenNims.Add(nim))
+                continue;
+
+            jumlahItem++;
+
+            if (existingByNim.TryGetValue(nim, out var existing))
+            {
+                var namaBerubah = !string.Equals(existing.Nama, nama, StringComparison.Ordinal);
+                var tahunAjaranBerubah = existing.TahunAjaran?.Id != targetTa.Id;
+
+                if (namaBerubah || tahunAjaranBerubah)
+                {
+                    existing.Nama = nama;
+                    existing.TahunAjaran = targetTa;
+                    _mahasiswaRepository.Update(existing);
+                    jumlahUpdate++;
+                }
+                else
+                {
+                    jumlahTidakBerubah++;
+                }
+            }
+            else
+            {
+                if (existingUsernames.Contains(nim))
+                {
+                    jumlahGagal++;
+                    errors.Add($"NIM '{nim}' ({nama}): username '{nim}' sudah digunakan oleh akun lain.");
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Name = nim,
+                    PasswordHash = _passwordHasher.HashPassword(null!, nim),
+                    Role = UserRoles.Mahasiswa
+                };
+
+                var mahasiswa = new Mahasiswa
+                {
+                    NIM = nim,
+                    Nama = nama,
+                    User = user,
+                    TahunAjaran = targetTa
+                };
+
+                user.Mahasiswa = mahasiswa;
+
+                _mahasiswaRepository.Add(mahasiswa);
+                _userRepository.Add(user);
+
+                existingByNim[nim] = mahasiswa;
+                existingUsernames.Add(nim);
+                jumlahBaru++;
+            }
+        }
+
+        if (jumlahBaru > 0 || jumlahUpdate > 0)
+        {
+            var saveResult = await _unitOfWork.SaveChangesAsync();
+            if (saveResult.IsFailure)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Gagal menyimpan hasil sinkronisasi mahasiswa ke database."
+                });
+            }
+        }
+
+        return Ok(new SiadiknonaSyncResult
+        {
+            Success = true,
+            IdTahunAjaran = targetTa.Id,
+            TahunAjaran = $"{targetTa.Tahun} - {targetTa.Semester}",
+            IdPeriode = idPeriode,
+            KodeProdi = SiadiknonaApi.IdProgramStudiProfesiDokterHewan,
+            NamaProdi = SiadiknonaApi.NamaProgramStudiProfesiDokterHewan,
+            StatusMahasiswa = SiadiknonaApi.StatusMahasiswaAktif,
+            JumlahItem = jumlahItem,
+            JumlahBaru = jumlahBaru,
+            JumlahUpdate = jumlahUpdate,
+            JumlahTidakBerubah = jumlahTidakBerubah,
+            JumlahGagal = jumlahGagal,
             Errors = errors
         });
     }

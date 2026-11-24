@@ -3,6 +3,7 @@ using ESchedulingKoasFKKH.Infrastructure;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Filters;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using NSwag;
@@ -43,6 +44,21 @@ builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 builder.Services.AddScoped<IAutoArchiveService, AutoArchiveService>();
 builder.Services.AddScoped<INotifikasiService, NotifikasiService>();
 builder.Services.AddScoped<ExcelService>();
+builder.Services.AddHttpClient<SiadiknonaApi>(conf =>
+{
+    var baseUrl = builder.Configuration["SiadiknonaApi:BaseUrl"]?.TrimEnd('/')
+        ?? throw new InvalidOperationException("Konfigurasi 'SiadiknonaApi:BaseUrl' belum diatur.");
+    var appKey = builder.Configuration["SiadiknonaApi:AppKey"]
+        ?? throw new InvalidOperationException("Konfigurasi 'SiadiknonaApi:AppKey' belum diatur.");
+    var secretKey = builder.Configuration["SiadiknonaApi:SecretKey"]
+        ?? throw new InvalidOperationException("Konfigurasi 'SiadiknonaApi:SecretKey' belum diatur.");
+
+    conf.BaseAddress = new Uri($"{baseUrl}/siakadcloud/v1/");
+    conf.DefaultRequestHeaders.Add("Accept", "application/json");
+    conf.DefaultRequestHeaders.Add("X-App-Key", appKey);
+    conf.DefaultRequestHeaders.Add("X-Secret-Key", secretKey);
+    conf.Timeout = TimeSpan.FromSeconds(20);
+});
 
 var app = builder.Build();
 

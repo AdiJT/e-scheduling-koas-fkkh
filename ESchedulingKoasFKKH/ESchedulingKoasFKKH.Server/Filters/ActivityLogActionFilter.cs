@@ -11,6 +11,7 @@ using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -316,6 +317,9 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
 
             case "Import":
                 return new ActivityMetadata(modul, "Import", "Mengimpor data mahasiswa dari file Excel", "Import Excel Mahasiswa");
+
+            case "SinkronSiadiknona":
+                return new ActivityMetadata(modul, "Sinkronisasi", "Menyinkronkan data mahasiswa dari SIADIKNONA", "Sinkronisasi SIADIKNONA");
 
             default:
                 return BuildFallbackMetadata("Mahasiswa", action, "POST");
@@ -860,6 +864,18 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             return current with
             {
                 Deskripsi = $"Mengimpor {excelResult.SuccessCount} dari {excelResult.TotalRows} baris data {labelEntitas} melalui Excel"
+            };
+        }
+
+        if (string.Equals(controller, "Mahasiswa", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(action, "SinkronSiadiknona", StringComparison.OrdinalIgnoreCase) &&
+            executedContext.Result is ObjectResult syncResultObj &&
+            syncResultObj.Value is SiadiknonaSyncResult syncResult)
+        {
+            return current with
+            {
+                Deskripsi = $"Sinkronisasi SIADIKNONA periode {syncResult.IdPeriode} ({syncResult.TahunAjaran}): {syncResult.JumlahBaru} baru, {syncResult.JumlahUpdate} diperbarui, {syncResult.JumlahTidakBerubah} tetap, {syncResult.JumlahGagal} gagal dari {syncResult.JumlahItem} data",
+                TargetEntitas = $"SIADIKNONA {syncResult.IdPeriode}"
             };
         }
 

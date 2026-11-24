@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type ExcelImportResult } from '../services/api';
+import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type ExcelImportResult, type SiadiknonaSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
@@ -31,6 +31,13 @@ export default function MahasiswaPage() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Sync SIADIKNONA state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncTahunAjaran, setSyncTahunAjaran] = useState<string>('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SiadiknonaSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -262,6 +269,50 @@ export default function MahasiswaPage() {
     }
   };
 
+  const getPeriodeCode = (ta?: TahunAjaran | null): string => {
+    if (!ta) return '-';
+    const semCode = ta.semester.toLowerCase() === 'ganjil' ? '1' : '2';
+    return `${ta.tahun}${semCode}`;
+  };
+
+  const openSyncModal = () => {
+    setSyncResult(null);
+    setSyncError(null);
+    if (filterTahunAjaran !== 'all') {
+      setSyncTahunAjaran(filterTahunAjaran);
+    } else {
+      const activeTa = tahunAjarans.find(t => t.isAktif)
+        || tahunAjarans.find(t => t.status === 'Berjalan')
+        || tahunAjarans[0];
+      setSyncTahunAjaran(activeTa ? activeTa.id.toString() : '');
+    }
+    setShowSyncModal(true);
+  };
+
+  const handleSyncSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSyncing(true);
+      setSyncError(null);
+      setSyncResult(null);
+
+      const taId = syncTahunAjaran ? parseInt(syncTahunAjaran) : undefined;
+      const res = await mahasiswaApi.sinkronSiadiknona(taId);
+      setSyncResult(res);
+
+      if (res.jumlahBaru > 0 || res.jumlahUpdate > 0) {
+        fetchData();
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      setSyncError(errorObj?.message || 'Gagal melakukan sinkronisasi dengan SIADIKNONA.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const selectedSyncTa = tahunAjarans.find(ta => ta.id.toString() === syncTahunAjaran) || null;
+
   const selectedMahasiswa = data.find(m => m.id === selectedId);
 
   return (
@@ -378,6 +429,22 @@ export default function MahasiswaPage() {
                   <ImportIcon className="w-4 h-4 text-blue-600" />
                   <span className="hidden sm:inline">Import Excel</span>
                   <span className="sm:hidden">Import</span>
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Sinkron SIADIKNONA Button (Admin Only) */}
+            {!isPengelola && (
+              <Tooltip content="Tarik & sinkronkan mahasiswa Profesi Dokter Hewan aktif dari SIADIKNONA" position="bottom">
+                <button
+                  onClick={openSyncModal}
+                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
+                    font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                  id="btn-sync-siadiknona"
+                >
+                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Sinkron SIADIKNONA</span>
+                  <span className="sm:hidden">SIADIKNONA</span>
                 </button>
               </Tooltip>
             )}
@@ -979,6 +1046,188 @@ export default function MahasiswaPage() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sinkron SIADIKNONA Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg animate-scale-in my-8">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-600 to-blue-700 text-white flex items-center justify-between rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <RefreshIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Sinkronisasi SIADIKNONA</h3>
+                  <p className="text-xs text-indigo-100 mt-0.5">Tarik data mahasiswa aktif Profesi Dokter Hewan dari SIADIKNONA UNDANA</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!syncing) {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }
+                }}
+                disabled={syncing}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSyncSubmit} className="p-5 sm:p-6 space-y-4">
+              {/* Fixed Parameters Info */}
+              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-indigo-900">Parameter Filter SIADIKNONA</p>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  <span className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-800 font-semibold">
+                    Prodi: Profesi Dokter Hewan (54961)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-700 font-semibold">
+                    Status: Aktif (A)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-semibold">
+                    Periode Masuk: {getPeriodeCode(selectedSyncTa)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dynamic Tahun Ajaran Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Tahun Ajaran / Periode Masuk <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  value={syncTahunAjaran}
+                  onChange={(val) => {
+                    setSyncTahunAjaran(String(val));
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  options={tahunAjarans.map(ta => ({
+                    value: String(ta.id),
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    subLabel: `Periode SIADIKNONA: ${getPeriodeCode(ta)}`,
+                    badge: ta.status || undefined
+                  }))}
+                  placeholder="Pilih Tahun Ajaran Target"
+                  disabled={syncing}
+                  accentColor="indigo"
+                  required
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Otomatis memetakan ke parameter <code className="px-1 py-0.5 bg-slate-100 rounded text-slate-700">f-id_periode={getPeriodeCode(selectedSyncTa)}</code> di SIADIKNONA.
+                </p>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-amber-800">Ketentuan Sinkronisasi:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
+                  <li>Mahasiswa baru akan dibuatkan akun login otomatis dengan <strong>username &amp; password = NIM</strong>.</li>
+                  <li>Mahasiswa yang sudah terdaftar hanya diperbarui <strong>Nama &amp; Tahun Ajaran</strong> (Kelompok dan password tidak diubah).</li>
+                </ul>
+              </div>
+
+              {/* Error Banner */}
+              {syncError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">⚠️</span>
+                  <span className="flex-1">{syncError}</span>
+                </div>
+              )}
+
+              {/* Sync Result Feedback */}
+              {syncResult && (
+                <div className="space-y-2.5">
+                  <div className="p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-900 text-xs space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-emerald-800">
+                        ✅ Sinkronisasi Periode {syncResult.idPeriode} ({syncResult.tahunAjaran}) Selesai
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 text-center">
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-100">
+                        <div className="text-sm font-bold text-slate-800">{syncResult.jumlahItem}</div>
+                        <div className="text-[10px] text-slate-500">Total</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-200">
+                        <div className="text-sm font-bold text-emerald-600">+{syncResult.jumlahBaru}</div>
+                        <div className="text-[10px] text-slate-500">Baru</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-blue-200">
+                        <div className="text-sm font-bold text-blue-600">{syncResult.jumlahUpdate}</div>
+                        <div className="text-[10px] text-slate-500">Diubah</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-slate-200">
+                        <div className="text-sm font-bold text-slate-600">{syncResult.jumlahTidakBerubah}</div>
+                        <div className="text-[10px] text-slate-500">Tetap</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-rose-200">
+                        <div className="text-sm font-bold text-rose-600">{syncResult.jumlahGagal}</div>
+                        <div className="text-[10px] text-slate-500">Gagal</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {syncResult.errors && syncResult.errors.length > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-semibold text-amber-800 mb-1.5">
+                        Catatan ({syncResult.errors.length}):
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
+                        {syncResult.errors.map((err, idx) => (
+                          <div key={idx} className="bg-amber-100/70 p-1.5 rounded leading-tight">
+                            • {err}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Footer Controls */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  disabled={syncing}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  {syncResult ? 'Selesai' : 'Batal'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncing || !syncTahunAjaran}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  id="btn-submit-sync-siadiknona"
+                >
+                  {syncing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyinkronkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshIcon className="w-4 h-4" />
+                      <span>Mulai Sinkronisasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
