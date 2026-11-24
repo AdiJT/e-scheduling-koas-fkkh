@@ -27,6 +27,7 @@ public class JadwalController : ControllerBase
     private readonly IJadwalSubStaseRepository _jadwalSubStaseRepository;
     private readonly INotifikasiService _notifikasiService;
     private readonly ITahunAjaranRepository _tahunAjaranRepository;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
     public JadwalController(
         IJadwalRepository jadwalRepository,
@@ -40,7 +41,8 @@ public class JadwalController : ControllerBase
         ISubStaseRepository subStaseRepository,
         IJadwalSubStaseRepository jadwalSubStaseRepository,
         INotifikasiService notifikasiService,
-        ITahunAjaranRepository tahunAjaranRepository)
+        ITahunAjaranRepository tahunAjaranRepository,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _jadwalRepository = jadwalRepository;
         _unitOfWork = unitOfWork;
@@ -54,6 +56,7 @@ public class JadwalController : ControllerBase
         _jadwalSubStaseRepository = jadwalSubStaseRepository;
         _notifikasiService = notifikasiService;
         _tahunAjaranRepository = tahunAjaranRepository;
+        _mahasiswaAccessService = mahasiswaAccessService;
     }
 
     [HttpGet("{id:int}")]
@@ -65,8 +68,13 @@ public class JadwalController : ControllerBase
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
             return Ok(ToResponse(jadwal));
 
-        var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
-        if (mahasiswa is not null && mahasiswa.Kelompok?.Id == jadwal.Kelompok.Id)
+        var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+        if (access is null || !access.CanViewJadwalDanKelompok)
+            return Forbid();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
+        if (_mahasiswaAccessService.IsKelompokInActivePeriod(jadwal.Kelompok, activeTaIds, today))
             return Ok(ToResponse(jadwal));
 
         return Forbid();
@@ -95,11 +103,36 @@ public class JadwalController : ControllerBase
                     .Select(ToResponse));
         }
 
-        var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
-        if (mahasiswa is not null)
+        if (User.IsInRole(UserRoles.Mahasiswa))
+        {
+            var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+            if (access is null || access.SudahSelesaiAtauTerlewat)
+                return Forbid();
+
+            if (!access.CanViewJadwalDanKelompok)
+                return Ok(Array.Empty<object>());
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
             return Ok(daftarjadwal
-                .Where(x => x.Kelompok.Id == mahasiswa.Kelompok?.Id && (idStase is null || x.Stase.Id == idStase) && (idTahunAjaran is null || x.Kelompok.IdTahunAjaran == idTahunAjaran))
+                .Where(x =>
+                {
+                    if (!_mahasiswaAccessService.IsKelompokInActivePeriod(x.Kelompok, activeTaIds, today))
+                        return false;
+                    if (idKelompok is not null && x.Kelompok.Id != idKelompok)
+                        return false;
+                    if (idStase is not null && x.Stase.Id != idStase)
+                        return false;
+                    if (idTahunAjaran is not null)
+                    {
+                        var resolvedTaId = _mahasiswaAccessService.ResolveTahunAjaranKelompok(x.Kelompok)?.Id ?? x.Kelompok?.IdTahunAjaran;
+                        if (resolvedTaId != idTahunAjaran)
+                            return false;
+                    }
+                    return true;
+                })
                 .Select(ToResponse));
+        }
 
         return Forbid();
     }
@@ -469,7 +502,7 @@ public class JadwalController : ControllerBase
     {
         var pembimbing = j.Pembimbing;
         var kelompok = j.Kelompok;
-        var tahunAjaran = kelompok?.TahunAjaran;
+        var tahunAjaran = _mahasiswaAccessService.ResolveTahunAjaranKelompok(kelompok);
         return new
         {
             j.Id,

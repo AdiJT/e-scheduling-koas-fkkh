@@ -59,10 +59,10 @@ function App() {
                         <ProtectedRoute><StasePage /></ProtectedRoute>
                     } />
                     <Route path="/kelompok" element={
-                        <ProtectedRoute><KelompokPage /></ProtectedRoute>
+                        <ProtectedRoute requireActiveMahasiswa><KelompokPage /></ProtectedRoute>
                     } />
                     <Route path="/jadwal" element={
-                        <ProtectedRoute><JadwalPage /></ProtectedRoute>
+                        <ProtectedRoute requireActiveMahasiswa><JadwalPage /></ProtectedRoute>
                     } />
                     <Route path="/riwayat-kelompok" element={
                         <ProtectedRoute><RiwayatKelompokPage /></ProtectedRoute>
@@ -87,7 +87,7 @@ function App() {
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahKelompokPage /></ProtectedRoute>
                     } />
                     <Route path="/kelompok/:id" element={
-                        <ProtectedRoute><DetailKelompokPage /></ProtectedRoute>
+                        <ProtectedRoute requireActiveMahasiswa><DetailKelompokPage /></ProtectedRoute>
                     } />
                     <Route path="/jadwal/tambah" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><TambahJadwalPage /></ProtectedRoute>

@@ -162,8 +162,10 @@ const allMenuItems: MenuItem[] = [
     path: '/kelompok',
     description: 'Pembagian & struktur anggota kelompok',
     gradient: 'from-amber-500 to-orange-600',
-    statValue: (stats, isMahasiswa) => isMahasiswa ? (stats.userKelompokNama ? `Kelompok ${stats.userKelompokNama}` : '-') : stats.kelompok,
-    statLabel: (_, isMahasiswa) => isMahasiswa ? 'Kelompok Anda' : 'Kelompok Aktif',
+    statValue: (stats) => stats.kelompok,
+    statLabel: (stats, isMahasiswa) => isMahasiswa
+      ? (stats.userKelompokNama ? `Kelompok Aktif (${stats.userKelompokNama})` : 'Kelompok Aktif')
+      : 'Kelompok Aktif',
     icon: KelompokIcon,
   },
   {
@@ -244,12 +246,13 @@ const allMenuItems: MenuItem[] = [
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, mahasiswaAccess } = useAuth();
 
   const role = user?.role?.toLowerCase();
   const isMahasiswa = role === 'mahasiswa';
   const isDosen = role === 'dosen';
   const isAdmin = role === 'admin' || role === 'administrator';
+  const canMahasiswaViewJadwalKelompok = !isMahasiswa || Boolean(mahasiswaAccess?.canViewJadwalDanKelompok);
 
   const [stats, setStats] = useState<Stats>({
     mahasiswa: 0,
@@ -267,7 +270,6 @@ export default function DashboardPage() {
   });
 
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
-  const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [calendarView, setCalendarView] = useState<View>('month');
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -280,23 +282,20 @@ export default function DashboardPage() {
         mahasiswaApi.getAll().catch(() => []),
         pembimbingApi.getAll().catch(() => []),
         staseApi.getAll().catch(() => []),
-        kelompokApi.getAll().catch(() => []),
-        jadwalApi.getAll().catch(() => []),
+        canMahasiswaViewJadwalKelompok ? kelompokApi.getAll().catch(() => []) : Promise.resolve([]),
+        canMahasiswaViewJadwalKelompok ? jadwalApi.getAll().catch(() => []) : Promise.resolve([]),
         tahunAjaranApi.getAll().catch(() => []),
         riwayatKelompokApi.getAll().catch(() => []),
         isAdmin ? activityLogApi.getAll({ limit: 1 }).catch(() => null) : Promise.resolve(null),
       ]);
 
-      let userKelId: number | null = null;
-      let userKelNama = '';
-      if (isMahasiswa) {
+      let userKelNama = mahasiswaAccess?.namaKelompok || '';
+      if (isMahasiswa && canMahasiswaViewJadwalKelompok) {
         const myKel = kel.find((k: any) => 
           k.daftarMahasiswa && k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
         );
         if (myKel) {
-          userKelId = myKel.id;
           userKelNama = myKel.nama;
-          setUserKelompokId(myKel.id);
         }
       }
 
@@ -305,7 +304,7 @@ export default function DashboardPage() {
       today.setHours(0, 0, 0, 0);
 
       const relevantJadwal = jadwal.filter((j: any) => {
-        if (isMahasiswa) return j.idKelompok === userKelId;
+        if (isMahasiswa) return canMahasiswaViewJadwalKelompok;
         if (isDosen) return isDosenSupervising(j, user?.profileId);
         return true;
       });
@@ -324,7 +323,9 @@ export default function DashboardPage() {
 
       const sortedTa = [...taList].sort((a: any, b: any) => b.tahun - a.tahun);
       const latestTa = sortedTa[0];
-      const activeTaStr = latestTa ? `${latestTa.tahun} - ${latestTa.semester}` : '';
+      const activeTaStr = latestTa
+        ? `${latestTa.tahun} - ${latestTa.semester}`
+        : (mahasiswaAccess?.tahunAjaran || '');
 
       setStats({
         mahasiswa: mhs.length,
@@ -347,7 +348,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, isMahasiswa, isDosen, user?.username, user?.profileId]);
+  }, [isAdmin, isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, mahasiswaAccess, user?.username, user?.profileId]);
 
   useEffect(() => {
     fetchStats();
@@ -376,6 +377,9 @@ export default function DashboardPage() {
           return false;
         }
       }
+      if (isMahasiswa && !canMahasiswaViewJadwalKelompok && (item.id === 'kelompok' || item.id === 'jadwal')) {
+        return false;
+      }
 
       // Category filter
       if (selectedCategory !== 'all' && item.category !== selectedCategory) {
@@ -384,7 +388,7 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [isAdmin, isMahasiswa, isDosen, selectedCategory]);
+  }, [isAdmin, isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, selectedCategory]);
 
   // Categories list for filter tabs
   const categoryTabs = useMemo(() => {
@@ -410,7 +414,7 @@ export default function DashboardPage() {
 
   const upcomingJadwal = [...jadwalList]
     .filter(j => {
-      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (isMahasiswa) return canMahasiswaViewJadwalKelompok;
       if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
@@ -421,7 +425,7 @@ export default function DashboardPage() {
   // === PREPARE CALENDAR EVENTS ===
   const jadwalEvents = jadwalList
     .filter(j => {
-      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (isMahasiswa) return canMahasiswaViewJadwalKelompok;
       if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
@@ -475,7 +479,9 @@ export default function DashboardPage() {
               <span className="text-xs text-slate-300">•</span>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {stats.jadwalBerlangsung} Stase Berlangsung
+                {isMahasiswa && !canMahasiswaViewJadwalKelompok
+                  ? `${stats.riwayatCount} Riwayat Selesai`
+                  : `${stats.jadwalBerlangsung} Stase Berlangsung`}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-primary-900 tracking-tight">
@@ -553,15 +559,15 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-bold text-primary-900 mb-1 group-hover:text-blue-600 transition-colors">
                   {isMahasiswa || isDosen ? (
                     item.id === 'stase' ? 'Daftar Stase' :
-                    item.id === 'kelompok' ? (isMahasiswa ? 'Kelompok Saya' : 'Kelompok Bimbingan') :
+                    item.id === 'kelompok' ? (isMahasiswa ? 'Kelompok Periode Aktif' : 'Kelompok Bimbingan') :
                     item.id === 'jadwal' ? 'Jadwal Stase' : item.label
                   ) : item.label}
                 </h3>
                 <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                   {isMahasiswa || isDosen ? (
                     item.id === 'stase' ? 'Lihat rotasi departemen klinik KOAS' :
-                    item.id === 'kelompok' ? (isMahasiswa ? 'Informasi anggota & pembimbing kelompok' : 'Daftar mahasiswa kelompok bimbingan') :
-                    item.id === 'jadwal' ? 'Kalender jadwal kegiatan KOAS' : item.description
+                    item.id === 'kelompok' ? (isMahasiswa ? 'Daftar kelompok & anggota pada periode aktif' : 'Daftar mahasiswa kelompok bimbingan') :
+                    item.id === 'jadwal' ? (isMahasiswa ? 'Kalender jadwal rotasi seluruh periode aktif' : 'Kalender jadwal kegiatan KOAS') : item.description
                   ) : item.description}
                 </p>
               </div>
@@ -575,6 +581,51 @@ export default function DashboardPage() {
       </div>
 
       {/* Calendar & Schedule Breakdown Section */}
+      {isMahasiswa && !canMahasiswaViewJadwalKelompok ? (
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-6 animate-fade-in-up">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                  mahasiswaAccess?.sudahSelesaiAtauTerlewat
+                    ? 'bg-slate-100 text-slate-700 border-slate-300'
+                    : 'bg-sky-50 text-sky-700 border-sky-200'
+                }`}>
+                  Status Periode: {mahasiswaAccess?.statusPeriode || 'Selesai'}
+                </span>
+                {mahasiswaAccess?.namaKelompok && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {mahasiswaAccess.namaKelompok}
+                  </span>
+                )}
+                {mahasiswaAccess?.tahunAjaran && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    T.A. {mahasiswaAccess.tahunAjaran}
+                  </span>
+                )}
+              </div>
+              <h2 className="text-lg font-bold text-primary-900">
+                {mahasiswaAccess?.sudahSelesaiAtauTerlewat
+                  ? 'Masa Periode Aktif KOAS Anda Telah Selesai'
+                  : 'Periode Aktif KOAS Anda Belum Dimulai'}
+              </h2>
+              <p className="text-sm text-slate-600 max-w-2xl">
+                {mahasiswaAccess?.alasanPembatasan || 'Akses jadwal aktif dan kelompok tidak tersedia. Anda dapat meninjau arsip riwayat kelompok Anda.'}
+              </p>
+              <p className="text-xs text-slate-500 font-medium">
+                Tercatat <span className="font-bold text-teal-700">{stats.riwayatCount} Arsip Stase</span> dalam riwayat kelompok Anda.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/riwayat-kelompok')}
+              className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            >
+              <HistoryIcon className="w-4 h-4" />
+              <span>Lihat Riwayat Kelompok Saya →</span>
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar View */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden flex flex-col">
@@ -738,6 +789,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
     </Layout>
   );
 }

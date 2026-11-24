@@ -31,12 +31,20 @@ interface NavSection {
   items: NavItem[];
 }
 
-const navSections = (userRole?: string): NavSection[] => {
+const navSections = (userRole?: string, canMahasiswaViewJadwalKelompok = true): NavSection[] => {
   const role = userRole?.toLowerCase();
   const isMahasiswaOrDosen = role === 'mahasiswa' || role === 'dosen';
   const isAdmin = role === 'admin' || role === 'administrator';
 
   if (isMahasiswaOrDosen) {
+    const hideJadwalKelompok = role === 'mahasiswa' && !canMahasiswaViewJadwalKelompok;
+    const academicItems: NavItem[] = [
+      { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' },
+      { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
+      { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
+      { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
+    ].filter(item => !hideJadwalKelompok || (item.id !== 'kelompok' && item.id !== 'jadwal'));
+
     return [
       {
         title: 'Menu Utama',
@@ -46,12 +54,7 @@ const navSections = (userRole?: string): NavSection[] => {
       },
       {
         title: 'Akademik & Penjadwalan',
-        items: [
-          { id: 'stase', label: 'Stase', icon: StaseIcon, path: '/stase' },
-          { id: 'kelompok', label: 'Kelompok', icon: KelompokIcon, path: '/kelompok' },
-          { id: 'jadwal', label: 'Jadwal', icon: JadwalIcon, path: '/jadwal' },
-          { id: 'riwayat-kelompok', label: 'Riwayat Kelompok', icon: HistoryIcon, path: '/riwayat-kelompok' }
-        ]
+        items: academicItems
       },
       {
         title: 'Komunikasi',
@@ -123,7 +126,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, mahasiswaAccess } = useAuth();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -191,7 +194,8 @@ export default function Sidebar({
     return parts[0].charAt(0).toUpperCase();
   };
 
-  const activeSections = navSections(user?.role);
+  const canMahasiswaViewJadwalKelompok = user?.role?.toLowerCase() !== 'mahasiswa' || Boolean(mahasiswaAccess?.canViewJadwalDanKelompok);
+  const activeSections = navSections(user?.role, canMahasiswaViewJadwalKelompok);
 
   const getRoleDisplay = () => {
     const role = user?.role?.toLowerCase();
@@ -248,7 +252,7 @@ export default function Sidebar({
           {collapsed ? '→' : '←'}
         </button>
 
-        <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+        <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto overflow-x-hidden sidebar-scrollbar">
           {activeSections.map((section) => (
             <div key={section.title} className="space-y-1">
               {!collapsed && (

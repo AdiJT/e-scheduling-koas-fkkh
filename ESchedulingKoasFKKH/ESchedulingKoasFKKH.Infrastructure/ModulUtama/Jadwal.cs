@@ -30,7 +30,7 @@ internal class JadwalRepository : IJadwalRepository
     public void Delete(Jadwal jadwal) => _appDbContext.Jadwal.Remove(jadwal);
 
     public async Task<Jadwal?> Get(int id) => await _appDbContext.Jadwal
-        .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
+        .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.Kelompok).ThenInclude(y => y.TahunAjaran)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)
@@ -39,7 +39,7 @@ internal class JadwalRepository : IJadwalRepository
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<Jadwal>> GetAll() => await _appDbContext.Jadwal
-        .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa)
+        .Include(x => x.Kelompok).ThenInclude(y => y.DaftarMahasiswa).ThenInclude(m => m.TahunAjaran)
         .Include(x => x.Kelompok).ThenInclude(y => y.TahunAjaran)
         .Include(x => x.Stase)
         .Include(x => x.Pembimbing)

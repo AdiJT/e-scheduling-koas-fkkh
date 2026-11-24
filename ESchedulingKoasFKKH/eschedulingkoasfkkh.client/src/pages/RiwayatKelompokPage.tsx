@@ -10,8 +10,9 @@ import SearchableSelect from '../components/SearchableSelect';
 
 export default function RiwayatKelompokPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, mahasiswaAccess } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'administrator';
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
 
   const [data, setData] = useState<RiwayatKelompok[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +68,8 @@ export default function RiwayatKelompokPage() {
   const uniqueTahunAjaran = Array.from(new Set(data.map(r => r.tahunAjaran))).filter(Boolean).sort();
 
   const sortedData = [...filteredData].sort((a, b) => {
-    let aVal: any = '';
-    let bVal: any = '';
+    let aVal: string | number = '';
+    let bVal: string | number = '';
 
     if (sortColumn === 'namaKelompok') {
       aVal = a.namaKelompok || '';
@@ -156,7 +157,11 @@ export default function RiwayatKelompokPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Riwayat Kelompok</h1>
-              <p className="text-xs sm:text-sm text-indigo-100/90">Daftar lengkap stase yang telah selesai dijalani oleh kelompok KOAS</p>
+              <p className="text-xs sm:text-sm text-indigo-100/90">
+                {isMahasiswa
+                  ? 'Daftar riwayat stase yang telah selesai dijalani oleh kelompok Anda'
+                  : 'Daftar lengkap stase yang telah selesai dijalani oleh kelompok KOAS'}
+              </p>
             </div>
           </div>
 
@@ -172,6 +177,19 @@ export default function RiwayatKelompokPage() {
           <InfoIcon className="text-red-500 w-5 h-5" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+        </div>
+      )}
+
+      {/* Mahasiswa Period Completed Info Banner */}
+      {isMahasiswa && mahasiswaAccess?.sudahSelesaiAtauTerlewat && (
+        <div className="mb-4 sm:mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 animate-fade-in-down">
+          <InfoIcon className="text-amber-600 w-5 h-5 mt-0.5 shrink-0" />
+          <div className="text-xs sm:text-sm text-amber-900">
+            <p className="font-bold">Periode KOAS Telah Selesai / Terlewat</p>
+            <p className="text-amber-800 mt-0.5">
+              {mahasiswaAccess.alasanPembatasan || 'Periode aktif KOAS Anda telah berakhir. Akses dibatasi hanya pada riwayat kelompok Anda.'}
+            </p>
+          </div>
         </div>
       )}
 

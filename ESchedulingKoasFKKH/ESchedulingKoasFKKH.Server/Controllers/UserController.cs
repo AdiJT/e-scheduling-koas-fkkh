@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Server.Configurations;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,17 +24,20 @@ public class UserController : ControllerBase
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _jwtOptions;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
     public UserController(
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
         IOptions<JwtOptions> jwtOptions,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtOptions = jwtOptions.Value;
         _unitOfWork = unitOfWork;
+        _mahasiswaAccessService = mahasiswaAccessService;
     }
 
     [Authorize]
@@ -110,7 +114,13 @@ public class UserController : ControllerBase
             _ => null
         };
 
-        return Ok(new { user.Id, user.Role, token = tokenStr, fullName, profileId });
+        MahasiswaAccessStatusDto? mahasiswaAccess = null;
+        if (string.Equals(user.Role, UserRoles.Mahasiswa, StringComparison.OrdinalIgnoreCase))
+        {
+            mahasiswaAccess = await _mahasiswaAccessService.EvaluateByUsernameAsync(user.Name);
+        }
+
+        return Ok(new { user.Id, user.Role, token = tokenStr, fullName, profileId, mahasiswaAccess });
     }
 
     [Authorize]

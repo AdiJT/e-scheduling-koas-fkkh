@@ -1,7 +1,8 @@
+using System.Text.Json;
 using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
-using ESchedulingKoasFKKH.Server.Helpers;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,35 +14,69 @@ namespace ESchedulingKoasFKKH.Server.Controllers;
 public class RiwayatKelompokController : ControllerBase
 {
     private readonly IRiwayatKelompokRepository _riwayatRepository;
+    private readonly IMahasiswaRepository _mahasiswaRepository;
+    private readonly IAutoArchiveService _autoArchiveService;
     private readonly IUnitOfWork _unitOfWork;
+
+    private static readonly JsonSerializerOptions CaseInsensitiveJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public RiwayatKelompokController(
         IRiwayatKelompokRepository riwayatRepository,
+        IMahasiswaRepository mahasiswaRepository,
+        IAutoArchiveService autoArchiveService,
         IUnitOfWork unitOfWork)
     {
         _riwayatRepository = riwayatRepository;
+        _mahasiswaRepository = mahasiswaRepository;
+        _autoArchiveService = autoArchiveService;
         _unitOfWork = unitOfWork;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
         var list = await _riwayatRepository.GetAll();
-        return Ok(list.Select(r => new
+
+        string? mahasiswaNim = null;
+        if (User.IsInRole(UserRoles.Mahasiswa))
         {
-            r.Id,
-            r.IdJadwalAsal,
-            r.NamaKelompok,
-            r.TahunAjaran,
-            r.NamaStase,
-            r.TanggalMulai,
-            r.TanggalSelesai,
-            r.NamaPembimbing,
-            r.NipPembimbing,
-            daftarMahasiswa = System.Text.Json.JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson) ?? [],
-            daftarSubStase = System.Text.Json.JsonSerializer.Deserialize<List<SubStaseDto>>(r.DaftarSubStaseJson) ?? [],
-            r.TanggalDiarsipkan
-        }));
+            var mahasiswa = await _mahasiswaRepository.Get(User?.Identity?.Name!);
+            if (mahasiswa is null) return Forbid();
+            mahasiswaNim = mahasiswa.NIM;
+        }
+
+        var result = list.Select(r =>
+        {
+            var daftarMahasiswa = JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson, CaseInsensitiveJsonOptions) ?? [];
+            var daftarSubStase = JsonSerializer.Deserialize<List<SubStaseDto>>(r.DaftarSubStaseJson, CaseInsensitiveJsonOptions) ?? [];
+            return new
+            {
+                r.Id,
+                r.IdJadwalAsal,
+                r.NamaKelompok,
+                r.TahunAjaran,
+                r.NamaStase,
+                r.TanggalMulai,
+                r.TanggalSelesai,
+                r.NamaPembimbing,
+                r.NipPembimbing,
+                daftarMahasiswa,
+                daftarSubStase,
+                r.TanggalDiarsipkan
+            };
+        });
+
+        if (mahasiswaNim is not null)
+        {
+            result = result.Where(r => r.daftarMahasiswa.Any(m =>
+                string.Equals(m.NIM, mahasiswaNim, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return Ok(result);
     }
 
     [HttpDelete("{id:int}")]

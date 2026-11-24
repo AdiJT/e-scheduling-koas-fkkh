@@ -65,15 +65,15 @@ const eventStyleGetter = (event: any) => {
 
 export default function JadwalPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, mahasiswaAccess } = useAuth();
   const isPengelola = user?.role?.toLowerCase() === 'pengelola';
   const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
   const isDosen = user?.role?.toLowerCase() === 'dosen';
   const [data, setData] = useState<Jadwal[]>([]);
-  const [userKelompokId, setUserKelompokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterKelompok, setFilterKelompok] = useState<number | ''>('');
   const [filterTahunAjaran, setFilterTahunAjaran] = useState<number | ''>('');
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
 
@@ -86,7 +86,7 @@ export default function JadwalPage() {
   // Reset pagination on filter or search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, filterTahunAjaran]);
+  }, [filterStatus, filterKelompok, filterTahunAjaran]);
 
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
@@ -134,15 +134,12 @@ export default function JadwalPage() {
         tahunAjaranApi.getAll(),
         kelompokApi.getAll()
       ]);
-      
-      if (isMahasiswa) {
-        // We can still try to find the kelompokId for local filtering if needed, 
-        // but backend already filters for us.
-        if (result.length > 0) setUserKelompokId(result[0].idKelompok);
-      }
-      
+
       setData(result);
-      setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
+      const visibleTa = isMahasiswa
+        ? taData.filter(ta => ta.isAktif || ta.status === 'Berjalan')
+        : taData;
+      setTahunAjaranList(visibleTa.sort((a, b) => b.tahun - a.tahun));
       setKelompokList(kData);
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
@@ -191,13 +188,11 @@ export default function JadwalPage() {
 
   const filteredData = dataWithStatus.filter(j => {
     const matchStatus = filterStatus === 'all' || j.status === filterStatus;
-    if (isMahasiswa) {
-      return matchStatus && j.idKelompok === userKelompokId;
-    }
+    const matchKelompok = filterKelompok === '' || j.idKelompok === filterKelompok;
     if (isDosen) {
-      return matchStatus && isDosenSupervising(j, user?.profileId);
+      return matchStatus && matchKelompok && isDosenSupervising(j, user?.profileId);
     }
-    return matchStatus;
+    return matchStatus && matchKelompok;
   });
 
   const sortedData = [...filteredData].sort((a, b) => {
@@ -255,7 +250,7 @@ export default function JadwalPage() {
   // 1. Jadwal Events
   const jadwalEvents = data
     .filter(j => {
-      if (isMahasiswa) return j.idKelompok === userKelompokId;
+      if (filterKelompok !== '' && j.idKelompok !== filterKelompok) return false;
       if (isDosen) return isDosenSupervising(j, user?.profileId);
       return true;
     })
@@ -514,7 +509,11 @@ export default function JadwalPage() {
                 {isMahasiswa || isDosen ? 'Jadwal Stase' : 'Kelola Jadwal'}
               </h1>
               <p className="text-sm text-rose-100/90">
-                {isMahasiswa || isDosen ? 'Lihat jadwal stase KOAS Anda' : 'Kelola jadwal stase KOAS'}
+                {isMahasiswa
+                  ? 'Lihat jadwal stase seluruh kelompok pada periode KOAS aktif'
+                  : isDosen
+                    ? 'Lihat jadwal stase KOAS Anda'
+                    : 'Kelola jadwal stase KOAS'}
               </p>
             </div>
           </div>
@@ -671,20 +670,47 @@ export default function JadwalPage() {
             </div>
           )}
 
+          {/* Kelompok Filter */}
+          <div className="w-full sm:w-52">
+            <SearchableSelect
+              value={filterKelompok}
+              onChange={(val) => setFilterKelompok(val ? Number(val) : '')}
+              options={[
+                { value: '', label: 'Semua Kelompok' },
+                ...(filterTahunAjaran
+                  ? kelompokList.filter(k => k.idTahunAjaran === Number(filterTahunAjaran))
+                  : kelompokList
+                ).map(k => ({
+                  value: k.id,
+                  label: k.nama,
+                  badge: isMahasiswa && k.id === mahasiswaAccess?.idKelompok ? 'Kelompok Anda' : undefined,
+                }))
+              ]}
+              placeholder="Semua Kelompok"
+              searchPlaceholder="Cari kelompok..."
+              size="sm"
+              isClearable={false}
+              accentColor="red"
+            />
+          </div>
+
           {/* Tahun Ajaran Filter */}
           <div className="w-full sm:w-56">
             <SearchableSelect
               value={filterTahunAjaran}
-              onChange={(val) => setFilterTahunAjaran(val ? Number(val) : '')}
+              onChange={(val) => {
+                setFilterTahunAjaran(val ? Number(val) : '');
+                setFilterKelompok('');
+              }}
               options={[
-                { value: '', label: 'Semua Tahun Ajaran' },
+                { value: '', label: isMahasiswa ? 'Semua Periode Aktif' : 'Semua Tahun Ajaran' },
                 ...tahunAjaranList.map(ta => ({
                   value: ta.id,
                   label: `${ta.tahun} - ${ta.semester}`,
                   badge: ta.status || undefined,
                 }))
               ]}
-              placeholder="Semua Tahun Ajaran"
+              placeholder={isMahasiswa ? 'Semua Periode Aktif' : 'Semua Tahun Ajaran'}
               searchPlaceholder="Cari T.A..."
               size="sm"
               isClearable={false}
@@ -832,12 +858,19 @@ export default function JadwalPage() {
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
                         <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + i + 1}</td>
                         <td className="px-3.5 py-3.5 whitespace-nowrap">
-                          <button 
-                            onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
-                            className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
-                          >
-                            {j.namaKelompok}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button 
+                              onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
+                              className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
+                            >
+                              {j.namaKelompok}
+                            </button>
+                            {isMahasiswa && j.idKelompok === mahasiswaAccess?.idKelompok && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                Kelompok Anda
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3.5 py-3.5 whitespace-nowrap">
                           {j.tahunAjaran ? (

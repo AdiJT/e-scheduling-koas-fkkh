@@ -1,16 +1,29 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable react-hooks/set-state-in-effect */
-import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode, useEffect } from 'react';
+import { mahasiswaApi, type MahasiswaAccessStatus } from '../services/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: { username: string; role: string; fullName?: string; profileId?: number } | null;
+  mahasiswaAccess: MahasiswaAccessStatus | null;
+  mahasiswaAccessLoading: boolean;
+  refreshMahasiswaAccess: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (username: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function readStoredMahasiswaAccess(): MahasiswaAccessStatus | null {
+  try {
+    const raw = localStorage.getItem('mahasiswaAccess');
+    return raw ? (JSON.parse(raw) as MahasiswaAccessStatus) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -31,6 +44,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return username && role ? { username, role, fullName, profileId: profileId ? parseInt(profileId) : undefined } : null;
   });
 
+  const [mahasiswaAccess, setMahasiswaAccess] = useState<MahasiswaAccessStatus | null>(() => {
+    const role = localStorage.getItem('role')?.toLowerCase();
+    return role === 'mahasiswa' ? readStoredMahasiswaAccess() : null;
+  });
+  const [mahasiswaAccessLoading, setMahasiswaAccessLoading] = useState(false);
+
+  const refreshMahasiswaAccess = useCallback(async () => {
+    const role = localStorage.getItem('role')?.toLowerCase();
+    const token = localStorage.getItem('token');
+    if (role !== 'mahasiswa' || !token) {
+      setMahasiswaAccess(null);
+      localStorage.removeItem('mahasiswaAccess');
+      return;
+    }
+
+    try {
+      setMahasiswaAccessLoading(true);
+      const access = await mahasiswaApi.getMyAccess();
+      setMahasiswaAccess(access);
+      localStorage.setItem('mahasiswaAccess', JSON.stringify(access));
+    } catch (err) {
+      console.error('Failed to refresh mahasiswa access:', err);
+    } finally {
+      setMahasiswaAccessLoading(false);
+    }
+  }, []);
+
   // Restore state from localStorage on mount
   useEffect(() => {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -48,6 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (timeDiff < 600000) {
         setIsAuthenticated(true);
         setUser({ username, role, fullName: fullName || undefined, profileId: profileId ? parseInt(profileId) : undefined });
+        if (role.toLowerCase() === 'mahasiswa') {
+          void refreshMahasiswaAccess();
+        }
       } else {
         // Expired
         localStorage.removeItem('isAuthenticated');
@@ -57,9 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('profileId');
         localStorage.removeItem('token');
         localStorage.removeItem('loginTimestamp');
+        localStorage.removeItem('mahasiswaAccess');
+        setMahasiswaAccess(null);
       }
     }
-  }, []);
+  }, [refreshMahasiswaAccess]);
 
   const login = async (username: string, password: string) => {
     try {
@@ -78,17 +123,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const role = data.role || data.Role;
       const fullName = data.fullName;
       const profileId = data.profileId;
+      const mhsAccess: MahasiswaAccessStatus | null = data.mahasiswaAccess || null;
       
       if (token) {
         setIsAuthenticated(true);
         setUser({ username, role, fullName, profileId });
+        setMahasiswaAccess(mhsAccess);
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('username', username);
         localStorage.setItem('role', role);
         if (fullName) localStorage.setItem('fullName', fullName);
         if (profileId) localStorage.setItem('profileId', profileId.toString());
+        if (mhsAccess) {
+          localStorage.setItem('mahasiswaAccess', JSON.stringify(mhsAccess));
+        } else {
+          localStorage.removeItem('mahasiswaAccess');
+        }
         localStorage.setItem('token', token);
         localStorage.setItem('loginTimestamp', new Date().getTime().toString());
+
+        if (role?.toLowerCase() === 'mahasiswa' && !mhsAccess) {
+          await refreshMahasiswaAccess();
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -99,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
+    setMahasiswaAccess(null);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
@@ -106,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('profileId');
     localStorage.removeItem('token');
     localStorage.removeItem('loginTimestamp');
+    localStorage.removeItem('mahasiswaAccess');
   };
 
   const updateUser = (username: string) => {
@@ -114,7 +172,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        mahasiswaAccess,
+        mahasiswaAccessLoading,
+        refreshMahasiswaAccess,
+        login,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

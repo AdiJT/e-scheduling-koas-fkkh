@@ -3,6 +3,7 @@ using ESchedulingKoasFKKH.Domain.Auth;
 using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
+using ESchedulingKoasFKKH.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,15 +17,18 @@ public class TahunAjaranController : ControllerBase
     private readonly ITahunAjaranRepository _tahunAjaranRepository;
     private readonly IMahasiswaRepository _mahasiswaRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
     public TahunAjaranController(
         ITahunAjaranRepository tahunAjaranRepository,
         IMahasiswaRepository mahasiswaRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _tahunAjaranRepository = tahunAjaranRepository;
         _mahasiswaRepository = mahasiswaRepository;
         _unitOfWork = unitOfWork;
+        _mahasiswaAccessService = mahasiswaAccessService;
     }
 
     [HttpGet("{id:int}")]
@@ -71,6 +75,15 @@ public class TahunAjaranController : ControllerBase
         if (!string.IsNullOrWhiteSpace(status) && TryParseStatusFilter(status, out var filterStatus))
         {
             daftarTahunAjaran = daftarTahunAjaran.Where(x => x.HitungStatusPeriode(today) == filterStatus).ToList();
+        }
+
+        if (User.IsInRole(UserRoles.Mahasiswa))
+        {
+            var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+            if (access is null || !access.CanViewJadwalDanKelompok)
+                return Ok(Array.Empty<object>());
+
+            daftarTahunAjaran = daftarTahunAjaran.Where(x => x.IsAktif(today)).ToList();
         }
 
         return Ok(daftarTahunAjaran

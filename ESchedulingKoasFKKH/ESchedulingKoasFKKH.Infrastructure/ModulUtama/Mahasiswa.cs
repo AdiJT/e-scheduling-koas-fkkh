@@ -56,19 +56,25 @@ internal class MahasiswaRepository : IMahasiswaRepository
     public void Delete(Mahasiswa mahasiswa) => _appDbContext.Mahasiswa.Remove(mahasiswa);
 
     public async Task<Mahasiswa?> Get(int id) => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Stase)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<Mahasiswa?> Get(string nim) => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Stase)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
-        .FirstOrDefaultAsync(x => x.NIM == nim);
+        .FirstOrDefaultAsync(x => x.NIM.ToLower() == nim.ToLower());
 
     public async Task<List<Mahasiswa>> GetAll() => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(x => x.DaftarJadwal).ThenInclude(x => x.Pembimbing)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Stase)
+        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Pembimbing)
         .Include(x => x.User)
         .Include(x => x.TahunAjaran)
         .ToListAsync();

@@ -46,13 +46,16 @@ export default function KelompokPage() {
         tahunAjaranApi.getAll()
       ]);
       setData(kelompokData);
-      setTahunAjaranList(taData.sort((a, b) => b.tahun - a.tahun));
+      const visibleTa = isMahasiswa
+        ? taData.filter(ta => ta.isAktif || ta.status === 'Berjalan')
+        : taData;
+      setTahunAjaranList(visibleTa.sort((a, b) => b.tahun - a.tahun));
     } catch {
       setError('Gagal memuat data kelompok. Pastikan server backend sedang berjalan.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isMahasiswa]);
 
   useEffect(() => {
     fetchData();
@@ -155,7 +158,13 @@ export default function KelompokPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{isMahasiswa || isDosen ? 'Data Kelompok' : 'Kelola Kelompok'}</h1>
-              <p className="text-xs sm:text-sm text-amber-100/90">{isMahasiswa || isDosen ? 'Lihat daftar semua kelompok' : 'Buat dan kelola kelompok mahasiswa'}</p>
+              <p className="text-xs sm:text-sm text-amber-100/90">
+                {isMahasiswa
+                  ? 'Lihat daftar kelompok pada periode KOAS aktif'
+                  : isDosen
+                    ? 'Lihat daftar semua kelompok'
+                    : 'Buat dan kelola kelompok mahasiswa'}
+              </p>
             </div>
           </div>
 
@@ -195,14 +204,14 @@ export default function KelompokPage() {
                 value={filterTahunAjaran}
                 onChange={(val) => setFilterTahunAjaran(val ? Number(val) : '')}
                 options={[
-                  { value: '', label: 'Semua Tahun Ajaran' },
+                  { value: '', label: isMahasiswa ? 'Semua Periode Aktif' : 'Semua Tahun Ajaran' },
                   ...tahunAjaranList.map(ta => ({
                     value: ta.id,
                     label: `${ta.tahun} - ${ta.semester}`,
                     badge: ta.status || undefined,
                   }))
                 ]}
-                placeholder="Semua Tahun Ajaran"
+                placeholder={isMahasiswa ? 'Semua Periode Aktif' : 'Semua Tahun Ajaran'}
                 searchPlaceholder="Cari T.A..."
                 size="sm"
                 isClearable={false}
@@ -388,7 +397,7 @@ export default function KelompokPage() {
                         ) : (
                           <>
                             <button onClick={() => navigate(`/kelompok/${kel.id}`)} className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5">
-                              <DetailIcon className="w-4 h-4" /> Kelola Detail & Jadwal
+                              <DetailIcon className="w-4 h-4" /> {isMahasiswa || isDosen ? 'Lihat Detail & Jadwal' : 'Kelola Detail & Jadwal'}
                             </button>
                             {!isPengelola && !isMahasiswa && !isDosen && (
                               <div className="flex gap-2">

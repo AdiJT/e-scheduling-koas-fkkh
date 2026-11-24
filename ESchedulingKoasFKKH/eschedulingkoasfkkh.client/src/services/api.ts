@@ -287,6 +287,24 @@ export interface MahasiswaDetail extends Mahasiswa {
     };
 }
 
+export interface MahasiswaAccessStatus {
+    mahasiswaId: number;
+    nim: string;
+    nama: string;
+    idKelompok?: number | null;
+    namaKelompok?: string | null;
+    idTahunAjaran?: number | null;
+    tahunAjaran?: string | null;
+    tanggalMulaiPeriode?: string | null;
+    tanggalSelesaiPeriode?: string | null;
+    statusPeriode: string;
+    isDalamPeriodeAktif: boolean;
+    isRotasiSelesai: boolean;
+    sudahSelesaiAtauTerlewat: boolean;
+    canViewJadwalDanKelompok: boolean;
+    alasanPembatasan?: string | null;
+}
+
 export interface CreateMahasiswa {
     nim: string;
     nama: string;
@@ -304,6 +322,11 @@ export const mahasiswaApi = {
     getAll: async (): Promise<Mahasiswa[]> => {
         const res = await apiFetch(`${BASE_URL}/mahasiswa`);
         return handleResponse<Mahasiswa[]>(res);
+    },
+
+    getMyAccess: async (): Promise<MahasiswaAccessStatus> => {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/me/akses`);
+        return handleResponse<MahasiswaAccessStatus>(res);
     },
 
     get: async (id: number): Promise<MahasiswaDetail> => {

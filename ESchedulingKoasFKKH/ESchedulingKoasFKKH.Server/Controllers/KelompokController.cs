@@ -22,6 +22,7 @@ public class KelompokController : ControllerBase
     private readonly IHariLiburService _hariLiburService;
     private readonly IAutoArchiveService _autoArchiveService;
     private readonly INotifikasiService _notifikasiService;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
     public KelompokController(
         IKelompokRepository kelompokRepository,
@@ -30,7 +31,8 @@ public class KelompokController : ControllerBase
         IUnitOfWork unitOfWork,
         IHariLiburService hariLiburService,
         IAutoArchiveService autoArchiveService,
-        INotifikasiService notifikasiService)
+        INotifikasiService notifikasiService,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _kelompokRepository = kelompokRepository;
         _mahasiswaRepository = mahasiswaRepository;
@@ -39,6 +41,7 @@ public class KelompokController : ControllerBase
         _hariLiburService = hariLiburService;
         _autoArchiveService = autoArchiveService;
         _notifikasiService = notifikasiService;
+        _mahasiswaAccessService = mahasiswaAccessService;
     }
 
     [HttpGet("{id:int}")]
@@ -48,35 +51,22 @@ public class KelompokController : ControllerBase
         var kelompok = await _kelompokRepository.Get(id);
         if (kelompok is null) return NotFound();
 
-        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen) || User.IsInRole(UserRoles.Mahasiswa))
-            return Ok(new
-            {
-                kelompok.Id,
-                kelompok.Nama,
-                idTahunAjaran = kelompok.IdTahunAjaran,
-                tahunAjaran = kelompok.TahunAjaran != null ? $"{kelompok.TahunAjaran.Tahun} - {kelompok.TahunAjaran.Semester}" : null,
-                daftarMahasiswa = (kelompok.DaftarMahasiswa ?? Enumerable.Empty<Mahasiswa>()).Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = (kelompok.DaftarJadwal ?? Enumerable.Empty<Jadwal>()).Select(j => new
-                {
-                    j.Id,
-                    j.TanggalMulai,
-                    tanggalSelesai = j.Stase != null ? j.TanggalSelesai(_hariLiburService) : j.TanggalMulai,
-                    idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama,
-                    idPembimbing = j.Pembimbing?.Id,
-                    namaPembimbing = j.Pembimbing?.Nama,
-                    nipPembimbing = j.Pembimbing?.NIP,
-                    daftarSubStase = (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>()).Select(sub => new
-                    {
-                        idSubStase = sub.SubStase?.Id,
-                        urutan = sub.SubStase?.Urutan,
-                        namaSubStase = sub.SubStase?.Nama,
-                        idPembimbing = sub.Pembimbing?.Id,
-                        namaPembimbing = sub.Pembimbing?.Nama,
-                        nipPembimbing = sub.Pembimbing?.NIP
-                    }).OrderBy(s => s.urutan)
-                })
-            });
+        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
+            return Ok(ToResponse(kelompok));
+
+        if (User.IsInRole(UserRoles.Mahasiswa))
+        {
+            var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+            if (access is null || !access.CanViewJadwalDanKelompok)
+                return Forbid();
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
+            if (!_mahasiswaAccessService.IsKelompokInActivePeriod(kelompok, activeTaIds, today))
+                return Forbid();
+
+            return Ok(ToResponse(kelompok));
+        }
 
         return Forbid();
     }
@@ -87,44 +77,73 @@ public class KelompokController : ControllerBase
         await AutoArchiveCompletedSchedulesAsync();
         var allKelompok = await _kelompokRepository.GetAll();
 
-        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen))
         {
-            allKelompok = allKelompok.Where(x => x.IdTahunAjaran == idTahunAjaran.Value).ToList();
+            if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+            {
+                allKelompok = allKelompok.Where(x => x.IdTahunAjaran == idTahunAjaran.Value).ToList();
+            }
+
+            return Ok(allKelompok.Select(ToResponse));
         }
 
-        if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen) || User.IsInRole(UserRoles.Mahasiswa))
+        if (User.IsInRole(UserRoles.Mahasiswa))
         {
-            return Ok(allKelompok.Select(x => new
+            var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+            if (access is null || access.SudahSelesaiAtauTerlewat)
+                return Forbid();
+
+            if (!access.CanViewJadwalDanKelompok)
+                return Ok(Array.Empty<object>());
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
+            var filtered = allKelompok
+                .Where(x => _mahasiswaAccessService.IsKelompokInActivePeriod(x, activeTaIds, today));
+
+            if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
             {
-                x.Id,
-                x.Nama,
-                idTahunAjaran = x.IdTahunAjaran,
-                tahunAjaran = x.TahunAjaran != null ? $"{x.TahunAjaran.Tahun} - {x.TahunAjaran.Semester}" : null,
-                daftarMahasiswa = (x.DaftarMahasiswa ?? Enumerable.Empty<Mahasiswa>()).Select(m => new { m.Id, m.NIM, m.Nama }),
-                daftarJadwal = (x.DaftarJadwal ?? Enumerable.Empty<Jadwal>()).Select(j => new
-                {
-                    j.Id,
-                    j.TanggalMulai,
-                    tanggalSelesai = j.Stase != null ? j.TanggalSelesai(_hariLiburService) : j.TanggalMulai,
-                    idStase = j.Stase?.Id,
-                    namaStase = j.Stase?.Nama,
-                    idPembimbing = j.Pembimbing?.Id,
-                    namaPembimbing = j.Pembimbing?.Nama,
-                    nipPembimbing = j.Pembimbing?.NIP,
-                    daftarSubStase = (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>()).Select(sub => new
-                    {
-                        idSubStase = sub.SubStase?.Id,
-                        urutan = sub.SubStase?.Urutan,
-                        namaSubStase = sub.SubStase?.Nama,
-                        idPembimbing = sub.Pembimbing?.Id,
-                        namaPembimbing = sub.Pembimbing?.Nama,
-                        nipPembimbing = sub.Pembimbing?.NIP
-                    }).OrderBy(s => s.urutan)
-                })
-            }));
+                filtered = filtered.Where(x =>
+                    (_mahasiswaAccessService.ResolveTahunAjaranKelompok(x)?.Id ?? x.IdTahunAjaran) == idTahunAjaran.Value);
+            }
+
+            return Ok(filtered.Select(ToResponse));
         }
 
         return Forbid();
+    }
+
+    private object ToResponse(Kelompok x)
+    {
+        var tahunAjaran = _mahasiswaAccessService.ResolveTahunAjaranKelompok(x);
+        return new
+        {
+            x.Id,
+            x.Nama,
+            idTahunAjaran = tahunAjaran?.Id ?? x.IdTahunAjaran,
+            tahunAjaran = tahunAjaran != null ? $"{tahunAjaran.Tahun} - {tahunAjaran.Semester}" : null,
+            daftarMahasiswa = (x.DaftarMahasiswa ?? Enumerable.Empty<Mahasiswa>()).Select(m => new { m.Id, m.NIM, m.Nama }),
+            daftarJadwal = (x.DaftarJadwal ?? Enumerable.Empty<Jadwal>()).Select(j => new
+            {
+                j.Id,
+                j.TanggalMulai,
+                tanggalSelesai = j.Stase != null ? j.TanggalSelesai(_hariLiburService) : j.TanggalMulai,
+                idStase = j.Stase?.Id,
+                namaStase = j.Stase?.Nama,
+                idPembimbing = j.Pembimbing?.Id,
+                namaPembimbing = j.Pembimbing?.Nama,
+                nipPembimbing = j.Pembimbing?.NIP,
+                daftarSubStase = (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>()).Select(sub => new
+                {
+                    idSubStase = sub.SubStase?.Id,
+                    urutan = sub.SubStase?.Urutan,
+                    namaSubStase = sub.SubStase?.Nama,
+                    idPembimbing = sub.Pembimbing?.Id,
+                    namaPembimbing = sub.Pembimbing?.Nama,
+                    nipPembimbing = sub.Pembimbing?.NIP
+                }).OrderBy(s => s.urutan)
+            })
+        };
     }
 
     [HttpPost]

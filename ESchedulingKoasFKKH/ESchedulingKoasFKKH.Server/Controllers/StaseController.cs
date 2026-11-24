@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
+using ESchedulingKoasFKKH.Server.Services;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,19 +21,22 @@ public class StaseController : ControllerBase
     private readonly IPembimbingRepository _pembimbingRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHariLiburService _hariLiburService;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
     public StaseController(
         IStaseRepository staseRepository,
         ISubStaseRepository subStaseRepository,
         IPembimbingRepository pembimbingRepository,
         IUnitOfWork unitOfWork,
-        IHariLiburService hariLiburService)
+        IHariLiburService hariLiburService,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _staseRepository = staseRepository;
         _subStaseRepository = subStaseRepository;
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
         _hariLiburService = hariLiburService;
+        _mahasiswaAccessService = mahasiswaAccessService;
     }
 
     [HttpGet("{id:int}")]
@@ -48,44 +52,9 @@ public class StaseController : ControllerBase
             await _unitOfWork.SaveChangesAsync();
         }
 
-        return Ok(new
-        {
-            stase.Id,
-            stase.Nama,
-            stase.Waktu,
-            jenis = stase.Jenis.Humanize(),
-            idKoordinator = stase.Koordinator?.Id,
-            namaKoordinator = stase.Koordinator?.Nama,
-            nipKoordinator = stase.Koordinator?.NIP,
-            daftarJadwal = stase.DaftarJadwal?.Select(j => new
-            {
-                j.Id,
-                j.TanggalMulai,
-                tanggalSelesai = j.TanggalSelesai(_hariLiburService),
-                idKelompok = j.Kelompok?.Id,
-                namaKelompok = j.Kelompok?.Nama,
-                idPembimbing = j.Pembimbing?.Id,
-                namaPembimbing = j.Pembimbing?.Nama
-            }) ?? [],
-            daftarSubStase = stase.DaftarSubStase?.OrderBy(s => s.Urutan).Select(s => new
-            {
-                s.Id,
-                s.Nama,
-                s.Urutan,
-                daftarDefaultPembimbing = s.DaftarDefaultPembimbing?.Select(p => new
-                {
-                    p.Id,
-                    p.NIP,
-                    p.Nama
-                }) ?? []
-            }) ?? [],
-            daftarPembimbing = stase.DaftarPembimbing?.Select(p => new
-            {
-                p.Id,
-                p.NIP,
-                p.Nama
-            }) ?? []
-        });
+        var jadwalFilter = await ResolveStaseJadwalFilterAsync();
+
+        return Ok(ToStaseResponse(stase, jadwalFilter.FilterByActivePeriod, jadwalFilter.ActiveTaIds, jadwalFilter.Today));
     }
 
     [HttpGet]
@@ -106,7 +75,33 @@ public class StaseController : ControllerBase
             await _unitOfWork.SaveChangesAsync();
         }
 
-        return Ok(staseList.Select(x => new
+        var jadwalFilter = await ResolveStaseJadwalFilterAsync();
+
+        return Ok(staseList.Select(x => ToStaseResponse(x, jadwalFilter.FilterByActivePeriod, jadwalFilter.ActiveTaIds, jadwalFilter.Today)));
+    }
+
+    private async Task<(bool FilterByActivePeriod, HashSet<int> ActiveTaIds, DateOnly Today)> ResolveStaseJadwalFilterAsync()
+    {
+        if (!User.IsInRole(UserRoles.Mahasiswa))
+            return (false, [], default);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+        if (access is null || !access.CanViewJadwalDanKelompok)
+            return (true, [], today);
+
+        var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
+        return (true, activeTaIds, today);
+    }
+
+    private object ToStaseResponse(Stase x, bool filterByActivePeriod, HashSet<int> activeTaIds, DateOnly today)
+    {
+        var daftarJadwal = x.DaftarJadwal ?? [];
+        IEnumerable<Jadwal> visibleJadwal = filterByActivePeriod
+            ? daftarJadwal.Where(j => _mahasiswaAccessService.IsKelompokInActivePeriod(j.Kelompok, activeTaIds, today))
+            : daftarJadwal;
+
+        return new
         {
             x.Id,
             x.Nama,
@@ -115,7 +110,7 @@ public class StaseController : ControllerBase
             idKoordinator = x.Koordinator?.Id,
             namaKoordinator = x.Koordinator?.Nama,
             nipKoordinator = x.Koordinator?.NIP,
-            daftarJadwal = x.DaftarJadwal?.Select(j => new
+            daftarJadwal = visibleJadwal.Select(j => new
             {
                 j.Id,
                 j.TanggalMulai,
@@ -124,7 +119,7 @@ public class StaseController : ControllerBase
                 namaKelompok = j.Kelompok?.Nama,
                 idPembimbing = j.Pembimbing?.Id,
                 namaPembimbing = j.Pembimbing?.Nama
-            }) ?? [],
+            }),
             daftarSubStase = x.DaftarSubStase?.OrderBy(s => s.Urutan).Select(s => new
             {
                 s.Id,
@@ -143,7 +138,7 @@ public class StaseController : ControllerBase
                 p.NIP,
                 p.Nama
             }) ?? []
-        }));
+        };
     }
 
     [HttpPost]

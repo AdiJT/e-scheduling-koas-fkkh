@@ -28,8 +28,10 @@ export default function DetailMahasiswaPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const mahasiswaId = Number(id);
-  const { user } = useAuth();
+  const { user, mahasiswaAccess } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'administrator';
+  const isMahasiswa = user?.role?.toLowerCase() === 'mahasiswa';
+  const canMahasiswaViewJadwalKelompok = !isMahasiswa || Boolean(mahasiswaAccess?.canViewJadwalDanKelompok);
 
   const [mahasiswa, setMahasiswa] = useState<MahasiswaDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,9 +64,10 @@ export default function DetailMahasiswaPage() {
     try {
       setLoading(true);
       setError(null);
+      const shouldFetchKelompok = !isMahasiswa || Boolean(mahasiswaAccess?.canViewJadwalDanKelompok);
       const [data, allKelompoks, allRiwayats] = await Promise.all([
         mahasiswaApi.get(mahasiswaId),
-        kelompokApi.getAll().catch(() => []),
+        shouldFetchKelompok ? kelompokApi.getAll().catch(() => []) : Promise.resolve([]),
         riwayatKelompokApi.getAll().catch(() => [])
       ]);
 
@@ -168,11 +171,17 @@ export default function DetailMahasiswaPage() {
     } finally {
       setLoading(false);
     }
-  }, [mahasiswaId]);
+  }, [mahasiswaId, isMahasiswa, mahasiswaAccess]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (isMahasiswa && mahasiswaAccess && !mahasiswaAccess.canViewJadwalDanKelompok && activeTab === 'jadwal') {
+      setActiveTab('riwayat');
+    }
+  }, [isMahasiswa, mahasiswaAccess, activeTab]);
 
   // Load Tahun Ajaran for Edit Modal if Admin
   const openEditModal = async () => {
@@ -276,9 +285,9 @@ export default function DetailMahasiswaPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <button
-              onClick={() => navigate('/mahasiswa')}
+              onClick={() => navigate(isMahasiswa ? '/dashboard' : '/mahasiswa')}
               className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all border border-white/10 shadow-sm cursor-pointer shrink-0"
-              title="Kembali ke Kelola Mahasiswa"
+              title={isMahasiswa ? 'Kembali ke Dashboard' : 'Kembali ke Kelola Mahasiswa'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -371,10 +380,10 @@ export default function DetailMahasiswaPage() {
           <h2 className="text-base sm:text-lg font-bold text-slate-800">Mahasiswa Tidak Ditemukan</h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 mb-5 sm:mb-6">Data mahasiswa dengan ID tersebut tidak tersedia di sistem.</p>
           <button
-            onClick={() => navigate('/mahasiswa')}
+            onClick={() => navigate(isMahasiswa ? '/dashboard' : '/mahasiswa')}
             className="px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all"
           >
-            Kembali ke Daftar Mahasiswa
+            {isMahasiswa ? 'Kembali ke Dashboard' : 'Kembali ke Daftar Mahasiswa'}
           </button>
         </div>
       ) : (
@@ -429,12 +438,14 @@ export default function DetailMahasiswaPage() {
                       <span className="text-sm sm:text-base font-bold text-primary-900 truncate">
                         {mahasiswa.kelompokDetail.nama}
                       </span>
-                      <button
-                        onClick={() => navigate(`/kelompok/${mahasiswa.kelompokDetail?.id}`)}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer shrink-0"
-                      >
-                        Buka Kelompok →
-                      </button>
+                      {canMahasiswaViewJadwalKelompok && (
+                        <button
+                          onClick={() => navigate(`/kelompok/${mahasiswa.kelompokDetail?.id}`)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer shrink-0"
+                        >
+                          Buka Kelompok →
+                        </button>
+                      )}
                     </div>
                     <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       {mahasiswa.kelompokDetail.daftarAnggota.length} Anggota Mahasiswa
@@ -515,22 +526,24 @@ export default function DetailMahasiswaPage() {
 
           {/* Navigation Tabs (Hidden on Print) */}
           <div className="border-b border-slate-200/80 flex items-center gap-1 sm:gap-2 print:hidden overflow-x-auto no-scrollbar whitespace-nowrap">
-            <button
-              onClick={() => setActiveTab('jadwal')}
-              className={`pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${
-                activeTab === 'jadwal'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <JadwalIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Jadwal Stase Aktif & Terjadwal</span>
-              {mahasiswa.kelompokDetail?.daftarJadwal?.length ? (
-                <span className="ml-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-blue-100 text-blue-700 font-bold">
-                  {mahasiswa.kelompokDetail.daftarJadwal.length}
-                </span>
-              ) : null}
-            </button>
+            {canMahasiswaViewJadwalKelompok && (
+              <button
+                onClick={() => setActiveTab('jadwal')}
+                className={`pb-2.5 sm:pb-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${
+                  activeTab === 'jadwal'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <JadwalIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Jadwal Stase Aktif & Terjadwal</span>
+                {mahasiswa.kelompokDetail?.daftarJadwal?.length ? (
+                  <span className="ml-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-blue-100 text-blue-700 font-bold">
+                    {mahasiswa.kelompokDetail.daftarJadwal.length}
+                  </span>
+                ) : null}
+              </button>
+            )}
 
             <button
               onClick={() => setActiveTab('riwayat')}
@@ -568,7 +581,7 @@ export default function DetailMahasiswaPage() {
           </div>
 
           {/* TAB 1: Jadwal Stase Aktif & Terjadwal */}
-          {(activeTab === 'jadwal' || typeof window === 'undefined') && (
+          {canMahasiswaViewJadwalKelompok && (activeTab === 'jadwal' || typeof window === 'undefined') && (
             <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-gradient-to-r from-blue-50/50 to-indigo-50/30">
                 <div>
@@ -1049,7 +1062,7 @@ export default function DetailMahasiswaPage() {
                   </p>
                 </div>
 
-                {mahasiswa.kelompokDetail && (
+                {mahasiswa.kelompokDetail && canMahasiswaViewJadwalKelompok && (
                   <button
                     onClick={() => navigate(`/kelompok/${mahasiswa.kelompokDetail?.id}`)}
                     className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold rounded-xl hover:shadow-md transition-all self-start sm:self-auto cursor-pointer text-center"

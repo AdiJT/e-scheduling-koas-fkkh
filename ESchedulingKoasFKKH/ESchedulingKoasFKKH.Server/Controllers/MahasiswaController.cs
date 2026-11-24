@@ -28,6 +28,12 @@ public class MahasiswaController : ControllerBase
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ExcelService _excelService;
+    private readonly IMahasiswaAccessService _mahasiswaAccessService;
+
+    private static readonly JsonSerializerOptions CaseInsensitiveJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public MahasiswaController(
         IMahasiswaRepository mahasiswaRepository,
@@ -39,7 +45,8 @@ public class MahasiswaController : ControllerBase
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
-        ExcelService excelService)
+        ExcelService excelService,
+        IMahasiswaAccessService mahasiswaAccessService)
     {
         _mahasiswaRepository = mahasiswaRepository;
         _tahunAjaranRepository = tahunAjaranRepository;
@@ -51,6 +58,17 @@ public class MahasiswaController : ControllerBase
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _excelService = excelService;
+        _mahasiswaAccessService = mahasiswaAccessService;
+    }
+
+    [HttpGet("me/akses")]
+    [Authorize(Roles = UserRoles.Mahasiswa)]
+    public async Task<IActionResult> GetMyAccess()
+    {
+        await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
+        var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+        if (access is null) return NotFound();
+        return Ok(access);
     }
 
     [HttpGet("template")]
@@ -221,20 +239,27 @@ public class MahasiswaController : ControllerBase
 
         if (!User.IsInRole(UserRoles.Admin) && !User.IsInRole(UserRoles.Pengelola) && !User.IsInRole(UserRoles.Dosen)) 
         {
-            if (mahasiswa.NIM != User?.Identity?.Name) return Forbid();
+            if (!string.Equals(mahasiswa.NIM, User?.Identity?.Name, StringComparison.OrdinalIgnoreCase)) return Forbid();
         }
 
         // Jalankan pengarsipan otomatis agar jadwal yang lewat terarsip
         await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
 
+        bool canViewJadwalDanKelompok = true;
+        if (User.IsInRole(UserRoles.Mahasiswa))
+        {
+            var access = await _mahasiswaAccessService.EvaluateAsync(mahasiswa);
+            canViewJadwalDanKelompok = access.CanViewJadwalDanKelompok;
+        }
+
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        // Ambil detail kelompok aktif saat ini jika mahasiswa terdaftar di kelompok
+        // Ambil detail kelompok aktif saat ini jika mahasiswa terdaftar di kelompok dan masih berhak mengakses
         object? kelompokDetail = null;
         int totalStaseSedangBerjalan = 0;
         int totalStaseMendatang = 0;
 
-        if (mahasiswa.Kelompok != null)
+        if (canViewJadwalDanKelompok && mahasiswa.Kelompok != null)
         {
             var kelompok = await _kelompokRepository.Get(mahasiswa.Kelompok.Id);
             if (kelompok != null)
@@ -294,8 +319,8 @@ public class MahasiswaController : ControllerBase
         {
             try
             {
-                var mhsList = JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson);
-                return mhsList != null && mhsList.Any(m => m.NIM == mahasiswa.NIM);
+                var mhsList = JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson, CaseInsensitiveJsonOptions);
+                return mhsList != null && mhsList.Any(m => string.Equals(m.NIM, mahasiswa.NIM, StringComparison.OrdinalIgnoreCase));
             }
             catch
             {
@@ -312,8 +337,8 @@ public class MahasiswaController : ControllerBase
             r.TanggalSelesai,
             r.NamaPembimbing,
             r.NipPembimbing,
-            daftarSubStase = JsonSerializer.Deserialize<List<SubStaseDto>>(r.DaftarSubStaseJson) ?? [],
-            daftarMahasiswa = JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson) ?? [],
+            daftarSubStase = JsonSerializer.Deserialize<List<SubStaseDto>>(r.DaftarSubStaseJson, CaseInsensitiveJsonOptions) ?? [],
+            daftarMahasiswa = JsonSerializer.Deserialize<List<MahasiswaDto>>(r.DaftarMahasiswaJson, CaseInsensitiveJsonOptions) ?? [],
             r.TanggalDiarsipkan
         }).ToList();
 
@@ -359,7 +384,34 @@ public class MahasiswaController : ControllerBase
     [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola},{UserRoles.Dosen},{UserRoles.Mahasiswa}")]
     public async Task<IActionResult> GetAll()
     {
-        return Ok((await _mahasiswaRepository.GetAll()).Select(ToResponse));
+        var allMahasiswa = await _mahasiswaRepository.GetAll();
+
+        if (User.IsInRole(UserRoles.Mahasiswa))
+        {
+            var access = await _mahasiswaAccessService.EvaluateByUsernameAsync(User?.Identity?.Name);
+            if (access is null) return Forbid();
+
+            if (!access.CanViewJadwalDanKelompok)
+            {
+                return Ok(allMahasiswa
+                    .Where(m => m.Id == access.MahasiswaId || string.Equals(m.NIM, access.Nim, StringComparison.OrdinalIgnoreCase))
+                    .Select(ToResponse));
+            }
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var activeTaIds = await _mahasiswaAccessService.GetActiveTahunAjaranIdsAsync(today);
+            return Ok(allMahasiswa
+                .Where(m =>
+                {
+                    var ta = m.TahunAjaran ?? m.Kelompok?.TahunAjaran;
+                    if (ta is not null)
+                        return ta.IsAktif(today) || activeTaIds.Contains(ta.Id);
+                    return m.Kelompok?.IdTahunAjaran.HasValue == true && activeTaIds.Contains(m.Kelompok.IdTahunAjaran.Value);
+                })
+                .Select(ToResponse));
+        }
+
+        return Ok(allMahasiswa.Select(ToResponse));
     }
 
     [HttpPost]
