@@ -6,6 +6,7 @@ using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -27,8 +28,8 @@ public class MahasiswaController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ExcelService _excelService;
     private readonly IMahasiswaAccessService _mahasiswaAccessService;
+    private readonly SiadiknonaApi _siadiknonaApi;
 
     private static readonly JsonSerializerOptions CaseInsensitiveJsonOptions = new()
     {
@@ -45,8 +46,8 @@ public class MahasiswaController : ControllerBase
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
-        ExcelService excelService,
-        IMahasiswaAccessService mahasiswaAccessService)
+        IMahasiswaAccessService mahasiswaAccessService,
+        SiadiknonaApi siadiknonaApi)
     {
         _mahasiswaRepository = mahasiswaRepository;
         _tahunAjaranRepository = tahunAjaranRepository;
@@ -57,8 +58,8 @@ public class MahasiswaController : ControllerBase
         _unitOfWork = unitOfWork;
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
-        _excelService = excelService;
         _mahasiswaAccessService = mahasiswaAccessService;
+        _siadiknonaApi = siadiknonaApi;
     }
 
     [HttpGet("me/akses")]
@@ -71,162 +72,172 @@ public class MahasiswaController : ControllerBase
         return Ok(access);
     }
 
-    [HttpGet("template")]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
-    public async Task<IActionResult> DownloadTemplate()
+    [HttpPost("sinkron-siadiknona")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SinkronSiadiknona(
+        [FromQuery] int? idTahunAjaran = null,
+        CancellationToken cancellationToken = default)
     {
-        var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
-        var bytes = _excelService.GenerateMahasiswaTemplate(daftarTahunAjaran);
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Template_Mahasiswa.xlsx");
-    }
-
-    [HttpGet("export")]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
-    public async Task<IActionResult> Export([FromQuery] int? idTahunAjaran = null)
-    {
-        var daftarMahasiswa = await _mahasiswaRepository.GetAll();
-
+        TahunAjaran? targetTa;
         if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
         {
-            daftarMahasiswa = daftarMahasiswa.Where(m => m.TahunAjaran?.Id == idTahunAjaran.Value).ToList();
+            targetTa = await _tahunAjaranRepository.Get(idTahunAjaran.Value);
+            if (targetTa is null)
+            {
+                return HelpersFunctions.NotFound(new Dictionary<string, string>
+                {
+                    ["idTahunAjaran"] = $"Tahun ajaran dengan id '{idTahunAjaran.Value}' tidak ditemukan"
+                });
+            }
+        }
+        else
+        {
+            var semuaTahunAjaran = (await _tahunAjaranRepository.GetAll())
+                .OrderByDescending(t => t.Tahun)
+                .ThenByDescending(t => t.Semester)
+                .ThenByDescending(t => t.TanggalMulai)
+                .ToList();
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            targetTa = semuaTahunAjaran.FirstOrDefault(t => t.IsAktif(today))
+                ?? semuaTahunAjaran.FirstOrDefault(t => t.Status == StatusTahunAjaran.Berjalan)
+                ?? semuaTahunAjaran.FirstOrDefault();
+
+            if (targetTa is null)
+            {
+                return HelpersFunctions.BadRequest(new Dictionary<string, string>
+                {
+                    ["idTahunAjaran"] = "Belum ada data Tahun Ajaran yang terdaftar di sistem."
+                });
+            }
         }
 
-        var data = daftarMahasiswa.Select(m => new MahasiswaExportDto
+        var idPeriode = $"{targetTa.Tahun}{(int)targetTa.Semester}";
+        var apiResult = await _siadiknonaApi.GetAllMahasiswaProfesiDokterHewanAktifAsync(idPeriode, cancellationToken);
+        if (apiResult.IsFailure)
         {
-            NIM = m.NIM,
-            Nama = m.Nama,
-            TahunAjaran = m.TahunAjaran != null ? $"{m.TahunAjaran.Tahun} - {m.TahunAjaran.Semester}" : "-",
-            StatusTahunAjaran = m.TahunAjaran != null ? m.TahunAjaran.Status.ToString() : "-",
-            Kelompok = m.Kelompok?.Nama ?? "-"
-        }).ToList();
-
-        var bytes = _excelService.ExportMahasiswa(data);
-        var filename = $"Data_Mahasiswa_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
-    }
-
-    [HttpPost("import")]
-    [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> Import(IFormFile? file, [FromQuery] int? idTahunAjaran = null)
-    {
-        if (file == null || file.Length == 0)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "File Excel wajib dipilih." });
-
-        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "Format file harus berekstensi .xlsx" });
-
-        using var stream = file.OpenReadStream();
-        var rows = _excelService.ParseMahasiswa(stream, out var parseErrors);
-
-        if (parseErrors.Count > 0 && rows.Count == 0)
-        {
-            return BadRequest(new ExcelImportResult
+            return StatusCode(StatusCodes.Status502BadGateway, new
             {
-                Success = false,
-                TotalRows = 0,
-                SuccessCount = 0,
-                Errors = parseErrors
+                message = apiResult.Error.Message
             });
         }
 
-        var semuaTahunAjaran = await _tahunAjaranRepository.GetAll();
-        TahunAjaran? defaultTahunAjaran = null;
-        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        var existingMahasiswaList = await _mahasiswaRepository.GetAll();
+        var existingByNim = existingMahasiswaList
+            .GroupBy(m => m.NIM, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingUsernames = new HashSet<string>(
+            (await _userRepository.GetAll()).Select(u => u.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        var seenNims = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var errors = new List<string>();
+        var jumlahItem = 0;
+        var jumlahBaru = 0;
+        var jumlahUpdate = 0;
+        var jumlahTidakBerubah = 0;
+        var jumlahGagal = 0;
+
+        foreach (var item in apiResult.Value)
         {
-            defaultTahunAjaran = semuaTahunAjaran.FirstOrDefault(t => t.Id == idTahunAjaran.Value);
-        }
-        defaultTahunAjaran ??= semuaTahunAjaran.FirstOrDefault(t => t.Status == StatusTahunAjaran.Berjalan)
-                             ?? semuaTahunAjaran.FirstOrDefault();
-
-        var existingNims = new HashSet<string>((await _mahasiswaRepository.GetAll()).Select(m => m.NIM), StringComparer.OrdinalIgnoreCase);
-        var existingUsernames = new HashSet<string>((await _userRepository.GetAll()).Select(u => u.Name), StringComparer.OrdinalIgnoreCase);
-
-        var errors = new List<string>(parseErrors);
-        var successCount = 0;
-        var fileNims = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var row in rows)
-        {
-            if (fileNims.Contains(row.NIM))
-            {
-                errors.Add($"Baris {row.RowIndex}: NIM '{row.NIM}' terduplikasi di dalam file yang diunggah.");
+            var attr = item.Attributes;
+            if (attr is null || string.Equals(attr.is_deleted?.Trim(), "1", StringComparison.Ordinal))
                 continue;
-            }
-            fileNims.Add(row.NIM);
 
-            if (existingNims.Contains(row.NIM))
+            var nim = attr.nim?.Trim() ?? string.Empty;
+            var nama = attr.nama?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(nim) || string.IsNullOrWhiteSpace(nama))
             {
-                errors.Add($"Baris {row.RowIndex}: NIM '{row.NIM}' sudah terdaftar di sistem.");
+                jumlahItem++;
+                jumlahGagal++;
+                errors.Add("Terdapat data mahasiswa SIADIKNONA dengan NIM atau Nama kosong.");
                 continue;
             }
 
-            if (existingUsernames.Contains(row.NIM))
-            {
-                errors.Add($"Baris {row.RowIndex}: Akun dengan username '{row.NIM}' sudah ada.");
+            if (!seenNims.Add(nim))
                 continue;
-            }
 
-            TahunAjaran? targetTa = defaultTahunAjaran;
-            if (!string.IsNullOrWhiteSpace(row.TahunAjaran))
+            jumlahItem++;
+
+            if (existingByNim.TryGetValue(nim, out var existing))
             {
-                var match = semuaTahunAjaran.FirstOrDefault(t =>
-                    $"{t.Tahun} - {t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase) ||
-                    $"{t.Tahun} {t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase) ||
-                    $"{t.Tahun}/{t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase));
+                var namaBerubah = !string.Equals(existing.Nama, nama, StringComparison.Ordinal);
+                var tahunAjaranBerubah = existing.TahunAjaran?.Id != targetTa.Id;
 
-                if (match != null)
+                if (namaBerubah || tahunAjaranBerubah)
                 {
-                    targetTa = match;
+                    existing.Nama = nama;
+                    existing.TahunAjaran = targetTa;
+                    _mahasiswaRepository.Update(existing);
+                    jumlahUpdate++;
                 }
                 else
                 {
-                    errors.Add($"Baris {row.RowIndex}: Tahun ajaran '{row.TahunAjaran}' tidak ditemukan di database.");
-                    continue;
+                    jumlahTidakBerubah++;
                 }
             }
-
-            if (targetTa == null)
+            else
             {
-                errors.Add($"Baris {row.RowIndex}: Tahun ajaran belum ditentukan atau tidak valid.");
-                continue;
+                if (existingUsernames.Contains(nim))
+                {
+                    jumlahGagal++;
+                    errors.Add($"NIM '{nim}' ({nama}): username '{nim}' sudah digunakan oleh akun lain.");
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Name = nim,
+                    PasswordHash = _passwordHasher.HashPassword(null!, nim),
+                    Role = UserRoles.Mahasiswa
+                };
+
+                var mahasiswa = new Mahasiswa
+                {
+                    NIM = nim,
+                    Nama = nama,
+                    User = user,
+                    TahunAjaran = targetTa
+                };
+
+                user.Mahasiswa = mahasiswa;
+
+                _mahasiswaRepository.Add(mahasiswa);
+                _userRepository.Add(user);
+
+                existingByNim[nim] = mahasiswa;
+                existingUsernames.Add(nim);
+                jumlahBaru++;
             }
-
-            var user = new User
-            {
-                Name = row.NIM,
-                PasswordHash = _passwordHasher.HashPassword(null, row.NIM),
-                Role = UserRoles.Mahasiswa
-            };
-
-            var mahasiswa = new Mahasiswa
-            {
-                NIM = row.NIM,
-                Nama = row.Nama,
-                User = user,
-                TahunAjaran = targetTa
-            };
-
-            user.Mahasiswa = mahasiswa;
-
-            _mahasiswaRepository.Add(mahasiswa);
-            _userRepository.Add(user);
-
-            existingNims.Add(row.NIM);
-            existingUsernames.Add(row.NIM);
-            successCount++;
         }
 
-        if (successCount > 0)
+        if (jumlahBaru > 0 || jumlahUpdate > 0)
         {
-            var result = await _unitOfWork.SaveChangesAsync();
-            if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+            var saveResult = await _unitOfWork.SaveChangesAsync();
+            if (saveResult.IsFailure)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Gagal menyimpan hasil sinkronisasi mahasiswa ke database."
+                });
+            }
         }
 
-        return Ok(new ExcelImportResult
+        return Ok(new SiadiknonaSyncResult
         {
-            Success = successCount > 0,
-            TotalRows = rows.Count,
-            SuccessCount = successCount,
+            Success = true,
+            IdTahunAjaran = targetTa.Id,
+            TahunAjaran = $"{targetTa.Tahun} - {targetTa.Semester}",
+            IdPeriode = idPeriode,
+            KodeProdi = SiadiknonaApi.IdProgramStudiProfesiDokterHewan,
+            NamaProdi = SiadiknonaApi.NamaProgramStudiProfesiDokterHewan,
+            StatusMahasiswa = SiadiknonaApi.StatusMahasiswaAktif,
+            JumlahItem = jumlahItem,
+            JumlahBaru = jumlahBaru,
+            JumlahUpdate = jumlahUpdate,
+            JumlahTidakBerubah = jumlahTidakBerubah,
+            JumlahGagal = jumlahGagal,
             Errors = errors
         });
     }

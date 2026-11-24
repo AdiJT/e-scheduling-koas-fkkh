@@ -2,9 +2,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type ExcelImportResult } from '../services/api';
+import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type SiadiknonaSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
+import { MahasiswaIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 import SearchableSelect from '../components/SearchableSelect';
 
@@ -22,15 +22,12 @@ export default function MahasiswaPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Export & Import Excel state
-  const [exporting, setExporting] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importTahunAjaran, setImportTahunAjaran] = useState<string>('');
-  const [importing, setImporting] = useState(false);
-  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
-  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  // Sync SIADIKNONA state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncTahunAjaran, setSyncTahunAjaran] = useState<string>('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SiadiknonaSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -196,71 +193,49 @@ export default function MahasiswaPage() {
     }
   };
 
-  // === EXPORT & IMPORT ===
-  const handleExport = async () => {
-    try {
-      setExporting(true);
-      const taId = filterTahunAjaran !== 'all' ? parseInt(filterTahunAjaran) : undefined;
-      await mahasiswaApi.exportExcel(taId);
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      setError(errorObj.message || 'Gagal mengekspor data mahasiswa.');
-    } finally {
-      setExporting(false);
-    }
+  const getPeriodeCode = (ta?: TahunAjaran | null): string => {
+    if (!ta) return '-';
+    const semCode = ta.semester.toLowerCase() === 'ganjil' ? '1' : '2';
+    return `${ta.tahun}${semCode}`;
   };
 
-  const openImportModal = () => {
-    setImportFile(null);
-    setImportResult(null);
-    setImportError(null);
+  const openSyncModal = () => {
+    setSyncResult(null);
+    setSyncError(null);
     if (filterTahunAjaran !== 'all') {
-      setImportTahunAjaran(filterTahunAjaran);
+      setSyncTahunAjaran(filterTahunAjaran);
     } else {
-      const activeTa = tahunAjarans.find(t => t.status === 'Berjalan') || tahunAjarans[0];
-      setImportTahunAjaran(activeTa ? activeTa.id.toString() : '');
+      const activeTa = tahunAjarans.find(t => t.isAktif)
+        || tahunAjarans.find(t => t.status === 'Berjalan')
+        || tahunAjarans[0];
+      setSyncTahunAjaran(activeTa ? activeTa.id.toString() : '');
     }
-    setShowImportModal(true);
+    setShowSyncModal(true);
   };
 
-  const handleDownloadTemplate = async () => {
-    try {
-      setDownloadingTemplate(true);
-      await mahasiswaApi.downloadTemplate();
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      setImportError(errorObj.message || 'Gagal mengunduh template Excel.');
-    } finally {
-      setDownloadingTemplate(false);
-    }
-  };
-
-  const handleImportSubmit = async (e: React.FormEvent) => {
+  const handleSyncSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!importFile) {
-      setImportError('Silakan pilih file Excel (.xlsx) yang akan diimpor.');
-      return;
-    }
-
     try {
-      setImporting(true);
-      setImportError(null);
-      setImportResult(null);
+      setSyncing(true);
+      setSyncError(null);
+      setSyncResult(null);
 
-      const taId = importTahunAjaran ? parseInt(importTahunAjaran) : undefined;
-      const res = await mahasiswaApi.importExcel(importFile, taId);
-      setImportResult(res);
+      const taId = syncTahunAjaran ? parseInt(syncTahunAjaran) : undefined;
+      const res = await mahasiswaApi.sinkronSiadiknona(taId);
+      setSyncResult(res);
 
-      if (res.successCount > 0) {
+      if (res.jumlahBaru > 0 || res.jumlahUpdate > 0) {
         fetchData();
       }
     } catch (err: unknown) {
-      const errorObj = err as Error;
-      setImportError(errorObj.message || 'Terjadi kesalahan saat memproses import file.');
+      const errorObj = err as { message?: string };
+      setSyncError(errorObj?.message || 'Gagal melakukan sinkronisasi dengan SIADIKNONA.');
     } finally {
-      setImporting(false);
+      setSyncing(false);
     }
   };
+
+  const selectedSyncTa = tahunAjarans.find(ta => ta.id.toString() === syncTahunAjaran) || null;
 
   const selectedMahasiswa = data.find(m => m.id === selectedId);
 
@@ -351,33 +326,18 @@ export default function MahasiswaPage() {
               </button>
             </Tooltip>
 
-            {/* Export Excel Button (Admin & Pengelola) */}
-            <Tooltip content="Ekspor data mahasiswa ke file Excel (.xlsx)" position="bottom">
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="px-3.5 py-2 sm:py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 
-                  font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
-                id="btn-export-mahasiswa"
-              >
-                <ExportIcon className="w-4 h-4 text-emerald-600" />
-                <span className="hidden sm:inline">{exporting ? 'Mengekspor...' : 'Export Excel'}</span>
-                <span className="sm:hidden">{exporting ? '...' : 'Export'}</span>
-              </button>
-            </Tooltip>
-
-            {/* Import Excel Button (Admin Only) */}
+            {/* Sinkron SIADIKNONA Button (Admin Only) */}
             {!isPengelola && (
-              <Tooltip content="Impor data mahasiswa dari file Excel (.xlsx)" position="bottom">
+              <Tooltip content="Tarik & sinkronkan mahasiswa Profesi Dokter Hewan aktif dari SIADIKNONA" position="bottom">
                 <button
-                  onClick={openImportModal}
-                  className="px-3.5 py-2 sm:py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 
+                  onClick={openSyncModal}
+                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
                     font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
-                  id="btn-import-mahasiswa"
+                  id="btn-sync-siadiknona"
                 >
-                  <ImportIcon className="w-4 h-4 text-blue-600" />
-                  <span className="hidden sm:inline">Import Excel</span>
-                  <span className="sm:hidden">Import</span>
+                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Sinkron SIADIKNONA</span>
+                  <span className="sm:hidden">SIADIKNONA</span>
                 </button>
               </Tooltip>
             )}
@@ -790,30 +750,30 @@ export default function MahasiswaPage() {
         </div>
       )}
 
-      {/* Import Excel Modal */}
-      {showImportModal && (
+      {/* Sinkron SIADIKNONA Modal */}
+      {showSyncModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg animate-scale-in my-8">
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-600 to-blue-700 text-white flex items-center justify-between rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
-                  <FileSpreadsheetIcon className="w-5 h-5" />
+                  <RefreshIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">Import Data Mahasiswa</h3>
-                  <p className="text-xs text-blue-100 mt-0.5">Unggah data mahasiswa secara massal via file Excel</p>
+                  <h3 className="font-bold text-lg leading-tight">Sinkronisasi SIADIKNONA</h3>
+                  <p className="text-xs text-indigo-100 mt-0.5">Tarik data mahasiswa aktif Profesi Dokter Hewan dari SIADIKNONA UNDANA</p>
                 </div>
               </div>
               <button
                 onClick={() => {
-                  if (!importing) {
-                    setShowImportModal(false);
-                    setImportResult(null);
-                    setImportError(null);
+                  if (!syncing) {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
                   }
                 }}
-                disabled={importing}
+                disabled={syncing}
                 className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 title="Tutup"
               >
@@ -822,163 +782,152 @@ export default function MahasiswaPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {/* Template Download Card */}
-              <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-center justify-between gap-3">
-                <div className="text-xs text-slate-700">
-                  <span className="font-semibold text-blue-900 block mb-0.5">Gunakan Template Resmi</span>
-                  Format file harus sesuai template agar data terbaca dengan benar.
+            <form onSubmit={handleSyncSubmit} className="p-5 sm:p-6 space-y-4">
+              {/* Fixed Parameters Info */}
+              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-indigo-900">Parameter Filter SIADIKNONA</p>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  <span className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-800 font-semibold">
+                    Prodi: Profesi Dokter Hewan (54961)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-700 font-semibold">
+                    Status: Aktif (A)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-semibold">
+                    Periode Masuk: {getPeriodeCode(selectedSyncTa)}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  disabled={downloadingTemplate}
-                  className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 font-medium rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
-                >
-                  <DownloadIcon className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{downloadingTemplate ? 'Mengunduh...' : 'Unduh Template'}</span>
-                </button>
               </div>
 
-              {/* Form Import */}
-              <form onSubmit={handleImportSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Tahun Ajaran Default <span className="text-red-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    value={importTahunAjaran}
-                    onChange={(val) => setImportTahunAjaran(String(val))}
-                    options={tahunAjarans.map(ta => ({
-                      value: String(ta.id),
-                      label: `${ta.tahun} - ${ta.semester}`,
-                      badge: ta.status || undefined
-                    }))}
-                    placeholder="Pilih Tahun Ajaran Default"
-                    disabled={importing}
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Digunakan untuk baris mahasiswa yang kolom Tahun Ajaran-nya tidak diisi pada file Excel.
-                  </p>
-                </div>
+              {/* Dynamic Tahun Ajaran Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Tahun Ajaran / Periode Masuk <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  value={syncTahunAjaran}
+                  onChange={(val) => {
+                    setSyncTahunAjaran(String(val));
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  options={tahunAjarans.map(ta => ({
+                    value: String(ta.id),
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    subLabel: `Periode SIADIKNONA: ${getPeriodeCode(ta)}`,
+                    badge: ta.status || undefined
+                  }))}
+                  placeholder="Pilih Tahun Ajaran Target"
+                  disabled={syncing}
+                  accentColor="indigo"
+                  required
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Otomatis memetakan ke parameter <code className="px-1 py-0.5 bg-slate-100 rounded text-slate-700">f-id_periode={getPeriodeCode(selectedSyncTa)}</code> di SIADIKNONA.
+                </p>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Pilih File Excel (.xlsx) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept=".xlsx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setImportFile(file);
-                      setImportResult(null);
-                      setImportError(null);
-                    }}
-                    disabled={importing}
-                    className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-2"
-                  />
-                  {importFile && (
-                    <div className="mt-1 text-xs text-slate-500 flex items-center justify-between">
-                      <span>📄 {importFile.name}</span>
-                      <span>{(importFile.size / 1024).toFixed(1)} KB</span>
+              {/* Info Box */}
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-amber-800">Ketentuan Sinkronisasi:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
+                  <li>Mahasiswa baru akan dibuatkan akun login otomatis dengan <strong>username &amp; password = NIM</strong>.</li>
+                  <li>Mahasiswa yang sudah terdaftar hanya diperbarui <strong>Nama &amp; Tahun Ajaran</strong> (Kelompok dan password tidak diubah).</li>
+                </ul>
+              </div>
+
+              {/* Error Banner */}
+              {syncError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">⚠️</span>
+                  <span className="flex-1">{syncError}</span>
+                </div>
+              )}
+
+              {/* Sync Result Feedback */}
+              {syncResult && (
+                <div className="space-y-2.5">
+                  <div className="p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-900 text-xs space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-emerald-800">
+                        ✅ Sinkronisasi Periode {syncResult.idPeriode} ({syncResult.tahunAjaran}) Selesai
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 text-center">
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-100">
+                        <div className="text-sm font-bold text-slate-800">{syncResult.jumlahItem}</div>
+                        <div className="text-[10px] text-slate-500">Total</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-200">
+                        <div className="text-sm font-bold text-emerald-600">+{syncResult.jumlahBaru}</div>
+                        <div className="text-[10px] text-slate-500">Baru</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-blue-200">
+                        <div className="text-sm font-bold text-blue-600">{syncResult.jumlahUpdate}</div>
+                        <div className="text-[10px] text-slate-500">Diubah</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-slate-200">
+                        <div className="text-sm font-bold text-slate-600">{syncResult.jumlahTidakBerubah}</div>
+                        <div className="text-[10px] text-slate-500">Tetap</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-rose-200">
+                        <div className="text-sm font-bold text-rose-600">{syncResult.jumlahGagal}</div>
+                        <div className="text-[10px] text-slate-500">Gagal</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {syncResult.errors && syncResult.errors.length > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-semibold text-amber-800 mb-1.5">
+                        Catatan ({syncResult.errors.length}):
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
+                        {syncResult.errors.map((err, idx) => (
+                          <div key={idx} className="bg-amber-100/70 p-1.5 rounded leading-tight">
+                            • {err}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
+              )}
 
-                {/* Important Notes */}
-                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
-                  <p className="font-semibold text-amber-800 flex items-center gap-1.5">
-                    <span>💡</span> Ketentuan Import:
-                  </p>
-                  <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
-                    <li>Kolom wajib: <strong>NIM</strong> dan <strong>Nama Mahasiswa</strong>.</li>
-                    <li>Akun login mahasiswa akan otomatis dibuat dengan <strong>username</strong> dan <strong>password awal</strong> sama dengan NIM.</li>
-                    <li>NIM yang sudah terdaftar di sistem atau ganda di dalam file akan dilewati dengan pesan keterangan.</li>
-                  </ul>
-                </div>
-
-                {/* Error Banner */}
-                {importError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">⚠️</span>
-                    <span className="flex-1">{importError}</span>
-                  </div>
-                )}
-
-                {/* Import Result Feedback */}
-                {importResult && (
-                  <div className="space-y-2.5">
-                    <div className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs ${
-                      importResult.successCount > 0
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        : 'bg-red-50 border-red-200 text-red-800'
-                    }`}>
-                      <span className="text-base">{importResult.successCount > 0 ? '✅' : '❌'}</span>
-                      <div className="flex-1">
-                        <span className="font-semibold block">
-                          {importResult.successCount > 0
-                            ? `Berhasil mengimpor ${importResult.successCount} data mahasiswa.`
-                            : 'Tidak ada data mahasiswa yang berhasil diimpor.'}
-                        </span>
-                        <span className="text-[11px] opacity-80">
-                          Total baris yang diproses: {importResult.totalRows} baris.
-                        </span>
-                      </div>
-                    </div>
-
-                    {importResult.errors && importResult.errors.length > 0 && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center justify-between">
-                          <span>Catatan / Kesalahan ({importResult.errors.length} baris):</span>
-                        </p>
-                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
-                          {importResult.errors.map((err, idx) => (
-                            <div key={idx} className="bg-amber-100/70 p-1.5 rounded text-amber-900 leading-tight">
-                              • {err}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Footer Controls */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportResult(null);
-                      setImportError(null);
-                    }}
-                    disabled={importing}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
-                  >
-                    {importResult ? 'Selesai' : 'Batal'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={importing || !importFile || !importTahunAjaran}
-                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    {importing ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Memproses Import...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ImportIcon className="w-4 h-4" />
-                        <span>Mulai Import</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Footer Controls */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  disabled={syncing}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  {syncResult ? 'Selesai' : 'Batal'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncing || !syncTahunAjaran}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  id="btn-submit-sync-siadiknona"
+                >
+                  {syncing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyinkronkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshIcon className="w-4 h-4" />
+                      <span>Mulai Sinkronisasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

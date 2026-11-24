@@ -9,6 +9,7 @@ interface ApiError {
     errors?: Record<string, string>;
     message?: string;
     requiresConfirmation?: boolean;
+    [key: string]: unknown;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -55,13 +56,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
         if (response.status === 409) {
             const errorData: ApiError = await response.json().catch(() => ({}));
             throw {
+                ...errorData,
                 status: 409,
                 errors: errorData.errors || {},
                 message: errorData.message || 'Perubahan membutuhkan konfirmasi.',
                 requiresConfirmation: errorData.requiresConfirmation || false,
             };
         }
-        throw { status: response.status, message: `Server error: ${response.status}` };
+        const errorData: ApiError = await response.json().catch(() => ({}));
+        throw { status: response.status, message: errorData.message || `Server error: ${response.status}` };
     }
 
     // Handle 204 No Content
@@ -84,44 +87,6 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
         headers
     });
 }
-
-async function downloadBlob(response: Response, defaultFilename: string): Promise<void> {
-    if (!response.ok) {
-        let errMessage = `Gagal mengunduh file (${response.status})`;
-        try {
-            const errJson = await response.json();
-            if (errJson.message) errMessage = errJson.message;
-        } catch { }
-        throw new Error(errMessage);
-    }
-
-    const disposition = response.headers.get('Content-Disposition');
-    let filename = defaultFilename;
-    if (disposition && disposition.indexOf('filename=') !== -1) {
-        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-        if (matches != null && matches[1]) {
-            filename = matches[1].replace(/['"]/g, '');
-        }
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-}
-
-export interface ExcelImportResult {
-    success: boolean;
-    totalRows: number;
-    successCount: number;
-    errors: string[];
-}
-
 
 // ============================================================
 // TAHUN AJARAN API
@@ -318,6 +283,22 @@ export interface UpdateMahasiswa {
     idTahunAjaran: number;
 }
 
+export interface SiadiknonaSyncResult {
+    success: boolean;
+    idTahunAjaran: number;
+    tahunAjaran: string;
+    idPeriode: string;
+    kodeProdi: string;
+    namaProdi: string;
+    statusMahasiswa: string;
+    jumlahItem: number;
+    jumlahBaru: number;
+    jumlahUpdate: number;
+    jumlahTidakBerubah: number;
+    jumlahGagal: number;
+    errors: string[];
+}
+
 export const mahasiswaApi = {
     getAll: async (): Promise<Mahasiswa[]> => {
         const res = await apiFetch(`${BASE_URL}/mahasiswa`);
@@ -368,37 +349,12 @@ export const mahasiswaApi = {
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
     },
 
-    downloadTemplate: async (): Promise<void> => {
-        const res = await apiFetch(`${BASE_URL}/mahasiswa/template`);
-        await downloadBlob(res, 'Template_Mahasiswa.xlsx');
-    },
-
-    exportExcel: async (idTahunAjaran?: number): Promise<void> => {
+    sinkronSiadiknona: async (idTahunAjaran?: number): Promise<SiadiknonaSyncResult> => {
         const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
-        const res = await apiFetch(`${BASE_URL}/mahasiswa/export${query}`);
-        await downloadBlob(res, `Data_Mahasiswa_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    },
-
-    importExcel: async (file: File, idTahunAjaran?: number): Promise<ExcelImportResult> => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
-        const res = await apiFetch(`${BASE_URL}/mahasiswa/import${query}`, {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/sinkron-siadiknona${query}`, {
             method: 'POST',
-            body: formData,
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            if (data.errors && Array.isArray(data.errors)) {
-                return data as ExcelImportResult;
-            }
-            if (data.errors && typeof data.errors === 'object') {
-                const msgs = Object.values(data.errors).flat() as string[];
-                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
-            }
-            throw new Error(data.message || `Import gagal (${res.status})`);
-        }
-        return data as ExcelImportResult;
+        return handleResponse<SiadiknonaSyncResult>(res);
     },
 };
 
@@ -493,6 +449,55 @@ export interface UpdatePembimbing {
     nama: string;
 }
 
+export interface DosenDeleteBlockKoordinator {
+    idStase: number;
+    namaStase: string;
+}
+
+export interface DosenDeleteBlockJadwal {
+    idJadwal: number;
+    idKelompok: number;
+    namaKelompok: string;
+    tahunAjaran?: string | null;
+    idStase?: number | null;
+    namaStase: string;
+    tanggalMulai: string;
+}
+
+export interface DosenDeleteBlockSubStase {
+    idJadwal: number;
+    idKelompok: number;
+    namaKelompok: string;
+    tahunAjaran?: string | null;
+    idStase?: number | null;
+    namaStase: string;
+    namaSubStase: string;
+    tanggalMulai: string;
+}
+
+export interface DosenDeleteConflictError {
+    status: 409;
+    message: string;
+    namaDosen: string;
+    nip: string;
+    koordinatorStase: DosenDeleteBlockKoordinator[];
+    jadwalUtama: DosenDeleteBlockJadwal[];
+    jadwalSubStase: DosenDeleteBlockSubStase[];
+    langkahPenyelesaian: string[];
+}
+
+export interface SinergiSyncResult {
+    success: boolean;
+    unitKerja: string[];
+    statusFilter: string[];
+    jumlahItem: number;
+    jumlahBaru: number;
+    jumlahUpdate: number;
+    jumlahTidakBerubah: number;
+    jumlahGagal: number;
+    errors: string[];
+}
+
 export const pembimbingApi = {
     getAll: async (): Promise<Pembimbing[]> => {
         const res = await apiFetch(`${BASE_URL}/pembimbing`);
@@ -538,35 +543,11 @@ export const pembimbingApi = {
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
     },
 
-    downloadTemplate: async (): Promise<void> => {
-        const res = await apiFetch(`${BASE_URL}/pembimbing/template`);
-        await downloadBlob(res, 'Template_Dosen.xlsx');
-    },
-
-    exportExcel: async (): Promise<void> => {
-        const res = await apiFetch(`${BASE_URL}/pembimbing/export`);
-        await downloadBlob(res, `Data_Dosen_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    },
-
-    importExcel: async (file: File): Promise<ExcelImportResult> => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await apiFetch(`${BASE_URL}/pembimbing/import`, {
+    sinkronSinergi: async (): Promise<SinergiSyncResult> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/sinkron-sinergi`, {
             method: 'POST',
-            body: formData,
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            if (data.errors && Array.isArray(data.errors)) {
-                return data as ExcelImportResult;
-            }
-            if (data.errors && typeof data.errors === 'object') {
-                const msgs = Object.values(data.errors).flat() as string[];
-                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
-            }
-            throw new Error(data.message || `Import gagal (${res.status})`);
-        }
-        return data as ExcelImportResult;
+        return handleResponse<SinergiSyncResult>(res);
     },
 };
 

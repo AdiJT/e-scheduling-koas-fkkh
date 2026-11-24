@@ -2,9 +2,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { pembimbingApi, type Pembimbing, type ExcelImportResult } from '../services/api';
+import { pembimbingApi, type Pembimbing, type DosenDeleteConflictError, type SinergiSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
+import { formatDateDisplay } from '../utils/holidays';
+import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
 
 export default function DosenPage() {
@@ -18,15 +19,13 @@ export default function DosenPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteBlockInfo, setDeleteBlockInfo] = useState<DosenDeleteConflictError | null>(null);
 
-  // Export & Import Excel state
-  const [exporting, setExporting] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
-  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  // Sync SINERGI state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SinergiSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,12 +116,33 @@ export default function DosenPage() {
 
   const confirmDelete = async () => {
     if (!selectedId) return;
+    const targetDosen = data.find(d => d.id === selectedId);
     try {
       setDeleting(true);
       await pembimbingApi.delete(selectedId);
       setData(prev => prev.filter(d => d.id !== selectedId));
-    } catch {
-      setError('Gagal menghapus data dosen.');
+    } catch (err: unknown) {
+      const apiErr = err as Partial<DosenDeleteConflictError> & { status?: number; message?: string };
+      if (
+        apiErr?.status === 409 &&
+        (Array.isArray(apiErr.koordinatorStase) ||
+          Array.isArray(apiErr.jadwalUtama) ||
+          Array.isArray(apiErr.jadwalSubStase))
+      ) {
+        setError(null);
+        setDeleteBlockInfo({
+          status: 409,
+          message: apiErr.message || 'Dosen tidak dapat dihapus karena masih aktif bertugas.',
+          namaDosen: apiErr.namaDosen || targetDosen?.nama || '-',
+          nip: apiErr.nip || targetDosen?.nip || '-',
+          koordinatorStase: apiErr.koordinatorStase || [],
+          jadwalUtama: apiErr.jadwalUtama || [],
+          jadwalSubStase: apiErr.jadwalSubStase || [],
+          langkahPenyelesaian: apiErr.langkahPenyelesaian || [],
+        });
+      } else {
+        setError(apiErr?.message || 'Gagal menghapus data dosen.');
+      }
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -175,61 +195,27 @@ export default function DosenPage() {
     }
   };
 
-  // === EXPORT & IMPORT ===
-  const handleExport = async () => {
-    try {
-      setExporting(true);
-      await pembimbingApi.exportExcel();
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      setError(errorObj.message || 'Gagal mengekspor data dosen.');
-    } finally {
-      setExporting(false);
-    }
+  // === SYNC SINERGI ===
+  const openSyncModal = () => {
+    setSyncResult(null);
+    setSyncError(null);
+    setShowSyncModal(true);
   };
 
-  const openImportModal = () => {
-    setImportFile(null);
-    setImportResult(null);
-    setImportError(null);
-    setShowImportModal(true);
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      setDownloadingTemplate(true);
-      await pembimbingApi.downloadTemplate();
-    } catch (err: unknown) {
-      const errorObj = err as Error;
-      setImportError(errorObj.message || 'Gagal mengunduh template Excel.');
-    } finally {
-      setDownloadingTemplate(false);
-    }
-  };
-
-  const handleImportSubmit = async (e: React.FormEvent) => {
+  const handleSyncSinergi = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!importFile) {
-      setImportError('Silakan pilih file Excel (.xlsx) yang akan diimpor.');
-      return;
-    }
-
     try {
-      setImporting(true);
-      setImportError(null);
-      setImportResult(null);
-
-      const res = await pembimbingApi.importExcel(importFile);
-      setImportResult(res);
-
-      if (res.successCount > 0) {
-        fetchData();
-      }
+      setSyncing(true);
+      setSyncError(null);
+      setSyncResult(null);
+      const res = await pembimbingApi.sinkronSinergi();
+      setSyncResult(res);
+      await fetchData();
     } catch (err: unknown) {
-      const errorObj = err as Error;
-      setImportError(errorObj.message || 'Terjadi kesalahan saat memproses import file.');
+      const apiErr = err as { message?: string };
+      setSyncError(apiErr?.message || 'Gagal menyinkronkan data dosen dari SINERGI.');
     } finally {
-      setImporting(false);
+      setSyncing(false);
     }
   };
 
@@ -305,33 +291,18 @@ export default function DosenPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Export Excel Button (Admin & Pengelola) */}
-            <Tooltip content="Ekspor data dosen ke file Excel (.xlsx)" position="bottom">
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="px-3.5 py-2 sm:py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 
-                  font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
-                id="btn-export-dosen"
-              >
-                <ExportIcon className="w-4 h-4 text-emerald-600" />
-                <span className="hidden sm:inline">{exporting ? 'Mengekspor...' : 'Export Excel'}</span>
-                <span className="sm:hidden">{exporting ? '...' : 'Export'}</span>
-              </button>
-            </Tooltip>
-
-            {/* Import Excel Button (Admin Only) */}
+            {/* Sinkron SINERGI Button (Admin Only) */}
             {!isPengelola && (
-              <Tooltip content="Impor data dosen dari file Excel (.xlsx)" position="bottom">
+              <Tooltip content="Tarik & sinkronkan dosen Kedokteran Hewan (Aktif & Tugas Belajar) dari SINERGI" position="bottom">
                 <button
-                  onClick={openImportModal}
-                  className="px-3.5 py-2 sm:py-2.5 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 
+                  onClick={openSyncModal}
+                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
                     font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
-                  id="btn-import-dosen"
+                  id="btn-sync-sinergi"
                 >
-                  <ImportIcon className="w-4 h-4 text-green-600" />
-                  <span className="hidden sm:inline">Import Excel</span>
-                  <span className="sm:hidden">Import</span>
+                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Sinkron SINERGI</span>
+                  <span className="sm:hidden">SINERGI</span>
                 </button>
               </Tooltip>
             )}
@@ -771,30 +742,192 @@ export default function DosenPage() {
         </div>
       )}
 
-      {/* Import Excel Modal */}
-      {showImportModal && (
+      {/* Delete Blocked Modal (409 Conflict) */}
+      {deleteBlockInfo && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
-            {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-gradient-to-r from-emerald-600 to-green-600 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
-                  <FileSpreadsheetIcon className="w-5 h-5" />
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-500 to-red-600 text-white flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shrink-0">
+                  ⚠️
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg leading-tight">Import Data Dosen</h3>
-                  <p className="text-xs text-emerald-100 mt-0.5">Unggah data dosen pembimbing secara massal via file Excel</p>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-lg leading-tight">Dosen Tidak Dapat Dihapus</h3>
+                  <p className="text-xs text-amber-50 mt-0.5 truncate">
+                    {deleteBlockInfo.namaDosen} ({deleteBlockInfo.nip})
+                  </p>
                 </div>
               </div>
               <button
+                type="button"
+                onClick={() => setDeleteBlockInfo(null)}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                title="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 leading-relaxed">
+                {deleteBlockInfo.message}
+              </div>
+
+              {deleteBlockInfo.koordinatorStase.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Koordinator Stase ({deleteBlockInfo.koordinatorStase.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.koordinatorStase.map(item => (
+                      <div
+                        key={`koordinator-${item.idStase}`}
+                        className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3"
+                      >
+                        <div className="text-sm font-semibold text-indigo-950">
+                          Stase {item.namaStase}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteBlockInfo(null);
+                            navigate(`/stase/${item.idStase}`);
+                          }}
+                          className="px-2.5 py-1 bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium rounded-lg text-xs shrink-0 transition-colors cursor-pointer"
+                        >
+                          Detail Stase →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.jadwalUtama.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Pembimbing Utama Jadwal ({deleteBlockInfo.jadwalUtama.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.jadwalUtama.map(item => (
+                      <div
+                        key={`jadwal-${item.idJadwal}`}
+                        className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-sm"
+                      >
+                        <div className="font-semibold text-slate-800">
+                          Stase {item.namaStase}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-0.5">
+                          Kelompok: <span className="font-medium text-slate-800">{item.namaKelompok}</span>
+                          {item.tahunAjaran ? ` (${item.tahunAjaran})` : ''} • Mulai {formatDateDisplay(item.tanggalMulai)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.jadwalSubStase.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Pembimbing Sub-Stase ({deleteBlockInfo.jadwalSubStase.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {deleteBlockInfo.jadwalSubStase.map((item, idx) => (
+                      <div
+                        key={`substase-${item.idJadwal}-${idx}`}
+                        className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-sm"
+                      >
+                        <div className="font-semibold text-slate-800">
+                          Sub-Stase {item.namaSubStase} <span className="font-normal text-slate-500">(Stase {item.namaStase})</span>
+                        </div>
+                        <div className="text-xs text-slate-600 mt-0.5">
+                          Kelompok: <span className="font-medium text-slate-800">{item.namaKelompok}</span>
+                          {item.tahunAjaran ? ` (${item.tahunAjaran})` : ''} • Mulai {formatDateDisplay(item.tanggalMulai)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deleteBlockInfo.langkahPenyelesaian.length > 0 && (
+                <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-sky-900">
+                    Cara Agar Dosen Bisa Dihapus
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs text-sky-900 leading-relaxed">
+                    {deleteBlockInfo.langkahPenyelesaian.map((step, idx) => (
+                      <li key={idx}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/70 flex flex-wrap justify-end gap-2.5">
+              {(deleteBlockInfo.jadwalUtama.length > 0 || deleteBlockInfo.jadwalSubStase.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteBlockInfo(null);
+                    navigate('/jadwal');
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Buka Halaman Jadwal
+                </button>
+              )}
+              {deleteBlockInfo.koordinatorStase.length > 0 &&
+                deleteBlockInfo.jadwalUtama.length === 0 &&
+                deleteBlockInfo.jadwalSubStase.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteBlockInfo(null);
+                    navigate('/stase');
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Buka Halaman Stase
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteBlockInfo(null)}
+                className="px-5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl shadow-sm text-sm transition-all cursor-pointer"
+              >
+                Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sinkron SINERGI Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <RefreshIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Sinkronisasi Dosen SINERGI</h3>
+                  <p className="text-xs text-indigo-100 mt-0.5">Tarik &amp; perbarui data dosen dari server SINERGI UNDANA</p>
+                </div>
+              </div>
+              <button
+                type="button"
                 onClick={() => {
-                  if (!importing) {
-                    setShowImportModal(false);
-                    setImportResult(null);
-                    setImportError(null);
+                  if (!syncing) {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
                   }
                 }}
-                disabled={importing}
+                disabled={syncing}
                 className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 title="Tutup"
               >
@@ -802,143 +935,115 @@ export default function DosenPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {/* Template Download Card */}
-              <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-3">
-                <div className="text-xs text-slate-700">
-                  <span className="font-semibold text-emerald-900 block mb-0.5">Gunakan Template Resmi</span>
-                  Format file harus sesuai template agar data terbaca dengan benar.
+            <form onSubmit={handleSyncSinergi} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-950 space-y-1.5">
+                <div className="font-semibold text-indigo-900">Cakupan Data yang Ditarik:</div>
+                <div className="space-y-1 text-[11px] text-indigo-900/90">
+                  <div>
+                    <span className="font-semibold">Unit Kerja:</span> S1-Program Studi Kedokteran Hewan &amp; Profesi-Program Studi Dokter Hewan
+                  </div>
+                  <div>
+                    <span className="font-semibold">Status Dosen:</span> Aktif &amp; Tugas Belajar
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  disabled={downloadingTemplate}
-                  className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-medium rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
-                >
-                  <DownloadIcon className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{downloadingTemplate ? 'Mengunduh...' : 'Unduh Template'}</span>
-                </button>
               </div>
 
-              {/* Form Import */}
-              <form onSubmit={handleImportSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Pilih File Excel (.xlsx) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept=".xlsx"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setImportFile(file);
-                      setImportResult(null);
-                      setImportError(null);
-                    }}
-                    disabled={importing}
-                    className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 file:cursor-pointer border border-slate-200 rounded-xl bg-slate-50 p-2"
-                  />
-                  {importFile && (
-                    <div className="mt-1 text-xs text-slate-500 flex items-center justify-between">
-                      <span>📄 {importFile.name}</span>
-                      <span>{(importFile.size / 1024).toFixed(1)} KB</span>
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-amber-800">Ketentuan Sinkronisasi:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
+                  <li>Dosen baru akan dibuatkan akun login otomatis dengan <strong>username &amp; password = NIP</strong>.</li>
+                  <li>Dosen yang sudah terdaftar (berdasarkan NIP) akan diperbarui <strong>Nama &amp; gelarnya</strong> jika berubah (password &amp; jadwal tidak diubah).</li>
+                  <li>Data dosen yang tidak terdaftar di SINERGI tetap dipertahankan (tidak dihapus).</li>
+                </ul>
+              </div>
+
+              {syncError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">⚠️</span>
+                  <span className="flex-1">{syncError}</span>
+                </div>
+              )}
+
+              {syncResult && (
+                <div className="space-y-2.5">
+                  <div className="p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-900 text-xs space-y-2">
+                    <div className="font-bold text-emerald-800">
+                      ✅ Sinkronisasi Dosen SINERGI Selesai
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 text-center">
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-100">
+                        <div className="text-sm font-bold text-slate-800">{syncResult.jumlahItem}</div>
+                        <div className="text-[10px] text-slate-500">Total</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-200">
+                        <div className="text-sm font-bold text-emerald-600">+{syncResult.jumlahBaru}</div>
+                        <div className="text-[10px] text-slate-500">Baru</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-blue-200">
+                        <div className="text-sm font-bold text-blue-600">{syncResult.jumlahUpdate}</div>
+                        <div className="text-[10px] text-slate-500">Diubah</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-slate-200">
+                        <div className="text-sm font-bold text-slate-600">{syncResult.jumlahTidakBerubah}</div>
+                        <div className="text-[10px] text-slate-500">Tetap</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-rose-200">
+                        <div className="text-sm font-bold text-rose-600">{syncResult.jumlahGagal}</div>
+                        <div className="text-[10px] text-slate-500">Gagal</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {syncResult.errors && syncResult.errors.length > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-semibold text-amber-800 mb-1.5">
+                        Catatan ({syncResult.errors.length}):
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
+                        {syncResult.errors.map((err, idx) => (
+                          <div key={idx} className="bg-amber-100/70 p-1.5 rounded leading-tight">
+                            • {err}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
+              )}
 
-                {/* Important Notes */}
-                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
-                  <p className="font-semibold text-amber-800 flex items-center gap-1.5">
-                    <span>💡</span> Ketentuan Import:
-                  </p>
-                  <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
-                    <li>Kolom wajib: <strong>NIP</strong> dan <strong>Nama Lengkap</strong>.</li>
-                    <li>Akun login dosen akan otomatis dibuat dengan <strong>username</strong> dan <strong>password awal</strong> sama dengan NIP.</li>
-                    <li>NIP yang sudah terdaftar di sistem atau ganda di dalam file akan dilewati dengan pesan keterangan.</li>
-                  </ul>
-                </div>
-
-                {/* Error Banner */}
-                {importError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">⚠️</span>
-                    <span className="flex-1">{importError}</span>
-                  </div>
-                )}
-
-                {/* Import Result Feedback */}
-                {importResult && (
-                  <div className="space-y-2.5">
-                    <div className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs ${
-                      importResult.successCount > 0
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        : 'bg-red-50 border-red-200 text-red-800'
-                    }`}>
-                      <span className="text-base">{importResult.successCount > 0 ? '✅' : '❌'}</span>
-                      <div className="flex-1">
-                        <span className="font-semibold block">
-                          {importResult.successCount > 0
-                            ? `Berhasil mengimpor ${importResult.successCount} data dosen.`
-                            : 'Tidak ada data dosen yang berhasil diimpor.'}
-                        </span>
-                        <span className="text-[11px] opacity-80">
-                          Total baris yang diproses: {importResult.totalRows} baris.
-                        </span>
-                      </div>
-                    </div>
-
-                    {importResult.errors && importResult.errors.length > 0 && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <p className="text-xs font-semibold text-amber-800 mb-1.5 flex items-center justify-between">
-                          <span>Catatan / Kesalahan ({importResult.errors.length} baris):</span>
-                        </p>
-                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
-                          {importResult.errors.map((err, idx) => (
-                            <div key={idx} className="bg-amber-100/70 p-1.5 rounded text-amber-900 leading-tight">
-                              • {err}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Footer Controls */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportResult(null);
-                      setImportError(null);
-                    }}
-                    disabled={importing}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
-                  >
-                    {importResult ? 'Selesai' : 'Batal'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={importing || !importFile}
-                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    {importing ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Memproses Import...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ImportIcon className="w-4 h-4" />
-                        <span>Mulai Import</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  disabled={syncing}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  {syncResult ? 'Selesai' : 'Batal'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncing}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  id="btn-submit-sync-sinergi"
+                >
+                  {syncing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyinkronkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshIcon className="w-4 h-4" />
+                      <span>Mulai Sinkronisasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

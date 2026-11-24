@@ -6,6 +6,7 @@ using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ public class PembimbingController : ControllerBase
     private readonly IRiwayatKelompokRepository _riwayatKelompokRepository;
     private readonly IHariLiburService _hariLiburService;
     private readonly IAutoArchiveService _autoArchiveService;
-    private readonly ExcelService _excelService;
+    private readonly SinergiApi _sinergiApi;
 
     public PembimbingController(
         IPembimbingRepository pembimbingRepository,
@@ -39,7 +40,7 @@ public class PembimbingController : ControllerBase
         IRiwayatKelompokRepository riwayatKelompokRepository,
         IHariLiburService hariLiburService,
         IAutoArchiveService autoArchiveService,
-        ExcelService excelService)
+        SinergiApi sinergiApi)
     {
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
@@ -50,126 +51,7 @@ public class PembimbingController : ControllerBase
         _riwayatKelompokRepository = riwayatKelompokRepository;
         _hariLiburService = hariLiburService;
         _autoArchiveService = autoArchiveService;
-        _excelService = excelService;
-    }
-
-    [HttpGet("template")]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
-    public IActionResult DownloadTemplate()
-    {
-        var bytes = _excelService.GenerateDosenTemplate();
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Template_Dosen.xlsx");
-    }
-
-    [HttpGet("export")]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
-    public async Task<IActionResult> Export()
-    {
-        var daftarPembimbing = await _pembimbingRepository.GetAll();
-        var semuaStase = await _staseRepository.GetAll();
-
-        var data = daftarPembimbing.Select(x => new DosenExportDto
-        {
-            NIP = x.NIP,
-            Nama = x.Nama,
-            DaftarStase = x.DaftarStase.Select(s => s.Nama).ToList(),
-            KoordinatorStase = semuaStase.Where(s => s.Koordinator?.Id == x.Id).Select(s => s.Nama).ToList()
-        }).ToList();
-
-        var bytes = _excelService.ExportDosen(data);
-        var filename = $"Data_Dosen_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
-    }
-
-    [HttpPost("import")]
-    [Authorize(Roles = UserRoles.Admin)]
-    public async Task<IActionResult> Import(IFormFile? file)
-    {
-        if (file == null || file.Length == 0)
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "File Excel wajib dipilih." });
-
-        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "Format file harus berekstensi .xlsx" });
-
-        using var stream = file.OpenReadStream();
-        var rows = _excelService.ParseDosen(stream, out var parseErrors);
-
-        if (parseErrors.Count > 0 && rows.Count == 0)
-        {
-            return BadRequest(new ExcelImportResult
-            {
-                Success = false,
-                TotalRows = 0,
-                SuccessCount = 0,
-                Errors = parseErrors
-            });
-        }
-
-        var existingNips = new HashSet<string>((await _pembimbingRepository.GetAll()).Select(p => p.NIP), StringComparer.OrdinalIgnoreCase);
-        var existingUsernames = new HashSet<string>((await _userRepository.GetAll()).Select(u => u.Name), StringComparer.OrdinalIgnoreCase);
-
-        var errors = new List<string>(parseErrors);
-        var successCount = 0;
-        var fileNips = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var row in rows)
-        {
-            if (fileNips.Contains(row.NIP))
-            {
-                errors.Add($"Baris {row.RowIndex}: NIP '{row.NIP}' terduplikasi di dalam file yang diunggah.");
-                continue;
-            }
-            fileNips.Add(row.NIP);
-
-            if (existingNips.Contains(row.NIP))
-            {
-                errors.Add($"Baris {row.RowIndex}: NIP '{row.NIP}' sudah terdaftar di sistem.");
-                continue;
-            }
-
-            if (existingUsernames.Contains(row.NIP))
-            {
-                errors.Add($"Baris {row.RowIndex}: Akun dengan username '{row.NIP}' sudah ada.");
-                continue;
-            }
-
-            var pembimbing = new Pembimbing
-            {
-                NIP = row.NIP,
-                Nama = row.Nama
-            };
-
-            var user = new User
-            {
-                Name = row.NIP,
-                PasswordHash = _passwordHasher.HashPassword(null, row.NIP),
-                Role = UserRoles.Dosen,
-                Pembimbing = pembimbing
-            };
-
-            pembimbing.User = user;
-
-            _pembimbingRepository.Add(pembimbing);
-            _userRepository.Add(user);
-
-            existingNips.Add(row.NIP);
-            existingUsernames.Add(row.NIP);
-            successCount++;
-        }
-
-        if (successCount > 0)
-        {
-            var result = await _unitOfWork.SaveChangesAsync();
-            if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
-        }
-
-        return Ok(new ExcelImportResult
-        {
-            Success = successCount > 0,
-            TotalRows = rows.Count,
-            SuccessCount = successCount,
-            Errors = errors
-        });
+        _sinergiApi = sinergiApi;
     }
 
     [HttpGet("{id:int}")]
@@ -491,8 +373,93 @@ public class PembimbingController : ControllerBase
         var pembimbing = await _pembimbingRepository.Get(id);
         if (pembimbing is null) return NotFound();
 
+        await _autoArchiveService.AutoArchiveCompletedSchedulesAsync();
+
+        var semuaStase = await _staseRepository.GetAll();
+        var semuaKelompok = await _kelompokRepository.GetAll();
+
+        var koordinatorStase = semuaStase
+            .Where(s => s.Koordinator?.Id == pembimbing.Id)
+            .OrderBy(s => s.Nama)
+            .Select(s => new
+            {
+                idStase = s.Id,
+                namaStase = s.Nama
+            })
+            .ToList();
+
+        var jadwalUtama = semuaKelompok
+            .SelectMany(k => (k.DaftarJadwal ?? Enumerable.Empty<Jadwal>())
+                .Where(j => j.Pembimbing?.Id == pembimbing.Id)
+                .Select(j => new
+                {
+                    idJadwal = j.Id,
+                    idKelompok = k.Id,
+                    namaKelompok = k.Nama,
+                    tahunAjaran = k.TahunAjaran != null ? $"{k.TahunAjaran.Tahun} - {k.TahunAjaran.Semester}" : null,
+                    idStase = j.Stase?.Id,
+                    namaStase = j.Stase?.Nama ?? "-",
+                    tanggalMulai = j.TanggalMulai.ToString("yyyy-MM-dd")
+                }))
+            .OrderBy(x => x.namaKelompok)
+            .ThenBy(x => x.tanggalMulai)
+            .ToList();
+
+        var jadwalSubStase = semuaKelompok
+            .SelectMany(k => (k.DaftarJadwal ?? Enumerable.Empty<Jadwal>())
+                .SelectMany(j => (j.DaftarJadwalSubStase ?? Enumerable.Empty<JadwalSubStase>())
+                    .Where(sub => sub.Pembimbing?.Id == pembimbing.Id)
+                    .Select(sub => new
+                    {
+                        idJadwal = j.Id,
+                        idKelompok = k.Id,
+                        namaKelompok = k.Nama,
+                        tahunAjaran = k.TahunAjaran != null ? $"{k.TahunAjaran.Tahun} - {k.TahunAjaran.Semester}" : null,
+                        idStase = j.Stase?.Id,
+                        namaStase = j.Stase?.Nama ?? "-",
+                        namaSubStase = sub.SubStase?.Nama ?? "-",
+                        tanggalMulai = j.TanggalMulai.ToString("yyyy-MM-dd")
+                    })))
+            .OrderBy(x => x.namaKelompok)
+            .ThenBy(x => x.namaStase)
+            .ThenBy(x => x.namaSubStase)
+            .ToList();
+
+        if (koordinatorStase.Count > 0 || jadwalUtama.Count > 0 || jadwalSubStase.Count > 0)
+        {
+            var langkahPenyelesaian = new List<string>();
+            if (koordinatorStase.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka halaman Detail Stase terkait (menu Stase), klik Atur Koordinator, lalu ganti atau kosongkan Koordinator Stase.");
+            }
+            if (jadwalUtama.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka menu Jadwal, cari jadwal stase dan kelompok di atas, klik Edit lalu ganti atau kosongkan Dosen Pembimbing Utama (atau hapus jadwal jika tidak lagi diperlukan).");
+            }
+            if (jadwalSubStase.Count > 0)
+            {
+                langkahPenyelesaian.Add("Buka menu Jadwal, cari jadwal stase dan kelompok di atas, klik Edit lalu ganti atau kosongkan Dosen Pembimbing pada Sub-Stase terkait.");
+            }
+            langkahPenyelesaian.Add("Setelah semua penugasan di atas dilepas atau diganti ke dosen lain, kembali ke halaman Dosen untuk menghapus dosen ini.");
+
+            return Conflict(new
+            {
+                status = 409,
+                message = $"Dosen \"{pembimbing.Nama}\" tidak dapat dihapus karena masih ditugaskan pada jadwal atau koordinator stase.",
+                namaDosen = pembimbing.Nama,
+                nip = pembimbing.NIP,
+                koordinatorStase,
+                jadwalUtama,
+                jadwalSubStase,
+                langkahPenyelesaian
+            });
+        }
+
         _pembimbingRepository.Delete(pembimbing);
-        _userRepository.Delete(pembimbing.User);
+        if (pembimbing.User is not null)
+        {
+            _userRepository.Delete(pembimbing.User);
+        }
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
@@ -531,6 +498,126 @@ public class PembimbingController : ControllerBase
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
         return Ok(new { message = $"Password untuk dosen '{pembimbing.Nama}' berhasil direset.", defaultUsed = string.IsNullOrWhiteSpace(dto.Password) });
+    }
+
+    [HttpPost("sinkron-sinergi")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SinkronSinergi(CancellationToken cancellationToken)
+    {
+        var apiResult = await _sinergiApi.GetDosenKedokteranHewanAsync(cancellationToken);
+        if (apiResult.IsFailure)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                message = apiResult.Error.Message
+            });
+        }
+
+        var daftarApi = apiResult.Value;
+        var existingByNip = (await _pembimbingRepository.GetAll())
+            .Where(p => !string.IsNullOrWhiteSpace(p.NIP))
+            .GroupBy(p => p.NIP.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingUsersByName = (await _userRepository.GetAll())
+            .Where(u => !string.IsNullOrWhiteSpace(u.Name))
+            .GroupBy(u => u.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        int jumlahBaru = 0;
+        int jumlahUpdate = 0;
+        int jumlahTidakBerubah = 0;
+        int jumlahGagal = 0;
+        var errors = new List<string>();
+        var processedNips = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in daftarApi)
+        {
+            var nip = (item.NIP ?? string.Empty).Trim();
+            var namaFormatted = SinergiApi.FormatNamaGelar(item.NamaLengkap, item.GelarDepan, item.GelarBelakang);
+
+            if (string.IsNullOrWhiteSpace(nip) || string.IsNullOrWhiteSpace(namaFormatted))
+            {
+                jumlahGagal++;
+                errors.Add($"Data dosen tidak lengkap (NIP: '{item.NIP}', Nama: '{item.NamaLengkap}').");
+                continue;
+            }
+
+            if (!processedNips.Add(nip))
+            {
+                continue;
+            }
+
+            if (existingByNip.TryGetValue(nip, out var existing))
+            {
+                if (!string.Equals(existing.Nama, namaFormatted, StringComparison.Ordinal))
+                {
+                    existing.Nama = namaFormatted;
+                    _pembimbingRepository.Update(existing);
+                    jumlahUpdate++;
+                }
+                else
+                {
+                    jumlahTidakBerubah++;
+                }
+                continue;
+            }
+
+            if (existingUsersByName.TryGetValue(nip, out var existingUser))
+            {
+                jumlahGagal++;
+                errors.Add($"NIP {nip} ({namaFormatted}): username sudah dipakai akun lain (role: {existingUser.Role}).");
+                continue;
+            }
+
+            var pembimbing = new Pembimbing
+            {
+                NIP = nip,
+                Nama = namaFormatted
+            };
+
+            var user = new User
+            {
+                Name = nip,
+                PasswordHash = _passwordHasher.HashPassword(null!, nip),
+                Role = UserRoles.Dosen,
+                Pembimbing = pembimbing
+            };
+
+            pembimbing.User = user;
+
+            _pembimbingRepository.Add(pembimbing);
+            _userRepository.Add(user);
+
+            existingByNip[nip] = pembimbing;
+            existingUsersByName[nip] = user;
+            jumlahBaru++;
+        }
+
+        if (jumlahBaru > 0 || jumlahUpdate > 0)
+        {
+            var saveResult = await _unitOfWork.SaveChangesAsync();
+            if (saveResult.IsFailure)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Gagal menyimpan hasil sinkronisasi dosen ke database."
+                });
+            }
+        }
+
+        return Ok(new SinergiSyncResult
+        {
+            Success = true,
+            UnitKerja = ["S1-Program Studi Kedokteran Hewan", "Profesi-Program Studi Dokter Hewan"],
+            StatusFilter = ["Aktif", "Tugas Belajar"],
+            JumlahItem = daftarApi.Count,
+            JumlahBaru = jumlahBaru,
+            JumlahUpdate = jumlahUpdate,
+            JumlahTidakBerubah = jumlahTidakBerubah,
+            JumlahGagal = jumlahGagal,
+            Errors = errors
+        });
     }
 }
 

@@ -401,3 +401,8 @@ FodyWeavers.xsd
 *.env
 /src/SIAkademik/SIAkademik.Web/appsettings.Production.json
 /src/SIAkademik/SIAkademik.Web/appsettings.Production.json
+
+# Local AI agent rules & skills
+.agents/
+AGENTS.md
+GEMINI.md
