@@ -131,8 +131,8 @@ public class KelompokController : ControllerBase
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateKelompok create)
     {
-        if (await _kelompokRepository.IsExist(create.Nama))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama kelompok '{create.Nama}' sudah digunakan" });
+        if (await _kelompokRepository.IsExist(create.Nama, create.IdTahunAjaran))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama kelompok '{create.Nama}' sudah digunakan pada tahun ajaran ini" });
 
         var kelompok = new Kelompok
         {
@@ -165,8 +165,8 @@ public class KelompokController : ControllerBase
         var kelompok = await _kelompokRepository.Get(id);
         if (kelompok is null) return NotFound();
 
-        if (await _kelompokRepository.IsExist(update.Nama, id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama kelompok '{update.Nama}' sudah digunakan" });
+        if (await _kelompokRepository.IsExist(update.Nama, update.IdTahunAjaran, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nama"] = $"Nama kelompok '{update.Nama}' sudah digunakan pada tahun ajaran ini" });
 
         kelompok.Nama = update.Nama;
         kelompok.IdTahunAjaran = update.IdTahunAjaran;

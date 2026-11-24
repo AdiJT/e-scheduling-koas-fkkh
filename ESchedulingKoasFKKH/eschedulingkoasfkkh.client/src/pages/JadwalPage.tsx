@@ -9,7 +9,7 @@ import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { useAuth } from '../contexts/AuthContext';
 import SearchableSelect from '../components/SearchableSelect';
 import { JadwalIcon, RefreshIcon, KelompokIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, PrintIcon, SparklesIcon, ListIcon } from '../components/Icons';
-import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, type View, type EventProps } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -26,6 +26,72 @@ const localizer = dateFnsLocalizer({
   getDay,
   locales,
 });
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  type: 'jadwal' | 'holiday';
+  idKelompok: number;
+  jadwalId: number;
+  namaKelompok?: string;
+  namaStase?: string;
+  subStaseName?: string | null;
+  tahunAjaran?: string | null;
+  idTahunAjaran?: number | null;
+  angkatanCode?: string | null;
+}
+
+const ANGKATAN_STYLES = [
+  { badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500', pillActive: 'bg-indigo-600 text-white border-indigo-600 shadow-sm' },
+  { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', pillActive: 'bg-emerald-600 text-white border-emerald-600 shadow-sm' },
+  { badge: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500', pillActive: 'bg-amber-600 text-white border-amber-600 shadow-sm' },
+  { badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500', pillActive: 'bg-sky-600 text-white border-sky-600 shadow-sm' },
+  { badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', pillActive: 'bg-rose-600 text-white border-rose-600 shadow-sm' },
+  { badge: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500', pillActive: 'bg-violet-600 text-white border-violet-600 shadow-sm' },
+];
+
+function getAngkatanCode(tahunAjaran?: string | null): string | null {
+  if (!tahunAjaran) return null;
+  const match = tahunAjaran.match(/(\d{4})\s*-\s*(ganjil|genap)/i);
+  if (!match) return null;
+  const sem = match[2].toLowerCase() === 'ganjil' ? '1' : '2';
+  return `${match[1]}${sem}`;
+}
+
+function getAngkatanStyle(idTahunAjaran?: number | null) {
+  if (!idTahunAjaran) {
+    return { badge: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400', pillActive: 'bg-slate-700 text-white border-slate-700 shadow-sm' };
+  }
+  return ANGKATAN_STYLES[Math.abs(idTahunAjaran) % ANGKATAN_STYLES.length];
+}
+
+function CalendarEventItem({ event }: EventProps<CalendarEvent>) {
+  if (event.type === 'holiday') {
+    return <span className="block truncate">{event.title}</span>;
+  }
+
+  const labelStase = event.subStaseName
+    ? `${event.namaStase} (${event.subStaseName})`
+    : event.namaStase;
+  const tooltipText = event.angkatanCode
+    ? `[${event.angkatanCode} · ${event.tahunAjaran}] ${event.namaKelompok} - ${labelStase}`
+    : `${event.namaKelompok} - ${labelStase}`;
+
+  return (
+    <div className="flex items-center gap-1 truncate leading-tight" title={tooltipText}>
+      {event.angkatanCode && (
+        <span className="inline-block bg-black/25 text-white px-1 rounded text-[10px] font-extrabold shrink-0">
+          {event.angkatanCode}
+        </span>
+      )}
+      <span className="truncate">
+        {event.namaKelompok} - {labelStase}
+      </span>
+    </div>
+  );
+}
 
 function getDefaultGenerateDate(): string {
   const now = new Date();
@@ -253,7 +319,7 @@ export default function JadwalPage() {
 
   // === PREPARE CALENDAR EVENTS ===
   // 1. Jadwal Events
-  const jadwalEvents = data
+  const jadwalEvents: CalendarEvent[] = data
     .filter(j => {
       if (isMahasiswa) return j.idKelompok === userKelompokId;
       if (isDosen) return isDosenSupervising(j, user?.profileId);
@@ -261,9 +327,11 @@ export default function JadwalPage() {
     })
     .map(j => {
       const sub = isDosen ? getDosenSubStase(j, user?.profileId) : null;
+      const angkatanCode = getAngkatanCode(j.tahunAjaran);
+      const labelKelompok = angkatanCode ? `[${angkatanCode}] ${j.namaKelompok}` : j.namaKelompok;
       const title = sub
-        ? `${j.namaKelompok} - ${j.namaStase} (${sub.namaSubStase})`
-        : `${j.namaKelompok} - ${j.namaStase}`;
+        ? `${labelKelompok} - ${j.namaStase} (${sub.namaSubStase})`
+        : `${labelKelompok} - ${j.namaStase}`;
       return {
         id: `jadwal_${j.id}`,
         title,
@@ -272,6 +340,12 @@ export default function JadwalPage() {
         type: 'jadwal',
         idKelompok: j.idKelompok,
         jadwalId: j.id,
+        namaKelompok: j.namaKelompok,
+        namaStase: j.namaStase,
+        subStaseName: sub ? sub.namaSubStase : null,
+        tahunAjaran: j.tahunAjaran,
+        idTahunAjaran: j.idTahunAjaran,
+        angkatanCode,
       };
     });
 
@@ -282,7 +356,7 @@ export default function JadwalPage() {
   const holidaysNextYear = getHolidays(currentYear + 1);
   const allHolidays = [...holidaysCurrentYear, ...holidaysNextYear];
   
-  const holidayEvents = allHolidays.map((h, i) => ({
+  const holidayEvents: CalendarEvent[] = allHolidays.map((h, i) => ({
     id: `holiday_${currentYear}_${i}`,
     title: `Libur: ${h.name}`,
     start: new Date(h.date + 'T00:00:00'),
@@ -292,7 +366,11 @@ export default function JadwalPage() {
     jadwalId: 0,
   }));
 
-  const calendarEvents = [...jadwalEvents, ...holidayEvents];
+  const calendarEvents: CalendarEvent[] = [...jadwalEvents, ...holidayEvents];
+
+  const selectedFilterTa = filterTahunAjaran
+    ? tahunAjaranList.find(t => t.id === Number(filterTahunAjaran)) || null
+    : null;
 
   // === DETAIL & DELETE ===
   const handleDetail = (id: number) => {
@@ -528,7 +606,10 @@ export default function JadwalPage() {
       {/* Print only Header */}
       <div className="hidden print:block text-center mb-6">
         <h1 className="text-2xl font-bold text-black uppercase">Jadwal Stase KOAS</h1>
-        <p className="text-sm text-gray-600">Pendidikan Profesi Dokter Hewan</p>
+        <p className="text-sm text-gray-600">
+          Pendidikan Profesi Dokter Hewan
+          {selectedFilterTa ? ` — Tahun Ajaran ${selectedFilterTa.tahun} - ${selectedFilterTa.semester} (${getAngkatanCode( `${selectedFilterTa.tahun} - ${selectedFilterTa.semester}`)})` : ''}
+        </p>
       </div>
 
       {/* Error Alert */}
@@ -637,7 +718,7 @@ export default function JadwalPage() {
         <div className="flex bg-slate-100 p-1 rounded-xl w-max">
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'calendar' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -645,7 +726,7 @@ export default function JadwalPage() {
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'table' ? 'bg-white text-primary-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -653,14 +734,13 @@ export default function JadwalPage() {
           </button>
         </div>
 
-
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full sm:w-auto">
           {/* Status Filter (only for table) */}
           {viewMode === 'table' && (
             <div className="flex gap-2 flex-wrap">
               {['all', 'Berlangsung', 'Akan Datang', 'Selesai'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     filterStatus === s
                       ? 'bg-primary-900 text-white shadow-md'
                       : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
@@ -671,21 +751,24 @@ export default function JadwalPage() {
             </div>
           )}
 
-          {/* Tahun Ajaran Filter */}
-          <div className="w-full sm:w-56">
+          {/* Tahun Ajaran Dropdown Filter (Applies to Calendar & Table) */}
+          <div className="w-full sm:w-72">
             <SearchableSelect
               value={filterTahunAjaran}
               onChange={(val) => setFilterTahunAjaran(val ? Number(val) : '')}
               options={[
-                { value: '', label: 'Semua Tahun Ajaran' },
-                ...tahunAjaranList.map(ta => ({
-                  value: ta.id,
-                  label: `${ta.tahun} - ${ta.semester}`,
-                  badge: ta.status || undefined,
-                }))
+                { value: '', label: 'Semua Tahun Ajaran / Angkatan' },
+                ...tahunAjaranList.map(ta => {
+                  const code = getAngkatanCode(`${ta.tahun} - ${ta.semester}`);
+                  return {
+                    value: ta.id,
+                    label: code ? `${code} · ${ta.tahun} - ${ta.semester}` : `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined,
+                  };
+                })
               ]}
               placeholder="Semua Tahun Ajaran"
-              searchPlaceholder="Cari T.A..."
+              searchPlaceholder="Cari angkatan / T.A..."
               size="sm"
               isClearable={false}
               accentColor="red"
@@ -696,8 +779,35 @@ export default function JadwalPage() {
 
       {/* Content Area */}
       {viewMode === 'calendar' ? (
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 animate-fade-in-up h-[700px] overflow-x-auto pb-6">
-          <div className="min-w-[800px] h-full">
+        <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-5 animate-fade-in-up overflow-x-auto pb-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100 text-xs">
+            <div className="text-slate-600 flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-700">Tag di Kalender:</span>
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold text-[11px]">20251</span>
+              <span>menunjukkan kode Tahun Angkatan sebelum nama kelompok.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedFilterTa ? (
+                <>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold ${getAngkatanStyle(selectedFilterTa.id).badge}`}>
+                    Menampilkan: {getAngkatanCode(`${selectedFilterTa.tahun} - ${selectedFilterTa.semester}`)} ({selectedFilterTa.tahun} - {selectedFilterTa.semester})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFilterTahunAjaran('')}
+                    className="text-rose-600 hover:text-rose-700 font-semibold underline cursor-pointer"
+                  >
+                    Tampilkan Semua
+                  </button>
+                </>
+              ) : (
+                <span className="text-slate-500 font-medium">
+                  Menampilkan seluruh angkatan ({jadwalEvents.length} jadwal)
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="min-w-[800px] h-[640px]">
             <Calendar
               localizer={localizer}
               events={calendarEvents}
@@ -709,6 +819,8 @@ export default function JadwalPage() {
               date={calendarDate}
               onNavigate={setCalendarDate}
               eventPropGetter={eventStyleGetter}
+              components={{ event: CalendarEventItem }}
+              popup
               messages={{
                 next: "Selanjutnya",
                 previous: "Sebelumnya",
@@ -828,20 +940,31 @@ export default function JadwalPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {paginatedData.map((j, i) => (
+                    {paginatedData.map((j, i) => {
+                      const angkatanCode = getAngkatanCode(j.tahunAjaran);
+                      const angkatanStyle = getAngkatanStyle(j.idTahunAjaran);
+                      return (
                       <tr key={j.id} className="hover:bg-red-50/20 transition-colors group">
                         <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + i + 1}</td>
                         <td className="px-3.5 py-3.5 whitespace-nowrap">
-                          <button 
-                            onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
-                            className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
-                          >
-                            {j.namaKelompok}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            {angkatanCode && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${angkatanStyle.badge}`}>
+                                {angkatanCode}
+                              </span>
+                            )}
+                            <button 
+                              onClick={() => navigate(`/kelompok/${j.idKelompok}`)}
+                              className="text-sm font-medium text-primary-900 hover:text-blue-600 hover:underline transition-all"
+                            >
+                              {j.namaKelompok}
+                            </button>
+                          </div>
                         </td>
                         <td className="px-3.5 py-3.5 whitespace-nowrap">
                           {j.tahunAjaran ? (
-                            <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${angkatanStyle.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${angkatanStyle.dot}`} />
                               {j.tahunAjaran}
                             </span>
                           ) : (
@@ -926,7 +1049,8 @@ export default function JadwalPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1014,7 +1138,14 @@ export default function JadwalPage() {
             <div className="space-y-4 mb-6 overflow-y-auto pr-2 flex-1 max-h-[60vh]">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p className="text-xs text-slate-500 mb-1">Kelompok</p>
-                <p className="font-semibold text-slate-800">{editingJadwal.namaKelompok}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-slate-800">{editingJadwal.namaKelompok}</p>
+                  {editingJadwal.tahunAjaran && (
+                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getAngkatanStyle(editingJadwal.idTahunAjaran).badge}`}>
+                      {getAngkatanCode(editingJadwal.tahunAjaran) ? `${getAngkatanCode(editingJadwal.tahunAjaran)} · ` : ''}{editingJadwal.tahunAjaran}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -1171,6 +1302,7 @@ export default function JadwalPage() {
               <h3 className="text-lg font-bold text-primary-900 mb-1">Hapus Jadwal?</h3>
               {selectedJadwal && (
                 <p className="text-sm text-slate-600 font-medium mb-1">
+                  {getAngkatanCode(selectedJadwal.tahunAjaran) ? `[${getAngkatanCode(selectedJadwal.tahunAjaran)}] ` : ''}
                   {selectedJadwal.namaKelompok} — {selectedJadwal.namaStase}
                 </p>
               )}
@@ -1220,7 +1352,13 @@ export default function JadwalPage() {
                 </div>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <p className="text-xs text-slate-500 mb-1">Tahun Ajaran</p>
-                  <p className="font-semibold text-slate-800 text-sm">{detailJadwal.tahunAjaran || '-'}</p>
+                  <p className="font-semibold text-slate-800 text-sm">
+                    {detailJadwal.tahunAjaran ? (
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-semibold ${getAngkatanStyle(detailJadwal.idTahunAjaran).badge}`}>
+                        {getAngkatanCode(detailJadwal.tahunAjaran) ? `${getAngkatanCode(detailJadwal.tahunAjaran)} · ` : ''}{detailJadwal.tahunAjaran}
+                      </span>
+                    ) : '-'}
+                  </p>
                 </div>
               </div>
               

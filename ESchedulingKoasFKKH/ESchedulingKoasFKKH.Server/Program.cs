@@ -43,7 +43,6 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 builder.Services.AddScoped<IAutoArchiveService, AutoArchiveService>();
 builder.Services.AddScoped<INotifikasiService, NotifikasiService>();
-builder.Services.AddScoped<ExcelService>();
 builder.Services.AddHttpClient<SiadiknonaApi>(conf =>
 {
     var baseUrl = builder.Configuration["SiadiknonaApi:BaseUrl"]?.TrimEnd('/')
