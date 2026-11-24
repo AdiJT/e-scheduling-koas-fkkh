@@ -314,6 +314,9 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
                 }
                 return new ActivityMetadata(modul, "Reset Password", "Mereset password akun mahasiswa", null);
 
+            case "Import":
+                return new ActivityMetadata(modul, "Import", "Mengimpor data mahasiswa dari file Excel", "Import Excel Mahasiswa");
+
             default:
                 return BuildFallbackMetadata("Mahasiswa", action, "POST");
         }
@@ -368,6 +371,9 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
                     }
                 }
                 return new ActivityMetadata(modul, "Reset Password", "Mereset password akun dosen pembimbing", null);
+
+            case "Import":
+                return new ActivityMetadata(modul, "Import", "Mengimpor data dosen pembimbing dari file Excel", "Import Excel Dosen");
 
             default:
                 return BuildFallbackMetadata("Pembimbing", action, "POST");
@@ -695,6 +701,18 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
                 }
                 return new ActivityMetadata(modul, "Hapus", "Menghapus riwayat broadcast", null);
 
+            case "ToggleStatus":
+                if (TryGetIntArg(args, "id", out var toggleId))
+                {
+                    var repo = sp.GetRequiredService<IBroadcastRepository>();
+                    var existing = await repo.Get(toggleId);
+                    if (existing is not null)
+                    {
+                        return new ActivityMetadata(modul, "Ubah", $"Mengubah status aktif broadcast '{existing.Judul}'", existing.Judul);
+                    }
+                }
+                return new ActivityMetadata(modul, "Ubah", "Mengubah status aktif broadcast", null);
+
             default:
                 return BuildFallbackMetadata("Broadcast", action, "POST");
         }
@@ -827,6 +845,21 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             return current with
             {
                 Deskripsi = $"Mengirim broadcast '{broadcastDto.Judul}' ke target {broadcastDto.TargetRole} ({broadcastDto.JumlahPenerima} penerima)"
+            };
+        }
+
+        if ((string.Equals(controller, "Mahasiswa", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(controller, "Pembimbing", StringComparison.OrdinalIgnoreCase)) &&
+            string.Equals(action, "Import", StringComparison.OrdinalIgnoreCase) &&
+            executedContext.Result is ObjectResult importResult &&
+            importResult.Value is ExcelImportResult excelResult)
+        {
+            var labelEntitas = string.Equals(controller, "Mahasiswa", StringComparison.OrdinalIgnoreCase)
+                ? "mahasiswa"
+                : "dosen pembimbing";
+            return current with
+            {
+                Deskripsi = $"Mengimpor {excelResult.SuccessCount} dari {excelResult.TotalRows} baris data {labelEntitas} melalui Excel"
             };
         }
 

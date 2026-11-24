@@ -38,6 +38,7 @@ public static class DepedencyInjection
         services.AddScoped<INotifikasiRepository, NotifikasiRepository>();
         services.AddScoped<IBroadcastRepository, BroadcastRepository>();
         services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
+        services.AddScoped<INotifikasiDibacaRepository, NotifikasiDibacaRepository>();
 
         services.AddScoped<IHariLiburService, HariLiburService>();
 

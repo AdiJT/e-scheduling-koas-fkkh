@@ -10,24 +10,21 @@ namespace ESchedulingKoasFKKH.Server.Controllers;
 
 [Route("api/broadcast")]
 [ApiController]
-[Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+[Authorize(Roles = "admin,Admin,administrator,Administrator,pengelola,Pengelola")]
 public class BroadcastController : ControllerBase
 {
     private readonly IBroadcastRepository _broadcastRepository;
     private readonly INotifikasiService _notifikasiService;
     private readonly IUserRepository _userRepository;
-    private readonly IUnitOfWork _unitOfWork;
 
     public BroadcastController(
         IBroadcastRepository broadcastRepository,
         INotifikasiService notifikasiService,
-        IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+        IUserRepository userRepository)
     {
         _broadcastRepository = broadcastRepository;
         _notifikasiService = notifikasiService;
         _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
     }
 
     private async Task<User?> GetCurrentUserAsync()
@@ -40,25 +37,15 @@ public class BroadcastController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int limit = 50)
     {
-        var list = await _broadcastRepository.GetAll(limit);
-        var dtos = list.Select(b => new BroadcastItemDto
-        {
-            Id = b.Id,
-            Judul = b.Judul,
-            Pesan = b.Pesan,
-            Tipe = b.Tipe,
-            Prioritas = b.Prioritas,
-            TargetRole = b.TargetRole,
-            TargetKelompokId = b.TargetKelompokId,
-            TargetKelompokNama = b.TargetKelompokNama,
-            Tautan = b.Tautan,
-            CreatedByUserId = b.CreatedByUserId,
-            CreatedByName = b.CreatedByName,
-            JumlahPenerima = b.JumlahPenerima,
-            CreatedAt = b.CreatedAt
-        }).ToList();
-
+        var dtos = await _notifikasiService.GetAllBroadcastsAsync(limit);
         return Ok(dtos);
+    }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var stats = await _notifikasiService.GetBroadcastStatsAsync();
+        return Ok(stats);
     }
 
     [HttpGet("{id:int}")]
@@ -81,6 +68,7 @@ public class BroadcastController : ControllerBase
             CreatedByUserId = b.CreatedByUserId,
             CreatedByName = b.CreatedByName,
             JumlahPenerima = b.JumlahPenerima,
+            IsActive = b.IsActive,
             CreatedAt = b.CreatedAt
         });
     }
@@ -105,14 +93,21 @@ public class BroadcastController : ControllerBase
         return Created($"/api/broadcast/{result.Id}", result);
     }
 
+    [HttpPost("{id:int}/toggle-status")]
+    public async Task<IActionResult> ToggleStatus(int id)
+    {
+        var success = await _notifikasiService.ToggleBroadcastStatusAsync(id);
+        if (!success) return NotFound(new { message = "Broadcast tidak ditemukan" });
+
+        return Ok(new { success = true });
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var b = await _broadcastRepository.Get(id);
-        if (b == null) return NotFound();
+        var success = await _notifikasiService.DeleteBroadcastAsync(id);
+        if (!success) return NotFound(new { message = "Broadcast tidak ditemukan" });
 
-        _broadcastRepository.Delete(b);
-        await _unitOfWork.SaveChangesAsync();
         return NoContent();
     }
 }

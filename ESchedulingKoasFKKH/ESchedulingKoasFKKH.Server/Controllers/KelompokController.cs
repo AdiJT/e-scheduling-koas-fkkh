@@ -82,10 +82,15 @@ public class KelompokController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? idTahunAjaran = null)
     {
         await AutoArchiveCompletedSchedulesAsync();
         var allKelompok = await _kelompokRepository.GetAll();
+
+        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        {
+            allKelompok = allKelompok.Where(x => x.IdTahunAjaran == idTahunAjaran.Value).ToList();
+        }
 
         if (User.IsInRole(UserRoles.Admin) || User.IsInRole(UserRoles.Pengelola) || User.IsInRole(UserRoles.Dosen) || User.IsInRole(UserRoles.Mahasiswa))
         {
@@ -201,6 +206,11 @@ public class KelompokController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idMahasiswa"] = $"Mahasiswa '{mahasiswa.Nama}' sudah terdaftar di kelompok lain" });
 
         mahasiswa.Kelompok = kelompok;
+
+        if (mahasiswa.TahunAjaran is null && kelompok.TahunAjaran is not null)
+        {
+            mahasiswa.TahunAjaran = kelompok.TahunAjaran;
+        }
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);

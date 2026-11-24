@@ -69,17 +69,22 @@ Dokumen ini berisi penjelasan detail mengenai pembaruan sistem yang telah diimpl
 
 ---
 
-### Poin 5: Manajemen Periode Tahun Ajaran (Ganjil & Genap)
+### Poin 5: Manajemen Periode & Flag Status Tahun Ajaran (Ganjil, Genap & Selesai, Berjalan, Akan Datang)
 > [!IMPORTANT]
-> **Deskripsi Perubahan**: Ditambahkan manajemen Tahun Ajaran yang mendukung pembagian Semester **Ganjil** dan **Genap**. Setiap mahasiswa kini wajib dihubungkan ke periode tahun ajaran aktif ini.
+> **Deskripsi Perubahan**: Ditambahkan manajemen Tahun Ajaran yang mendukung pembagian Semester (**Ganjil** dan **Genap**) serta **Flag Status Periode** (**Berjalan**, **Akan Datang**, dan **Selesai**). Flag status ini berfungsi untuk mempermudah filtering data pada tabel tahun ajaran serta menampilkan indikator status pada dropdown filter di menu Mahasiswa, Kelompok, dan Jadwal.
 
 * **Letak Menu**: 
   * Login sebagai **Admin/Pengelola** > Pilih menu **Tahun Ajaran**.
 * **Cara Menggunakan**:
-  1. Klik tombol **"Tambah Tahun Ajaran"**.
-  2. Input Tahun (misalnya: `2026/2027`) dan pilih tipe Semester (**Ganjil** atau **Genap**) melalui tombol radio.
-  3. Tentukan status tahun ajaran tersebut (**Aktif** atau **Tidak Aktif**). Hanya boleh ada satu tahun ajaran yang aktif dalam satu waktu.
-  4. Ketika menambah/mengimport mahasiswa baru di menu **Mahasiswa**, Anda wajib memilih Tahun Ajaran aktif ini sebagai periode akademik mereka.
+  1. Klik tombol **"Tambah Tahun Ajaran"** atau ikon **Edit** pada salah satu baris tahun ajaran.
+  2. Input Tahun (misalnya: `2026`) dan pilih **Semester** (**Ganjil** atau **Genap**).
+  3. Pilih **Status** periode tersebut:
+     * **Berjalan**: Ditandai dengan badge hijau berkedip, menandakan semester yang sedang aktif berlangsung saat ini.
+     * **Akan Datang**: Ditandai dengan badge biru muda, menandakan semester mendatang yang telah dipersiapkan.
+     * **Selesai**: Ditandai dengan badge abu-abu netral, menandakan semester yang telah berakhir masa studinya.
+  4. **Filtering Berdasarkan Status**:
+     * Di halaman **Tahun Ajaran**, gunakan tombol tab filter di samping pencarian (`Semua Status`, `Berjalan`, `Akan Datang`, `Selesai`) untuk menyaring data secara instan.
+     * Di halaman **Mahasiswa**, **Kelompok**, dan **Jadwal**, dropdown filter tahun ajaran kini menampilkan label status otomatis (misal: `2026 - Ganjil (Berjalan)`) sehingga pengguna dapat langsung mengenali periode aktif tanpa ragu.
 
 ---
 

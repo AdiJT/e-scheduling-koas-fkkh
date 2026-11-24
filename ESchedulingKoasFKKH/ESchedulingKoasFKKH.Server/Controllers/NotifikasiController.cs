@@ -59,18 +59,20 @@ public class NotifikasiController : ControllerBase
     }
 
     [HttpPut("{id:int}/read")]
-    public async Task<IActionResult> MarkAsRead(int id)
+    [HttpPost("{id:int}/read")]
+    public async Task<IActionResult> MarkAsRead(int id, [FromQuery] bool? isBroadcast)
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
 
-        var success = await _notifikasiService.MarkAsReadAsync(id, user.Id);
+        var success = await _notifikasiService.MarkAsReadAsync(id, user.Id, isBroadcast);
         if (!success) return NotFound();
 
         return Ok(new { success = true });
     }
 
     [HttpPut("read-all")]
+    [HttpPost("read-all")]
     public async Task<IActionResult> MarkAllAsRead()
     {
         var user = await GetCurrentUserAsync();
@@ -81,12 +83,12 @@ public class NotifikasiController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromQuery] bool? isBroadcast)
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
 
-        var success = await _notifikasiService.DeleteNotificationAsync(id, user.Id);
+        var success = await _notifikasiService.DeleteNotificationAsync(id, user.Id, isBroadcast);
         if (!success) return NotFound();
 
         return NoContent();

@@ -37,5 +37,5 @@ public interface IJadwalRepository
     void Add(Jadwal jadwal);
     void Update(Jadwal jadwal);
     void Delete(Jadwal jadwal);
-    Task DeleteAll();
+    Task DeleteAll(int? idTahunAjaran = null);
 }

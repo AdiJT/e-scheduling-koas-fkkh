@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { KelompokIcon, SaveIcon, InfoIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahKelompokPage() {
   const navigate = useNavigate();
@@ -19,7 +20,12 @@ export default function TambahKelompokPage() {
     const fetchTahunAjaran = async () => {
       try {
         const list = await tahunAjaranApi.getAll();
-        setTahunAjaranList(list.sort((a, b) => b.tahun - a.tahun)); // Urutkan tahun terbaru di atas
+        const sorted = list.sort((a, b) => b.tahun - a.tahun);
+        setTahunAjaranList(sorted);
+        const active = sorted.find(t => t.status === 'Berjalan') || sorted[0];
+        if (active) {
+          setIdTahunAjaran(active.id);
+        }
       } catch (err) {
         console.error("Gagal mengambil data tahun ajaran:", err);
       } finally {
@@ -34,10 +40,16 @@ export default function TambahKelompokPage() {
     setIsSubmitting(true);
     setErrors({});
 
+    if (!idTahunAjaran) {
+      setErrors({ idTahunAjaran: 'Tahun ajaran wajib dipilih.' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       await kelompokApi.create({ 
         nama, 
-        idTahunAjaran: idTahunAjaran === '' ? undefined : Number(idTahunAjaran) 
+        idTahunAjaran: Number(idTahunAjaran) 
       });
       
       setShowSuccess(true);
@@ -107,18 +119,28 @@ export default function TambahKelompokPage() {
             {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
 
             <div className="mt-4 sm:mt-5">
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-slate-400 font-normal">(Opsional)</span></label>
-              <select
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Tahun Ajaran <span className="text-red-500">*</span>
+              </label>
+              <SearchableSelect
                 value={idTahunAjaran}
-                onChange={(e) => setIdTahunAjaran(e.target.value ? Number(e.target.value) : '')}
+                onChange={(val) => {
+                  setIdTahunAjaran(val ? Number(val) : '');
+                  if (errors.idTahunAjaran) setErrors(prev => ({ ...prev, idTahunAjaran: '' }));
+                }}
                 disabled={isLoadingTahunAjaran}
-                className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-orange-400 focus:bg-white transition-all disabled:opacity-50 !bg-none appearance-auto"
-              >
-                <option value="">-- Pilih Tahun Ajaran --</option>
-                {tahunAjaranList.map(ta => (
-                  <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
-                ))}
-              </select>
+                required
+                error={errors.idTahunAjaran}
+                options={tahunAjaranList.map(ta => ({
+                  value: ta.id,
+                  label: `${ta.tahun} - ${ta.semester}`,
+                  badge: ta.status || undefined,
+                }))}
+                placeholder="-- Pilih Tahun Ajaran --"
+                searchPlaceholder="Cari tahun ajaran..."
+                accentColor="orange"
+              />
+              {errors.idTahunAjaran && <p className="text-xs text-red-500 mt-1">{errors.idTahunAjaran}</p>}
             </div>
             
             <div className="mt-5 sm:mt-6 bg-orange-50 border border-orange-200 rounded-xl p-3.5 sm:p-4">

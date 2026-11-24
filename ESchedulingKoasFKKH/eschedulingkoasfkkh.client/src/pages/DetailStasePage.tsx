@@ -7,6 +7,7 @@ import { staseApi, jadwalApi, pembimbingApi, type Stase, type Jadwal, type Pembi
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
 import { StaseIcon, KelompokIcon, JadwalIcon, InfoIcon, PrintIcon, StaseTerpisahIcon, StaseBersamaanIcon, DosenIcon, EditIcon, DeleteIcon, SaveIcon, KoordinatorIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function DetailStasePage() {
   const navigate = useNavigate();
@@ -906,18 +907,19 @@ export default function DetailStasePage() {
             <div className="mb-5 sm:mb-6 space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1.5">Dosen Koordinator Stase</label>
-                <select
+                <SearchableSelect
                   value={selectedKoordinatorId}
-                  onChange={(e) => setSelectedKoordinatorId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-purple-500 cursor-pointer"
-                >
-                  <option value="">-- Tanpa Koordinator Stase --</option>
-                  {pembimbingList.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.nama} (NIP: {p.nip})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedKoordinatorId(val ? Number(val) : '')}
+                  options={[
+                    { value: '', label: '-- Tanpa Koordinator Stase --' },
+                    ...pembimbingList.map(p => ({
+                      value: p.id,
+                      label: p.nama,
+                      subLabel: p.nip ? `NIP: ${p.nip}` : undefined,
+                    }))
+                  ]}
+                  placeholder="Pilih Koordinator Stase"
+                />
               </div>
             </div>
 

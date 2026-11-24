@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import { staseApi } from '../services/api';
 import { StaseIcon, SaveIcon, InfoIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahStasePage() {
   const navigate = useNavigate();
@@ -120,19 +121,23 @@ export default function TambahStasePage() {
               {/* Jenis */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Jenis Stase <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
                   name="jenis"
                   value={form.jenis}
-                  onChange={handleChange}
+                  onChange={(val) => {
+                    setForm(prev => ({ ...prev, jenis: String(val) }));
+                    if (errors.jenis) setErrors(e => ({ ...e, jenis: '' }));
+                  }}
+                  options={[
+                    { value: 'Terpisah', label: 'Terpisah', subLabel: 'Rotasi berurutan / bergantian per kelompok' },
+                    { value: 'Bersamaan', label: 'Bersamaan', subLabel: 'Semua kelompok masuk stase bersama' },
+                    { value: 'Seminar', label: 'Seminar', subLabel: 'Presentasi ilmiah / telaah kasus' },
+                    { value: 'Ujian', label: 'Ujian', subLabel: 'Evaluasi akhir stase' },
+                  ]}
+                  placeholder="Pilih jenis stase"
                   required
-                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all cursor-pointer
-                    ${errors.jenis ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                >
-                  <option value="Terpisah">Terpisah</option>
-                  <option value="Bersamaan">Bersamaan</option>
-                  <option value="Seminar">Seminar</option>
-                  <option value="Ujian">Ujian</option>
-                </select>
+                  className={errors.jenis ? 'border-red-400 bg-red-50' : ''}
+                />
                 {errors.jenis && <p className="text-xs text-red-500 mt-1">{errors.jenis}</p>}
               </div>
             </div>

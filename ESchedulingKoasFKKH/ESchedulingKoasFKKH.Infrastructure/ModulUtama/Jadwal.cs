@@ -49,5 +49,17 @@ internal class JadwalRepository : IJadwalRepository
 
     public void Update(Jadwal jadwal) => _appDbContext.Jadwal.Update(jadwal);
     
-    public async Task DeleteAll() => await _appDbContext.Jadwal.ExecuteDeleteAsync();
+    public async Task DeleteAll(int? idTahunAjaran = null)
+    {
+        if (idTahunAjaran.HasValue)
+        {
+            await _appDbContext.Jadwal
+                .Where(j => j.Kelompok.IdTahunAjaran == idTahunAjaran.Value)
+                .ExecuteDeleteAsync();
+        }
+        else
+        {
+            await _appDbContext.Jadwal.ExecuteDeleteAsync();
+        }
+    }
 }

@@ -14,6 +14,13 @@ internal class NotifikasiConfiguration : IEntityTypeConfiguration<Notifikasi>
         builder.HasIndex(x => x.IsRead);
         builder.HasIndex(x => new { x.UserId, x.MetadataKey }).IsUnique(false);
 
+        builder.Property(x => x.ReadAt)
+            .HasColumnType("timestamp without time zone");
+        builder.Property(x => x.CreatedAt)
+            .HasColumnType("timestamp without time zone");
+        builder.Property(x => x.UpdatedAt)
+            .HasColumnType("timestamp without time zone");
+
         builder.HasOne(x => x.User)
             .WithMany()
             .HasForeignKey(x => x.UserId)
@@ -51,7 +58,7 @@ internal class NotifikasiRepository : INotifikasiRepository
     {
         var query = _appDbContext.Notifikasi
             .Include(x => x.Broadcast)
-            .Where(x => x.UserId == userId);
+            .Where(x => x.UserId == userId && x.BroadcastId == null && x.Tipe != "broadcast");
 
         if (unreadOnly.HasValue && unreadOnly.Value)
         {
@@ -65,14 +72,16 @@ internal class NotifikasiRepository : INotifikasiRepository
     }
 
     public async Task<int> GetUnreadCount(int userId) => await _appDbContext.Notifikasi
-        .CountAsync(x => x.UserId == userId && !x.IsRead);
+        .CountAsync(x => x.UserId == userId && !x.IsRead && x.BroadcastId == null && x.Tipe != "broadcast");
 
     public async Task<bool> ExistsByMetadataKey(int userId, string metadataKey) => await _appDbContext.Notifikasi
         .AnyAsync(x => x.UserId == userId && x.MetadataKey == metadataKey);
 
     public async Task DeleteAllByUserId(int userId)
     {
-        var list = await _appDbContext.Notifikasi.Where(x => x.UserId == userId).ToListAsync();
+        var list = await _appDbContext.Notifikasi
+            .Where(x => x.UserId == userId && x.BroadcastId == null)
+            .ToListAsync();
         _appDbContext.Notifikasi.RemoveRange(list);
     }
 }

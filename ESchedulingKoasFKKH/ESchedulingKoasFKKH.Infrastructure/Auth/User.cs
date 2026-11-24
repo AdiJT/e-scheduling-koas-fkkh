@@ -72,17 +72,17 @@ internal class UserRepository : IUserRepository
     public void Delete(User user) => _appDbContext.User.Remove(user);
 
     public async Task<User?> Get(int id) => await _appDbContext.User
-        .Include(x => x.Mahasiswa)
+        .Include(x => x.Mahasiswa).ThenInclude(m => m.Kelompok)
         .Include(x => x.Pembimbing)
         .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<List<User>> GetAll() => await _appDbContext.User
-        .Include(x => x.Mahasiswa)
+        .Include(x => x.Mahasiswa).ThenInclude(m => m.Kelompok)
         .Include(x => x.Pembimbing)
         .ToListAsync();
 
     public async Task<User?> GetByName(string name) => await _appDbContext.User
-        .Include(x => x.Mahasiswa)
+        .Include(x => x.Mahasiswa).ThenInclude(m => m.Kelompok)
         .Include(x => x.Pembimbing)
         .FirstOrDefaultAsync(x => x.Name.ToLower() == name.ToLower());
 

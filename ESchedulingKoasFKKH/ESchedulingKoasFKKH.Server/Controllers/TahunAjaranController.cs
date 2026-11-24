@@ -34,14 +34,44 @@ public class TahunAjaranController : ControllerBase
         if (tahunAjaran is null) return NotFound();
 
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var calculatedStatus = tahunAjaran.HitungStatusPeriode(today);
+        if (tahunAjaran.Status != calculatedStatus)
+        {
+            tahunAjaran.Status = calculatedStatus;
+            _tahunAjaranRepository.Update(tahunAjaran);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         return Ok(ToResponse(tahunAjaran, today));
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? status = null)
     {
         var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
         var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var anyChanged = false;
+        foreach (var ta in daftarTahunAjaran)
+        {
+            var calculatedStatus = ta.HitungStatusPeriode(today);
+            if (ta.Status != calculatedStatus)
+            {
+                ta.Status = calculatedStatus;
+                _tahunAjaranRepository.Update(ta);
+                anyChanged = true;
+            }
+        }
+
+        if (anyChanged)
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && TryParseStatusFilter(status, out var filterStatus))
+        {
+            daftarTahunAjaran = daftarTahunAjaran.Where(x => x.HitungStatusPeriode(today) == filterStatus).ToList();
+        }
 
         return Ok(daftarTahunAjaran
             .OrderByDescending(x => x.Tahun)
@@ -74,20 +104,22 @@ public class TahunAjaranController : ControllerBase
                 ["tahun"] = $"Tahun ajaran {create.Tahun} semester {semester} sudah ada"
             });
 
+        var today = DateOnly.FromDateTime(DateTime.Today);
         var tahunAjaran = new TahunAjaran
         {
             Tahun = create.Tahun,
             Semester = semester,
             TanggalMulai = tanggalMulai,
-            TanggalSelesai = tanggalSelesai
+            TanggalSelesai = tanggalSelesai,
+            Status = StatusTahunAjaran.AkanDatang
         };
+        tahunAjaran.Status = tahunAjaran.HitungStatusPeriode(today);
 
         _tahunAjaranRepository.Add(tahunAjaran);
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
         return Created(
             $"/api/tahun-ajaran/{tahunAjaran.Id}",
             ToResponse(tahunAjaran, today));
@@ -149,6 +181,9 @@ public class TahunAjaranController : ControllerBase
             tahunAjaran.TanggalSelesai = tanggalSelesai;
         }
 
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        tahunAjaran.Status = tahunAjaran.HitungStatusPeriode(today);
+
         _tahunAjaranRepository.Update(tahunAjaran);
 
         var result = await _unitOfWork.SaveChangesAsync();
@@ -193,7 +228,7 @@ public class TahunAjaranController : ControllerBase
             tanggalMulai = tahunAjaran.TanggalMulai,
             tanggalSelesai = tahunAjaran.TanggalSelesai,
             isAktif = tahunAjaran.IsAktif(today),
-            status = tahunAjaran.GetStatus(today)
+            status = tahunAjaran.GetStatusLabel(today)
         };
     }
 
@@ -236,6 +271,31 @@ public class TahunAjaranController : ControllerBase
 
         return DateOnly.TryParseExact(value.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate)
             || DateOnly.TryParse(value.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate);
+    }
+
+    private static bool TryParseStatusFilter(string? statusStr, out StatusTahunAjaran status)
+    {
+        status = StatusTahunAjaran.AkanDatang;
+        if (string.IsNullOrWhiteSpace(statusStr)) return false;
+
+        var clean = statusStr.Replace(" ", "").Replace("_", "").Replace("-", "").ToLowerInvariant();
+        if (clean is "aktif" or "berjalan")
+        {
+            status = StatusTahunAjaran.Berjalan;
+            return true;
+        }
+        if (clean is "belummulai" or "akandatang")
+        {
+            status = StatusTahunAjaran.AkanDatang;
+            return true;
+        }
+        if (clean == "selesai")
+        {
+            status = StatusTahunAjaran.Selesai;
+            return true;
+        }
+
+        return Enum.TryParse(clean, true, out status) && Enum.IsDefined(status);
     }
 
     private static bool TryParseSemester(string semester, out Semester parsedSemester)

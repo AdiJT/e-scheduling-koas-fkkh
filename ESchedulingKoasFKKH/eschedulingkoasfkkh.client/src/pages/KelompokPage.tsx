@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { kelompokApi, tahunAjaranApi, type Kelompok, type TahunAjaran } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { KelompokIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, DosenIcon, MahasiswaIcon, JadwalIcon, SaveIcon } from '../components/Icons';
+import SearchableSelect from '../components/SearchableSelect';
 
 import Tooltip from '../components/Tooltip';
 
@@ -32,6 +33,7 @@ export default function KelompokPage() {
   // Inline edit state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editNama, setEditNama] = useState('');
+  const [editIdTahunAjaran, setEditIdTahunAjaran] = useState<number | ''>('');
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -87,12 +89,14 @@ export default function KelompokPage() {
   const startEdit = (kel: Kelompok) => {
     setEditingId(kel.id);
     setEditNama(kel.nama);
+    setEditIdTahunAjaran(kel.idTahunAjaran ?? '');
     setEditErrors({});
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditNama('');
+    setEditIdTahunAjaran('');
     setEditErrors({});
   };
 
@@ -101,13 +105,18 @@ export default function KelompokPage() {
     try {
       setSaving(true);
       setEditErrors({});
-      const kel = data.find(k => k.id === editingId);
       await kelompokApi.update(editingId, { 
         id: editingId, 
         nama: editNama,
-        idTahunAjaran: kel?.idTahunAjaran ?? undefined
+        idTahunAjaran: editIdTahunAjaran ? Number(editIdTahunAjaran) : undefined
       });
-      setData(prev => prev.map(k => k.id === editingId ? { ...k, nama: editNama } : k));
+      const updatedTaObj = tahunAjaranList.find(t => t.id === Number(editIdTahunAjaran));
+      setData(prev => prev.map(k => k.id === editingId ? { 
+        ...k, 
+        nama: editNama,
+        idTahunAjaran: editIdTahunAjaran ? Number(editIdTahunAjaran) : undefined,
+        tahunAjaran: updatedTaObj ? `${updatedTaObj.tahun} - ${updatedTaObj.semester}` : (editIdTahunAjaran ? k.tahunAjaran : undefined)
+      } : k));
       setEditingId(null);
     } catch (err: unknown) {
       const apiErr = err as { status?: number; errors?: Record<string, string> };
@@ -181,16 +190,25 @@ export default function KelompokPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={filterTahunAjaran}
-              onChange={(e) => setFilterTahunAjaran(e.target.value ? Number(e.target.value) : '')}
-              className="flex-1 sm:w-48 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-orange-400 transition-all cursor-pointer font-medium"
-            >
-              <option value="">Semua Tahun Ajaran</option>
-              {tahunAjaranList.map(ta => (
-                <option key={ta.id} value={ta.id}>{ta.tahun} - {ta.semester}</option>
-              ))}
-            </select>
+            <div className="w-full sm:w-56">
+              <SearchableSelect
+                value={filterTahunAjaran}
+                onChange={(val) => setFilterTahunAjaran(val ? Number(val) : '')}
+                options={[
+                  { value: '', label: 'Semua Tahun Ajaran' },
+                  ...tahunAjaranList.map(ta => ({
+                    value: ta.id,
+                    label: `${ta.tahun} - ${ta.semester}`,
+                    badge: ta.status || undefined,
+                  }))
+                ]}
+                placeholder="Semua Tahun Ajaran"
+                searchPlaceholder="Cari T.A..."
+                size="sm"
+                isClearable={false}
+                accentColor="orange"
+              />
+            </div>
 
             <Tooltip content="Muat ulang data" position="bottom">
               <button
@@ -275,7 +293,7 @@ export default function KelompokPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           {editingId === kel.id ? (
-                            <div>
+                            <div className="space-y-1.5">
                               <input
                                 value={editNama}
                                 onChange={(e) => setEditNama(e.target.value)}
@@ -284,7 +302,20 @@ export default function KelompokPage() {
                                   ${editErrors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                                 placeholder="Nama Kelompok"
                               />
-                              {editErrors.nama && <p className="text-[10px] text-red-500 mt-1">{editErrors.nama}</p>}
+                              <SearchableSelect
+                                value={editIdTahunAjaran}
+                                onChange={(val) => setEditIdTahunAjaran(val ? Number(val) : '')}
+                                options={tahunAjaranList.map(ta => ({
+                                  value: ta.id,
+                                  label: `${ta.tahun} - ${ta.semester}`,
+                                  badge: ta.status || undefined,
+                                }))}
+                                placeholder="-- Pilih Tahun Ajaran --"
+                                searchPlaceholder="Cari tahun ajaran..."
+                                size="sm"
+                                accentColor="orange"
+                              />
+                              {editErrors.nama && <p className="text-[10px] text-red-500">{editErrors.nama}</p>}
                             </div>
                           ) : (
                             <div>

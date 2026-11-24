@@ -27,6 +27,7 @@ public class PembimbingController : ControllerBase
     private readonly IRiwayatKelompokRepository _riwayatKelompokRepository;
     private readonly IHariLiburService _hariLiburService;
     private readonly IAutoArchiveService _autoArchiveService;
+    private readonly ExcelService _excelService;
 
     public PembimbingController(
         IPembimbingRepository pembimbingRepository,
@@ -37,7 +38,8 @@ public class PembimbingController : ControllerBase
         IKelompokRepository kelompokRepository,
         IRiwayatKelompokRepository riwayatKelompokRepository,
         IHariLiburService hariLiburService,
-        IAutoArchiveService autoArchiveService)
+        IAutoArchiveService autoArchiveService,
+        ExcelService excelService)
     {
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
@@ -48,6 +50,126 @@ public class PembimbingController : ControllerBase
         _riwayatKelompokRepository = riwayatKelompokRepository;
         _hariLiburService = hariLiburService;
         _autoArchiveService = autoArchiveService;
+        _excelService = excelService;
+    }
+
+    [HttpGet("template")]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    public IActionResult DownloadTemplate()
+    {
+        var bytes = _excelService.GenerateDosenTemplate();
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Template_Dosen.xlsx");
+    }
+
+    [HttpGet("export")]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    public async Task<IActionResult> Export()
+    {
+        var daftarPembimbing = await _pembimbingRepository.GetAll();
+        var semuaStase = await _staseRepository.GetAll();
+
+        var data = daftarPembimbing.Select(x => new DosenExportDto
+        {
+            NIP = x.NIP,
+            Nama = x.Nama,
+            DaftarStase = x.DaftarStase.Select(s => s.Nama).ToList(),
+            KoordinatorStase = semuaStase.Where(s => s.Koordinator?.Id == x.Id).Select(s => s.Nama).ToList()
+        }).ToList();
+
+        var bytes = _excelService.ExportDosen(data);
+        var filename = $"Data_Dosen_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
+    }
+
+    [HttpPost("import")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Import(IFormFile? file)
+    {
+        if (file == null || file.Length == 0)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "File Excel wajib dipilih." });
+
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "Format file harus berekstensi .xlsx" });
+
+        using var stream = file.OpenReadStream();
+        var rows = _excelService.ParseDosen(stream, out var parseErrors);
+
+        if (parseErrors.Count > 0 && rows.Count == 0)
+        {
+            return BadRequest(new ExcelImportResult
+            {
+                Success = false,
+                TotalRows = 0,
+                SuccessCount = 0,
+                Errors = parseErrors
+            });
+        }
+
+        var existingNips = new HashSet<string>((await _pembimbingRepository.GetAll()).Select(p => p.NIP), StringComparer.OrdinalIgnoreCase);
+        var existingUsernames = new HashSet<string>((await _userRepository.GetAll()).Select(u => u.Name), StringComparer.OrdinalIgnoreCase);
+
+        var errors = new List<string>(parseErrors);
+        var successCount = 0;
+        var fileNips = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in rows)
+        {
+            if (fileNips.Contains(row.NIP))
+            {
+                errors.Add($"Baris {row.RowIndex}: NIP '{row.NIP}' terduplikasi di dalam file yang diunggah.");
+                continue;
+            }
+            fileNips.Add(row.NIP);
+
+            if (existingNips.Contains(row.NIP))
+            {
+                errors.Add($"Baris {row.RowIndex}: NIP '{row.NIP}' sudah terdaftar di sistem.");
+                continue;
+            }
+
+            if (existingUsernames.Contains(row.NIP))
+            {
+                errors.Add($"Baris {row.RowIndex}: Akun dengan username '{row.NIP}' sudah ada.");
+                continue;
+            }
+
+            var pembimbing = new Pembimbing
+            {
+                NIP = row.NIP,
+                Nama = row.Nama
+            };
+
+            var user = new User
+            {
+                Name = row.NIP,
+                PasswordHash = _passwordHasher.HashPassword(null, row.NIP),
+                Role = UserRoles.Dosen,
+                Pembimbing = pembimbing
+            };
+
+            pembimbing.User = user;
+
+            _pembimbingRepository.Add(pembimbing);
+            _userRepository.Add(user);
+
+            existingNips.Add(row.NIP);
+            existingUsernames.Add(row.NIP);
+            successCount++;
+        }
+
+        if (successCount > 0)
+        {
+            var result = await _unitOfWork.SaveChangesAsync();
+            if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        return Ok(new ExcelImportResult
+        {
+            Success = successCount > 0,
+            TotalRows = rows.Count,
+            SuccessCount = successCount,
+            Errors = errors
+        });
     }
 
     [HttpGet("{id:int}")]

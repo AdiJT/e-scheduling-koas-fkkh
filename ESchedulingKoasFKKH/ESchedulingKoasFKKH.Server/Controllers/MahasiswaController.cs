@@ -27,6 +27,7 @@ public class MahasiswaController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ExcelService _excelService;
 
     public MahasiswaController(
         IMahasiswaRepository mahasiswaRepository,
@@ -37,7 +38,8 @@ public class MahasiswaController : ControllerBase
         IAutoArchiveService autoArchiveService,
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
-        IPasswordHasher<User> passwordHasher)
+        IPasswordHasher<User> passwordHasher,
+        ExcelService excelService)
     {
         _mahasiswaRepository = mahasiswaRepository;
         _tahunAjaranRepository = tahunAjaranRepository;
@@ -48,6 +50,167 @@ public class MahasiswaController : ControllerBase
         _unitOfWork = unitOfWork;
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _excelService = excelService;
+    }
+
+    [HttpGet("template")]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    public async Task<IActionResult> DownloadTemplate()
+    {
+        var daftarTahunAjaran = await _tahunAjaranRepository.GetAll();
+        var bytes = _excelService.GenerateMahasiswaTemplate(daftarTahunAjaran);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Template_Mahasiswa.xlsx");
+    }
+
+    [HttpGet("export")]
+    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    public async Task<IActionResult> Export([FromQuery] int? idTahunAjaran = null)
+    {
+        var daftarMahasiswa = await _mahasiswaRepository.GetAll();
+
+        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        {
+            daftarMahasiswa = daftarMahasiswa.Where(m => m.TahunAjaran?.Id == idTahunAjaran.Value).ToList();
+        }
+
+        var data = daftarMahasiswa.Select(m => new MahasiswaExportDto
+        {
+            NIM = m.NIM,
+            Nama = m.Nama,
+            TahunAjaran = m.TahunAjaran != null ? $"{m.TahunAjaran.Tahun} - {m.TahunAjaran.Semester}" : "-",
+            StatusTahunAjaran = m.TahunAjaran != null ? m.TahunAjaran.Status.ToString() : "-",
+            Kelompok = m.Kelompok?.Nama ?? "-"
+        }).ToList();
+
+        var bytes = _excelService.ExportMahasiswa(data);
+        var filename = $"Data_Mahasiswa_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
+    }
+
+    [HttpPost("import")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> Import(IFormFile? file, [FromQuery] int? idTahunAjaran = null)
+    {
+        if (file == null || file.Length == 0)
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "File Excel wajib dipilih." });
+
+        if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["file"] = "Format file harus berekstensi .xlsx" });
+
+        using var stream = file.OpenReadStream();
+        var rows = _excelService.ParseMahasiswa(stream, out var parseErrors);
+
+        if (parseErrors.Count > 0 && rows.Count == 0)
+        {
+            return BadRequest(new ExcelImportResult
+            {
+                Success = false,
+                TotalRows = 0,
+                SuccessCount = 0,
+                Errors = parseErrors
+            });
+        }
+
+        var semuaTahunAjaran = await _tahunAjaranRepository.GetAll();
+        TahunAjaran? defaultTahunAjaran = null;
+        if (idTahunAjaran.HasValue && idTahunAjaran.Value > 0)
+        {
+            defaultTahunAjaran = semuaTahunAjaran.FirstOrDefault(t => t.Id == idTahunAjaran.Value);
+        }
+        defaultTahunAjaran ??= semuaTahunAjaran.FirstOrDefault(t => t.Status == StatusTahunAjaran.Berjalan)
+                             ?? semuaTahunAjaran.FirstOrDefault();
+
+        var existingNims = new HashSet<string>((await _mahasiswaRepository.GetAll()).Select(m => m.NIM), StringComparer.OrdinalIgnoreCase);
+        var existingUsernames = new HashSet<string>((await _userRepository.GetAll()).Select(u => u.Name), StringComparer.OrdinalIgnoreCase);
+
+        var errors = new List<string>(parseErrors);
+        var successCount = 0;
+        var fileNims = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in rows)
+        {
+            if (fileNims.Contains(row.NIM))
+            {
+                errors.Add($"Baris {row.RowIndex}: NIM '{row.NIM}' terduplikasi di dalam file yang diunggah.");
+                continue;
+            }
+            fileNims.Add(row.NIM);
+
+            if (existingNims.Contains(row.NIM))
+            {
+                errors.Add($"Baris {row.RowIndex}: NIM '{row.NIM}' sudah terdaftar di sistem.");
+                continue;
+            }
+
+            if (existingUsernames.Contains(row.NIM))
+            {
+                errors.Add($"Baris {row.RowIndex}: Akun dengan username '{row.NIM}' sudah ada.");
+                continue;
+            }
+
+            TahunAjaran? targetTa = defaultTahunAjaran;
+            if (!string.IsNullOrWhiteSpace(row.TahunAjaran))
+            {
+                var match = semuaTahunAjaran.FirstOrDefault(t =>
+                    $"{t.Tahun} - {t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase) ||
+                    $"{t.Tahun} {t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase) ||
+                    $"{t.Tahun}/{t.Semester}".Equals(row.TahunAjaran, StringComparison.OrdinalIgnoreCase));
+
+                if (match != null)
+                {
+                    targetTa = match;
+                }
+                else
+                {
+                    errors.Add($"Baris {row.RowIndex}: Tahun ajaran '{row.TahunAjaran}' tidak ditemukan di database.");
+                    continue;
+                }
+            }
+
+            if (targetTa == null)
+            {
+                errors.Add($"Baris {row.RowIndex}: Tahun ajaran belum ditentukan atau tidak valid.");
+                continue;
+            }
+
+            var user = new User
+            {
+                Name = row.NIM,
+                PasswordHash = _passwordHasher.HashPassword(null, row.NIM),
+                Role = UserRoles.Mahasiswa
+            };
+
+            var mahasiswa = new Mahasiswa
+            {
+                NIM = row.NIM,
+                Nama = row.Nama,
+                User = user,
+                TahunAjaran = targetTa
+            };
+
+            user.Mahasiswa = mahasiswa;
+
+            _mahasiswaRepository.Add(mahasiswa);
+            _userRepository.Add(user);
+
+            existingNims.Add(row.NIM);
+            existingUsernames.Add(row.NIM);
+            successCount++;
+        }
+
+        if (successCount > 0)
+        {
+            var result = await _unitOfWork.SaveChangesAsync();
+            if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        return Ok(new ExcelImportResult
+        {
+            Success = successCount > 0,
+            TotalRows = rows.Count,
+            SuccessCount = successCount,
+            Errors = errors
+        });
     }
 
     [HttpGet("{id:int}")]

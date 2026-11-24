@@ -25,6 +25,8 @@ internal class BroadcastRepository : IBroadcastRepository
 
     public void Add(Broadcast broadcast) => _appDbContext.Broadcast.Add(broadcast);
 
+    public void Update(Broadcast broadcast) => _appDbContext.Broadcast.Update(broadcast);
+
     public void Delete(Broadcast broadcast) => _appDbContext.Broadcast.Remove(broadcast);
 
     public async Task<Broadcast?> Get(int id) => await _appDbContext.Broadcast
@@ -34,4 +36,22 @@ internal class BroadcastRepository : IBroadcastRepository
         .OrderByDescending(x => x.CreatedAt)
         .Take(limit)
         .ToListAsync();
+
+    public async Task<List<Broadcast>> GetActiveBroadcasts() => await _appDbContext.Broadcast
+        .Where(x => x.IsActive)
+        .OrderByDescending(x => x.CreatedAt)
+        .ToListAsync();
+
+    public async Task<int> GetActiveCount() => await _appDbContext.Broadcast
+        .CountAsync(x => x.IsActive);
+
+    public async Task<int> GetTotalCount() => await _appDbContext.Broadcast
+        .CountAsync();
+
+    public async Task<int> GetCountThisMonth()
+    {
+        var now = DateTime.Now;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+        return await _appDbContext.Broadcast.CountAsync(x => x.CreatedAt >= startOfMonth);
+    }
 }

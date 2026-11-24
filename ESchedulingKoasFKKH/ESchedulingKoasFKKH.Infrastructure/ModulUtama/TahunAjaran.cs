@@ -21,7 +21,8 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
                 Tahun = 2025,
                 Semester = Semester.Ganjil,
                 TanggalMulai = new DateOnly(2025, 7, 1),
-                TanggalSelesai = new DateOnly(2027, 7, 1)
+                TanggalSelesai = new DateOnly(2027, 7, 1),
+                Status = StatusTahunAjaran.Selesai
             },
             new TahunAjaran
             {
@@ -29,7 +30,8 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
                 Tahun = 2025,
                 Semester = Semester.Genap,
                 TanggalMulai = new DateOnly(2026, 1, 1),
-                TanggalSelesai = new DateOnly(2028, 1, 1)
+                TanggalSelesai = new DateOnly(2028, 1, 1),
+                Status = StatusTahunAjaran.Selesai
             },
             new TahunAjaran
             {
@@ -37,7 +39,8 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
                 Tahun = 2026,
                 Semester = Semester.Ganjil,
                 TanggalMulai = new DateOnly(2026, 7, 1),
-                TanggalSelesai = new DateOnly(2028, 7, 1)
+                TanggalSelesai = new DateOnly(2028, 7, 1),
+                Status = StatusTahunAjaran.Berjalan
             },
             new TahunAjaran
             {
@@ -45,7 +48,8 @@ internal class TahunAjaranConfiguration : IEntityTypeConfiguration<TahunAjaran>
                 Tahun = 2026,
                 Semester = Semester.Genap,
                 TanggalMulai = new DateOnly(2027, 1, 1),
-                TanggalSelesai = new DateOnly(2029, 1, 1)
+                TanggalSelesai = new DateOnly(2029, 1, 1),
+                Status = StatusTahunAjaran.AkanDatang
             }
         );
     }

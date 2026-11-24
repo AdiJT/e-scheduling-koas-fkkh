@@ -7,6 +7,7 @@ import { formatDateDisplay } from '../utils/holidays';
 import { useAuth } from '../contexts/AuthContext';
 import { TahunAjaranIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, SemesterGanjilIcon, SemesterGenapIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 const semesterOptions = ['Ganjil', 'Genap'];
 
@@ -34,9 +35,9 @@ function getTodayDateStr(): string {
 function computeStatusFromDates(tanggalMulai: string, tanggalSelesai: string): StatusPeriodeTahunAjaran | null {
   if (!tanggalMulai || !tanggalSelesai) return null;
   const today = getTodayDateStr();
-  if (today < tanggalMulai) return 'Belum Mulai';
+  if (today < tanggalMulai) return 'Akan Datang';
   if (today > tanggalSelesai) return 'Selesai';
-  return 'Aktif';
+  return 'Berjalan';
 }
 
 export default function TahunAjaranPage() {
@@ -51,18 +52,13 @@ export default function TahunAjaranPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | StatusPeriodeTahunAjaran>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | StatusPeriodeTahunAjaran>('all');
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [sortColumn, setSortColumn] = useState<string>('tahun');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  // Reset pagination on search or filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -101,10 +97,10 @@ export default function TahunAjaranPage() {
   }, [fetchData]);
 
   const filteredData = data.filter(item => {
-    const label = `${item.tahun} ${item.semester} ${item.status} ${formatDateDisplay(item.tanggalMulai)} ${formatDateDisplay(item.tanggalSelesai)}`.toLowerCase();
-    const matchesSearch = label.includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const label = `${item.tahun} ${item.semester} ${item.status || ''} ${formatDateDisplay(item.tanggalMulai)} ${formatDateDisplay(item.tanggalSelesai)}`.toLowerCase();
+    const matchSearch = label.includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'all' || item.status === filterStatus;
+    return matchSearch && matchStatus;
   });
 
   const sortedData = [...filteredData].sort((a, b) => {
@@ -117,16 +113,13 @@ export default function TahunAjaranPage() {
     } else if (sortColumn === 'semester') {
       aVal = a.semester || '';
       bVal = b.semester || '';
-    } else if (sortColumn === 'label') {
-      aVal = `${a.tahun} - ${a.semester}`;
-      bVal = `${b.tahun} - ${b.semester}`;
     } else if (sortColumn === 'rentang') {
       aVal = a.tanggalMulai || '';
       bVal = b.tanggalMulai || '';
     } else if (sortColumn === 'status') {
-      const rank: Record<string, number> = { Aktif: 1, 'Belum Mulai': 2, Selesai: 3 };
-      aVal = rank[a.status] ?? 99;
-      bVal = rank[b.status] ?? 99;
+      const rank: Record<string, number> = { Berjalan: 1, 'Akan Datang': 2, Selesai: 3 };
+      aVal = rank[a.status || ''] ?? 99;
+      bVal = rank[b.status || ''] ?? 99;
     }
 
     if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -191,7 +184,7 @@ export default function TahunAjaranPage() {
     setFormSubmitError(null);
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     if (name === 'tanggalMulai') {
@@ -355,7 +348,7 @@ export default function TahunAjaranPage() {
   };
 
   const selectedTahunAjaran = data.find(item => item.id === selectedId);
-  const activeCount = data.filter(item => item.isAktif).length;
+  const activeCount = data.filter(item => item.isAktif || item.status === 'Berjalan').length;
   const minTanggalSelesai = form.tanggalMulai ? addYearsDateStr(form.tanggalMulai, 2) : '';
   const previewStatus = computeStatusFromDates(form.tanggalMulai, form.tanggalSelesai);
   const isReadOnlyIdentity = formMode === 'edit' && !isAdmin;
@@ -366,23 +359,42 @@ export default function TahunAjaranPage() {
       : 'bg-emerald-100 text-emerald-700 border-emerald-200';
   };
 
-  const getStatusBadgeClass = (status: StatusPeriodeTahunAjaran | string) => {
-    if (status === 'Aktif') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (status === 'Belum Mulai') return 'bg-amber-50 text-amber-700 border-amber-200';
-    return 'bg-slate-100 text-slate-600 border-slate-200';
-  };
-
-  const getStatusDotClass = (status: StatusPeriodeTahunAjaran | string) => {
-    if (status === 'Aktif') return 'bg-emerald-500 animate-pulse';
-    if (status === 'Belum Mulai') return 'bg-amber-500';
-    return 'bg-slate-400';
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'Berjalan':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Aktif (Berjalan)
+          </span>
+        );
+      case 'Akan Datang':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+            Akan Datang
+          </span>
+        );
+      case 'Selesai':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+            Selesai
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+            {status || '-'}
+          </span>
+        );
+    }
   };
 
   return (
     <Layout>
       {/* Page Header Card */}
       <div className="relative overflow-hidden bg-gradient-to-r from-sky-700 to-cyan-700 rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6 animate-fade-in-down">
-        {/* Subtle decorative watermark */}
         <div className="absolute -right-6 -bottom-8 opacity-10 pointer-events-none transform rotate-12">
           <TahunAjaranIcon className="w-44 h-44 sm:w-56 sm:h-56 text-white" />
         </div>
@@ -422,13 +434,13 @@ export default function TahunAjaranPage() {
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
           <span className="text-red-500 text-lg">!</span>
           <p className="text-sm text-red-700 flex-1">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">x</button>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg cursor-pointer">x</button>
         </div>
       )}
 
-      {/* Action Bar */}
+      {/* Action Bar & Filter */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
-        <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3">
+        <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
@@ -436,24 +448,34 @@ export default function TahunAjaranPage() {
                 type="text"
                 placeholder="Cari tahun, semester, tanggal, atau status..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:bg-white focus:shadow-sm transition-all duration-200"
                 id="search-tahun-ajaran"
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | StatusPeriodeTahunAjaran)}
-                className="flex-1 sm:flex-none px-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-700 focus:outline-none focus:border-cyan-400 focus:bg-white cursor-pointer"
-                id="filter-status-tahun-ajaran"
-              >
-                <option value="all">Semua Status</option>
-                <option value="Aktif">Aktif</option>
-                <option value="Belum Mulai">Belum Mulai</option>
-                <option value="Selesai">Selesai</option>
-              </select>
+              <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto shrink-0">
+                {[
+                  { id: 'all', label: 'Semua Status' },
+                  { id: 'Berjalan', label: 'Berjalan' },
+                  { id: 'Akan Datang', label: 'Akan Datang' },
+                  { id: 'Selesai', label: 'Selesai' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => { setFilterStatus(tab.id as 'all' | StatusPeriodeTahunAjaran); setCurrentPage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      filterStatus === tab.id
+                        ? 'bg-white text-sky-700 shadow-sm border border-slate-200/60'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
               <Tooltip content="Muat ulang data" position="bottom">
                 <button
@@ -485,41 +507,41 @@ export default function TahunAjaranPage() {
 
       {/* Summary KPI Cards */}
       {!loading && data.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <TahunAjaranIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-6 animate-fade-in-up">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <TahunAjaranIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="min-w-0">
               <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Total Periode</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Total Periode</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white animate-pulse" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full bg-white animate-pulse" />
             </div>
             <div className="min-w-0">
               <p className="text-base sm:text-2xl font-bold text-emerald-700 leading-tight">{activeCount}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Periode Aktif</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Periode Aktif</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <SemesterGanjilIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Ganjil').length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Ganjil</p>
+              <p className="text-base sm:text-2xl font-bold text-sky-700 leading-tight">{data.filter(item => item.status === 'Akan Datang').length}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Akan Datang</p>
             </div>
           </div>
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
-              <SemesterGenapIcon className="w-4 h-4 sm:w-6 sm:h-6" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-card border border-slate-100/80 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white shadow-sm sm:shadow-md shrink-0">
+              <span className="text-xs font-bold">✓</span>
             </div>
             <div className="min-w-0">
-              <p className="text-base sm:text-2xl font-bold text-primary-900 leading-tight">{data.filter(item => item.semester === 'Genap').length}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate">Genap</p>
+              <p className="text-base sm:text-2xl font-bold text-slate-700 leading-tight">{data.filter(item => item.status === 'Selesai').length}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Telah Selesai</p>
             </div>
           </div>
         </div>
@@ -539,7 +561,7 @@ export default function TahunAjaranPage() {
             </div>
             <p className="text-slate-600 font-medium">Tidak ada data ditemukan</p>
             <p className="text-sm text-slate-400 mt-1">
-              {searchTerm || statusFilter !== 'all'
+              {searchTerm || filterStatus !== 'all'
                 ? 'Coba ubah kata kunci pencarian atau filter status'
                 : isAdmin
                   ? 'Mulai dengan menambah periode tahun ajaran baru'
@@ -589,10 +611,7 @@ export default function TahunAjaranPage() {
                             )}
                             {tahunAjaran.semester}
                           </span>
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusBadgeClass(tahunAjaran.status)}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(tahunAjaran.status)}`} />
-                            {tahunAjaran.status}
-                          </span>
+                          {getStatusBadge(tahunAjaran.status)}
                         </div>
                         <p className="text-xs text-slate-600 mt-1 font-medium">
                           Rentang: {formatDateDisplay(tahunAjaran.tanggalMulai)} – {formatDateDisplay(tahunAjaran.tanggalSelesai)}
@@ -686,10 +705,7 @@ export default function TahunAjaranPage() {
                         </span>
                       </td>
                       <td className="px-4 md:px-5 py-3.5 text-center whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${getStatusBadgeClass(tahunAjaran.status)}`}>
-                          <span className={`w-2 h-2 rounded-full ${getStatusDotClass(tahunAjaran.status)}`} />
-                          {tahunAjaran.status}
-                        </span>
+                        {getStatusBadge(tahunAjaran.status)}
                       </td>
                       {canEditRange && (
                         <td className="px-4 md:px-5 py-3.5 whitespace-nowrap">
@@ -836,24 +852,28 @@ export default function TahunAjaranPage() {
                     </span>
                   )}
                 </div>
-                <select
-                  name="semester"
-                  value={form.semester}
-                  onChange={handleFormChange}
-                  disabled={isReadOnlyIdentity}
-                  className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-all ${
-                    isReadOnlyIdentity
-                      ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
-                      : formErrors.semester
-                        ? 'border-red-400 bg-red-50 focus:border-cyan-500 focus:bg-white cursor-pointer'
-                        : 'bg-slate-50 border-slate-200 focus:border-cyan-500 focus:bg-white cursor-pointer'
-                  }`}
-                >
-                  <option value="">Pilih semester</option>
-                  {semesterOptions.map(semester => (
-                    <option key={semester} value={semester}>{semester}</option>
-                  ))}
-                </select>
+                {isReadOnlyIdentity ? (
+                  <input
+                    type="text"
+                    value={form.semester}
+                    disabled
+                    className="w-full px-4 py-3 border-2 rounded-xl text-sm bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                  />
+                ) : (
+                  <SearchableSelect
+                    name="semester"
+                    value={form.semester}
+                    onChange={(val) => {
+                      setForm(prev => ({ ...prev, semester: String(val) }));
+                      if (formErrors.semester) setFormErrors(e => ({ ...e, semester: '' }));
+                      setFormSubmitError(null);
+                    }}
+                    options={semesterOptions.map(semester => ({ value: semester, label: semester }))}
+                    placeholder="Pilih semester"
+                    required
+                    className={formErrors.semester ? 'border-red-400 bg-red-50' : ''}
+                  />
+                )}
                 {formErrors.semester && <p className="text-xs text-red-500 mt-1">{formErrors.semester}</p>}
               </div>
 
@@ -905,10 +925,7 @@ export default function TahunAjaranPage() {
               {previewStatus && (
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <span className="text-xs font-medium text-slate-600">Status Otomatis Periode:</span>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClass(previewStatus)}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(previewStatus)}`} />
-                    {previewStatus}
-                  </span>
+                  {getStatusBadge(previewStatus)}
                 </div>
               )}
 

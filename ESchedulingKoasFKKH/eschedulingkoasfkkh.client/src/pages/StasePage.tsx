@@ -6,6 +6,7 @@ import { staseApi, type Stase } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { StaseIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, InfoIcon, SaveIcon, JadwalIcon as ClockIcon, StaseTerpisahIcon, StaseBersamaanIcon, KoordinatorIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function StasePage() {
   const navigate = useNavigate();
@@ -235,16 +236,18 @@ export default function StasePage() {
           {/* Filter & Refresh Controls */}
           <div className="flex items-center gap-2">
             {!isMahasiswa && !isDosen && (
-              <select
-                value={filterJenis}
-                onChange={(e) => setFilterJenis(e.target.value)}
-                className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-purple-400 transition-all cursor-pointer font-medium"
-                id="filter-jenis"
-              >
-                <option value="all">Semua Jenis</option>
-                <option value="Terpisah">Terpisah</option>
-                <option value="Bersamaan">Bersamaan</option>
-              </select>
+              <div className="w-44">
+                <SearchableSelect
+                  value={filterJenis}
+                  onChange={(val) => setFilterJenis(String(val))}
+                  options={[
+                    { value: 'all', label: 'Semua Jenis' },
+                    { value: 'Terpisah', label: 'Terpisah' },
+                    { value: 'Bersamaan', label: 'Bersamaan' },
+                  ]}
+                  placeholder="Semua Jenis"
+                />
+              </div>
             )}
 
             {/* Refresh */}
@@ -636,8 +639,8 @@ export default function StasePage() {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in overflow-hidden">
-            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-violet-50">
+          <div className="bg-white rounded-2xl shadow-elevated w-full max-w-md mx-4 animate-scale-in">
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-violet-50 rounded-t-2xl">
               <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
                 <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-violet-500 rounded-full" />
                 Edit Stase
@@ -667,22 +670,29 @@ export default function StasePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Jenis <span className="text-red-500">*</span></label>
-                  <select
+                  <SearchableSelect
                     value={editForm.jenis}
-                    onChange={(e) => setEditForm({ ...editForm, jenis: e.target.value })}
-                    className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:bg-white transition-all cursor-pointer
-                      ${editErrors.jenis ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
-                  >
-                    <option value="Terpisah">Terpisah</option>
-                    <option value="Bersamaan">Bersamaan</option>
-                    <option value="Seminar">Seminar</option>
-                    <option value="Ujian">Ujian</option>
-                  </select>
+                    onChange={(val) => {
+                      setEditForm(prev => ({ ...prev, jenis: String(val) }));
+                      if (editErrors.jenis) setEditErrors(e => ({ ...e, jenis: '' }));
+                    }}
+                    options={[
+                      { value: 'Terpisah', label: 'Terpisah', subLabel: 'Rotasi berurutan / bergantian per kelompok' },
+                      { value: 'Bersamaan', label: 'Bersamaan', subLabel: 'Semua kelompok masuk stase bersama' },
+                      { value: 'Seminar', label: 'Seminar', subLabel: 'Presentasi ilmiah / telaah kasus' },
+                      { value: 'Ujian', label: 'Ujian', subLabel: 'Evaluasi akhir stase' },
+                    ]}
+                    placeholder="Pilih jenis stase"
+                    required
+                    accentColor="purple"
+                    minMenuWidth={280}
+                    className={editErrors.jenis ? 'border-red-400 bg-red-50' : ''}
+                  />
                   {editErrors.jenis && <p className="text-xs text-red-500 mt-1">{editErrors.jenis}</p>}
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 rounded-b-2xl">
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={saving}

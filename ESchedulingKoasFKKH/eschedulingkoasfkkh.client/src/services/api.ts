@@ -13,19 +13,38 @@ interface ApiError {
 
 async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
+        if (response.status === 401) {
+            throw { status: 401, message: 'Sesi login telah berakhir. Silakan login kembali.' };
+        }
+        if (response.status === 403) {
+            throw { status: 403, message: 'Akses ditolak. Anda tidak memiliki wewenang untuk tindakan ini.' };
+        }
         if (response.status === 400) {
             const errorData: any = await response.json().catch(() => ({}));
             
             // Normalize errors to lowercase keys and string values
             const normalizedErrors: Record<string, string> = {};
-            if (errorData.errors) {
+            let firstErrorMessage = '';
+
+            if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+                firstErrorMessage = errorData.errors[0];
+                errorData.errors.forEach((err: string, idx: number) => {
+                    normalizedErrors[idx.toString()] = err;
+                });
+            } else if (errorData.errors && typeof errorData.errors === 'object') {
                 for (const [key, value] of Object.entries(errorData.errors)) {
                     const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
-                    normalizedErrors[lowerKey] = Array.isArray(value) ? value[0] : (value as string);
+                    const msg = Array.isArray(value) ? value[0] : (value as string);
+                    normalizedErrors[lowerKey] = msg;
+                    if (!firstErrorMessage) firstErrorMessage = msg;
                 }
             }
             
-            throw { status: 400, errors: normalizedErrors, message: 'Validasi gagal' };
+            throw { 
+                status: 400, 
+                errors: normalizedErrors, 
+                message: firstErrorMessage || errorData.message || 'Validasi gagal' 
+            };
         }
         if (response.status === 403) {
             throw { status: 403, message: 'Anda tidak memiliki hak akses untuk melakukan aksi ini.' };
@@ -66,10 +85,48 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
     });
 }
 
+async function downloadBlob(response: Response, defaultFilename: string): Promise<void> {
+    if (!response.ok) {
+        let errMessage = `Gagal mengunduh file (${response.status})`;
+        try {
+            const errJson = await response.json();
+            if (errJson.message) errMessage = errJson.message;
+        } catch { }
+        throw new Error(errMessage);
+    }
+
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = defaultFilename;
+    if (disposition && disposition.indexOf('filename=') !== -1) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+        if (matches != null && matches[1]) {
+            filename = matches[1].replace(/['"]/g, '');
+        }
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+export interface ExcelImportResult {
+    success: boolean;
+    totalRows: number;
+    successCount: number;
+    errors: string[];
+}
+
+
 // ============================================================
 // TAHUN AJARAN API
 // ============================================================
-export type StatusPeriodeTahunAjaran = 'Aktif' | 'Belum Mulai' | 'Selesai';
+export type StatusPeriodeTahunAjaran = 'Berjalan' | 'Akan Datang' | 'Selesai';
 
 export interface TahunAjaran {
     id: number;
@@ -78,7 +135,7 @@ export interface TahunAjaran {
     tanggalMulai: string;
     tanggalSelesai: string;
     isAktif: boolean;
-    status: StatusPeriodeTahunAjaran;
+    status: StatusPeriodeTahunAjaran | string;
 }
 
 export interface CreateTahunAjaran {
@@ -97,8 +154,9 @@ export interface UpdateTahunAjaran {
 }
 
 export const tahunAjaranApi = {
-    getAll: async (): Promise<TahunAjaran[]> => {
-        const res = await apiFetch(`${BASE_URL}/tahun-ajaran`);
+    getAll: async (status?: string): Promise<TahunAjaran[]> => {
+        const query = status ? `?status=${encodeURIComponent(status)}` : '';
+        const res = await apiFetch(`${BASE_URL}/tahun-ajaran${query}`);
         return handleResponse<TahunAjaran[]>(res);
     },
 
@@ -286,6 +344,39 @@ export const mahasiswaApi = {
         });
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
     },
+
+    downloadTemplate: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/template`);
+        await downloadBlob(res, 'Template_Mahasiswa.xlsx');
+    },
+
+    exportExcel: async (idTahunAjaran?: number): Promise<void> => {
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/export${query}`);
+        await downloadBlob(res, `Data_Mahasiswa_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    importExcel: async (file: File, idTahunAjaran?: number): Promise<ExcelImportResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/mahasiswa/import${query}`, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (data.errors && Array.isArray(data.errors)) {
+                return data as ExcelImportResult;
+            }
+            if (data.errors && typeof data.errors === 'object') {
+                const msgs = Object.values(data.errors).flat() as string[];
+                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
+            }
+            throw new Error(data.message || `Import gagal (${res.status})`);
+        }
+        return data as ExcelImportResult;
+    },
 };
 
 // ============================================================
@@ -422,6 +513,37 @@ export const pembimbingApi = {
             body: JSON.stringify({ password }),
         });
         return handleResponse<{ message: string; defaultUsed: boolean }>(res);
+    },
+
+    downloadTemplate: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/template`);
+        await downloadBlob(res, 'Template_Dosen.xlsx');
+    },
+
+    exportExcel: async (): Promise<void> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/export`);
+        await downloadBlob(res, `Data_Dosen_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    importExcel: async (file: File): Promise<ExcelImportResult> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiFetch(`${BASE_URL}/pembimbing/import`, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            if (data.errors && Array.isArray(data.errors)) {
+                return data as ExcelImportResult;
+            }
+            if (data.errors && typeof data.errors === 'object') {
+                const msgs = Object.values(data.errors).flat() as string[];
+                return { success: false, totalRows: 0, successCount: 0, errors: msgs };
+            }
+            throw new Error(data.message || `Import gagal (${res.status})`);
+        }
+        return data as ExcelImportResult;
     },
 };
 
@@ -627,8 +749,9 @@ export interface UpdateKelompok {
 }
 
 export const kelompokApi = {
-    getAll: async (): Promise<Kelompok[]> => {
-        const res = await apiFetch(`${BASE_URL}/kelompok`);
+    getAll: async (idTahunAjaran?: number): Promise<Kelompok[]> => {
+        const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+        const res = await apiFetch(`${BASE_URL}/kelompok${query}`);
         return handleResponse<Kelompok[]>(res);
     },
 
@@ -758,6 +881,7 @@ export interface GenerateJadwalKelompokSummary {
 }
 
 export interface GenerateJadwalRequest {
+  idTahunAjaran: number;
   tanggalMulai?: string;
 }
 
@@ -820,8 +944,9 @@ export const jadwalApi = {
     });
     return handleResponse<void>(res);
   },
-  deleteAll: async (): Promise<void> => {
-    const res = await apiFetch(`${BASE_URL}/Jadwal/all`, {
+  deleteAll: async (idTahunAjaran?: number): Promise<void> => {
+    const query = idTahunAjaran ? `?idTahunAjaran=${idTahunAjaran}` : '';
+    const res = await apiFetch(`${BASE_URL}/Jadwal/all${query}`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);
@@ -858,23 +983,36 @@ export const userApi = {
 
 export interface NotifikasiItem {
   id: number;
+  userId: number;
   judul: string;
   pesan: string;
   tipe: string; // broadcast, penugasan, kegiatan_mulai, kegiatan_selesai, sistem, jadwal, pemberitahuan
   kategori?: string;
   tautan?: string;
+  actionUrl?: string;
   isRead: boolean;
   readAt?: string;
   metadataKey?: string;
   broadcastId?: number;
+  isBroadcast?: boolean;
+  senderName?: string;
   prioritas?: string;
   createdAt: string;
+  timeAgo?: string;
 }
 
 export interface NotifikasiListResponse {
   items: NotifikasiItem[];
-  total: number;
+  total?: number;
+  totalCount?: number;
   unreadCount: number;
+}
+
+export interface BroadcastStats {
+  totalBroadcast: number;
+  broadcastAktif: number;
+  totalDibaca: number;
+  broadcastBulanIni: number;
 }
 
 export interface BroadcastItem {
@@ -884,12 +1022,19 @@ export interface BroadcastItem {
   targetRole: string;
   targetKelompokId?: number;
   targetNamaKelompok?: string;
+  targetKelompokNama?: string;
   prioritas: string;
   kategori?: string;
+  tipe?: string;
   actionUrl?: string;
-  senderName: string;
+  tautan?: string;
+  senderName?: string;
+  createdByName?: string;
+  totalPenerima?: number;
+  jumlahPenerima?: number;
+  totalDibaca?: number;
+  isActive: boolean;
   createdAt: string;
-  totalPenerima: number;
 }
 
 export interface CreateBroadcastInput {
@@ -899,7 +1044,9 @@ export interface CreateBroadcastInput {
   targetKelompokId?: number;
   prioritas?: string;
   kategori?: string;
+  tipe?: string;
   actionUrl?: string;
+  tautan?: string;
 }
 
 export const notifikasiApi = {
@@ -917,8 +1064,9 @@ export const notifikasiApi = {
     return handleResponse<{ unreadCount: number }>(res);
   },
 
-  markAsRead: async (id: number): Promise<void> => {
-    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}/read`, {
+  markAsRead: async (id: number, isBroadcast?: boolean): Promise<void> => {
+    const qs = isBroadcast !== undefined ? `?isBroadcast=${isBroadcast}` : '';
+    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}/read${qs}`, {
       method: 'PUT',
     });
     return handleResponse<void>(res);
@@ -931,8 +1079,9 @@ export const notifikasiApi = {
     return handleResponse<void>(res);
   },
 
-  delete: async (id: number): Promise<void> => {
-    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}`, {
+  delete: async (id: number, isBroadcast?: boolean): Promise<void> => {
+    const qs = isBroadcast !== undefined ? `?isBroadcast=${isBroadcast}` : '';
+    const res = await apiFetch(`${BASE_URL}/notifikasi/${id}${qs}`, {
       method: 'DELETE',
     });
     return handleResponse<void>(res);
@@ -947,9 +1096,14 @@ export const notifikasiApi = {
 };
 
 export const broadcastApi = {
-  getAll: async (): Promise<BroadcastItem[]> => {
-    const res = await apiFetch(`${BASE_URL}/broadcast`);
+  getAll: async (limit: number = 50): Promise<BroadcastItem[]> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast?limit=${limit}`);
     return handleResponse<BroadcastItem[]>(res);
+  },
+
+  getStats: async (): Promise<BroadcastStats> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast/stats`);
+    return handleResponse<BroadcastStats>(res);
   },
 
   get: async (id: number): Promise<BroadcastItem> => {
@@ -958,12 +1112,26 @@ export const broadcastApi = {
   },
 
   create: async (data: CreateBroadcastInput): Promise<BroadcastItem> => {
+    const payload = {
+      ...data,
+      tipe: data.tipe || data.kategori || 'Pengumuman',
+      kategori: data.kategori || data.tipe || 'Pengumuman',
+      tautan: data.tautan || data.actionUrl,
+      actionUrl: data.actionUrl || data.tautan,
+    };
     const res = await apiFetch(`${BASE_URL}/broadcast`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return handleResponse<BroadcastItem>(res);
+  },
+
+  toggleStatus: async (id: number): Promise<{ success: boolean }> => {
+    const res = await apiFetch(`${BASE_URL}/broadcast/${id}/toggle-status`, {
+      method: 'POST',
+    });
+    return handleResponse<{ success: boolean }>(res);
   },
 
   delete: async (id: number): Promise<void> => {

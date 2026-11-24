@@ -21,8 +21,8 @@ public class Notifikasi : Entity<int>, IAuditableEntity
     public int? BroadcastId { get; set; }
     public Broadcast? Broadcast { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
 
 public interface INotifikasiRepository

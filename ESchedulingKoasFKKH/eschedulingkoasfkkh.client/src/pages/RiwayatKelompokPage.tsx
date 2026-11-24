@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
 import { SearchIcon, RefreshIcon, DetailIcon, DeleteIcon, InfoIcon, JadwalIcon as ClockIcon, JadwalIcon, KelompokIcon, DosenIcon, MahasiswaIcon, HistoryIcon } from '../components/Icons';
 import Tooltip from '../components/Tooltip';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function RiwayatKelompokPage() {
   const navigate = useNavigate();
@@ -189,16 +190,17 @@ export default function RiwayatKelompokPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <select
-              value={filterTahunAjaran}
-              onChange={(e) => setFilterTahunAjaran(e.target.value)}
-              className="flex-1 sm:w-48 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-indigo-400 transition-all cursor-pointer font-medium"
-            >
-              <option value="">Semua Tahun Ajaran</option>
-              {uniqueTahunAjaran.map(ta => (
-                <option key={ta} value={ta}>{ta}</option>
-              ))}
-            </select>
+            <div className="w-52">
+              <SearchableSelect
+                value={filterTahunAjaran}
+                onChange={(val) => setFilterTahunAjaran(String(val))}
+                options={[
+                  { value: '', label: 'Semua Tahun Ajaran' },
+                  ...uniqueTahunAjaran.map(ta => ({ value: ta, label: ta }))
+                ]}
+                placeholder="Semua Tahun Ajaran"
+              />
+            </div>
 
             <Tooltip content="Muat ulang data" position="bottom">
               <button

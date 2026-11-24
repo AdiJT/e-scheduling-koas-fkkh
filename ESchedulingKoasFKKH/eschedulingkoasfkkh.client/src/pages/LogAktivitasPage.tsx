@@ -19,7 +19,7 @@ const MODUL_OPTIONS = [
   'Profil Pengguna',
 ];
 
-const AKSI_OPTIONS = ['Tambah', 'Ubah', 'Hapus', 'Generate', 'Broadcast', 'Reset Password'];
+const AKSI_OPTIONS = ['Tambah', 'Ubah', 'Hapus', 'Generate', 'Broadcast', 'Import', 'Reset Password'];
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrator' },
@@ -78,6 +78,8 @@ function getAksiBadgeClass(aksi: string): string {
       return 'bg-purple-100 text-purple-700 border-purple-200';
     case 'Broadcast':
       return 'bg-pink-100 text-pink-700 border-pink-200';
+    case 'Import':
+      return 'bg-teal-100 text-teal-700 border-teal-200';
     case 'Reset Password':
       return 'bg-amber-100 text-amber-700 border-amber-200';
     default:
