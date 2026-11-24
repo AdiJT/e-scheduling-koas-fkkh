@@ -379,6 +379,9 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             case "Import":
                 return new ActivityMetadata(modul, "Import", "Mengimpor data dosen pembimbing dari file Excel", "Import Excel Dosen");
 
+            case "SinkronSinergi":
+                return new ActivityMetadata(modul, "Sinkronisasi", "Menyinkronkan data dosen pembimbing dari SINERGI", "Sinkronisasi SINERGI");
+
             default:
                 return BuildFallbackMetadata("Pembimbing", action, "POST");
         }
@@ -876,6 +879,18 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             {
                 Deskripsi = $"Sinkronisasi SIADIKNONA periode {syncResult.IdPeriode} ({syncResult.TahunAjaran}): {syncResult.JumlahBaru} baru, {syncResult.JumlahUpdate} diperbarui, {syncResult.JumlahTidakBerubah} tetap, {syncResult.JumlahGagal} gagal dari {syncResult.JumlahItem} data",
                 TargetEntitas = $"SIADIKNONA {syncResult.IdPeriode}"
+            };
+        }
+
+        if (string.Equals(controller, "Pembimbing", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(action, "SinkronSinergi", StringComparison.OrdinalIgnoreCase) &&
+            executedContext.Result is ObjectResult sinergiResultObj &&
+            sinergiResultObj.Value is SinergiSyncResult sinergiResult)
+        {
+            return current with
+            {
+                Deskripsi = $"Sinkronisasi SINERGI (S1 Kedokteran Hewan & Profesi Dokter Hewan): {sinergiResult.JumlahBaru} baru, {sinergiResult.JumlahUpdate} diperbarui, {sinergiResult.JumlahTidakBerubah} tetap, {sinergiResult.JumlahGagal} gagal dari {sinergiResult.JumlahItem} data",
+                TargetEntitas = "SINERGI Dosen"
             };
         }
 

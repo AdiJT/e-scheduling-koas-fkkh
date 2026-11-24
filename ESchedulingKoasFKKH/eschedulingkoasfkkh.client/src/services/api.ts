@@ -63,7 +63,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
                 requiresConfirmation: errorData.requiresConfirmation || false,
             };
         }
-        throw { status: response.status, message: `Server error: ${response.status}` };
+        const errorData: ApiError = await response.json().catch(() => ({}));
+        throw { status: response.status, message: errorData.message || `Server error: ${response.status}` };
     }
 
     // Handle 204 No Content
@@ -533,6 +534,18 @@ export interface DosenDeleteConflictError {
     langkahPenyelesaian: string[];
 }
 
+export interface SinergiSyncResult {
+    success: boolean;
+    unitKerja: string[];
+    statusFilter: string[];
+    jumlahItem: number;
+    jumlahBaru: number;
+    jumlahUpdate: number;
+    jumlahTidakBerubah: number;
+    jumlahGagal: number;
+    errors: string[];
+}
+
 export const pembimbingApi = {
     getAll: async (): Promise<Pembimbing[]> => {
         const res = await apiFetch(`${BASE_URL}/pembimbing`);
@@ -607,6 +620,13 @@ export const pembimbingApi = {
             throw new Error(data.message || `Import gagal (${res.status})`);
         }
         return data as ExcelImportResult;
+    },
+
+    sinkronSinergi: async (): Promise<SinergiSyncResult> => {
+        const res = await apiFetch(`${BASE_URL}/pembimbing/sinkron-sinergi`, {
+            method: 'POST',
+        });
+        return handleResponse<SinergiSyncResult>(res);
     },
 };
 

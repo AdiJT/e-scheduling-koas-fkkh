@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { pembimbingApi, type Pembimbing, type ExcelImportResult, type DosenDeleteConflictError } from '../services/api';
+import { pembimbingApi, type Pembimbing, type ExcelImportResult, type DosenDeleteConflictError, type SinergiSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
 import { DosenIcon, RefreshIcon, SearchIcon, EditIcon, DeleteIcon, DetailIcon, DownloadIcon, FileSpreadsheetIcon, ExportIcon, ImportIcon } from '../components/Icons';
@@ -29,6 +29,12 @@ export default function DosenPage() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Sync SINERGI state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SinergiSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -256,6 +262,30 @@ export default function DosenPage() {
     }
   };
 
+  // === SYNC SINERGI ===
+  const openSyncModal = () => {
+    setSyncResult(null);
+    setSyncError(null);
+    setShowSyncModal(true);
+  };
+
+  const handleSyncSinergi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSyncing(true);
+      setSyncError(null);
+      setSyncResult(null);
+      const res = await pembimbingApi.sinkronSinergi();
+      setSyncResult(res);
+      await fetchData();
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      setSyncError(apiErr?.message || 'Gagal menyinkronkan data dosen dari SINERGI.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const selectedDosen = data.find(d => d.id === selectedId);
 
   return (
@@ -355,6 +385,22 @@ export default function DosenPage() {
                   <ImportIcon className="w-4 h-4 text-green-600" />
                   <span className="hidden sm:inline">Import Excel</span>
                   <span className="sm:hidden">Import</span>
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Sinkron SINERGI Button (Admin Only) */}
+            {!isPengelola && (
+              <Tooltip content="Tarik & sinkronkan dosen Kedokteran Hewan (Aktif & Tugas Belajar) dari SINERGI" position="bottom">
+                <button
+                  onClick={openSyncModal}
+                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
+                    font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                  id="btn-sync-sinergi"
+                >
+                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Sinkron SINERGI</span>
+                  <span className="sm:hidden">SINERGI</span>
                 </button>
               </Tooltip>
             )}
@@ -1124,6 +1170,150 @@ export default function DosenPage() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sinkron SINERGI Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0">
+                  <RefreshIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">Sinkronisasi Dosen SINERGI</h3>
+                  <p className="text-xs text-indigo-100 mt-0.5">Tarik &amp; perbarui data dosen dari server SINERGI UNDANA</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!syncing) {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }
+                }}
+                disabled={syncing}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSyncSinergi} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-3.5 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-950 space-y-1.5">
+                <div className="font-semibold text-indigo-900">Cakupan Data yang Ditarik:</div>
+                <div className="space-y-1 text-[11px] text-indigo-900/90">
+                  <div>
+                    <span className="font-semibold">Unit Kerja:</span> S1-Program Studi Kedokteran Hewan &amp; Profesi-Program Studi Dokter Hewan
+                  </div>
+                  <div>
+                    <span className="font-semibold">Status Dosen:</span> Aktif &amp; Tugas Belajar
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-amber-800">Ketentuan Sinkronisasi:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
+                  <li>Dosen baru akan dibuatkan akun login otomatis dengan <strong>username &amp; password = NIP</strong>.</li>
+                  <li>Dosen yang sudah terdaftar (berdasarkan NIP) akan diperbarui <strong>Nama &amp; gelarnya</strong> jika berubah (password &amp; jadwal tidak diubah).</li>
+                  <li>Data dosen yang tidak terdaftar di SINERGI tetap dipertahankan (tidak dihapus).</li>
+                </ul>
+              </div>
+
+              {syncError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">⚠️</span>
+                  <span className="flex-1">{syncError}</span>
+                </div>
+              )}
+
+              {syncResult && (
+                <div className="space-y-2.5">
+                  <div className="p-3.5 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-900 text-xs space-y-2">
+                    <div className="font-bold text-emerald-800">
+                      ✅ Sinkronisasi Dosen SINERGI Selesai
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 text-center">
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-100">
+                        <div className="text-sm font-bold text-slate-800">{syncResult.jumlahItem}</div>
+                        <div className="text-[10px] text-slate-500">Total</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-emerald-200">
+                        <div className="text-sm font-bold text-emerald-600">+{syncResult.jumlahBaru}</div>
+                        <div className="text-[10px] text-slate-500">Baru</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-blue-200">
+                        <div className="text-sm font-bold text-blue-600">{syncResult.jumlahUpdate}</div>
+                        <div className="text-[10px] text-slate-500">Diubah</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-slate-200">
+                        <div className="text-sm font-bold text-slate-600">{syncResult.jumlahTidakBerubah}</div>
+                        <div className="text-[10px] text-slate-500">Tetap</div>
+                      </div>
+                      <div className="bg-white/90 rounded-lg p-1.5 border border-rose-200">
+                        <div className="text-sm font-bold text-rose-600">{syncResult.jumlahGagal}</div>
+                        <div className="text-[10px] text-slate-500">Gagal</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {syncResult.errors && syncResult.errors.length > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-semibold text-amber-800 mb-1.5">
+                        Catatan ({syncResult.errors.length}):
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1 pr-1 text-[11px] text-amber-900 font-mono">
+                        {syncResult.errors.map((err, idx) => (
+                          <div key={idx} className="bg-amber-100/70 p-1.5 rounded leading-tight">
+                            • {err}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncResult(null);
+                    setSyncError(null);
+                  }}
+                  disabled={syncing}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  {syncResult ? 'Selesai' : 'Batal'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncing}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                  id="btn-submit-sync-sinergi"
+                >
+                  {syncing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Menyinkronkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshIcon className="w-4 h-4" />
+                      <span>Mulai Sinkronisasi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,7 @@ public class PembimbingController : ControllerBase
     private readonly IHariLiburService _hariLiburService;
     private readonly IAutoArchiveService _autoArchiveService;
     private readonly ExcelService _excelService;
+    private readonly SinergiApi _sinergiApi;
 
     public PembimbingController(
         IPembimbingRepository pembimbingRepository,
@@ -39,7 +41,8 @@ public class PembimbingController : ControllerBase
         IRiwayatKelompokRepository riwayatKelompokRepository,
         IHariLiburService hariLiburService,
         IAutoArchiveService autoArchiveService,
-        ExcelService excelService)
+        ExcelService excelService,
+        SinergiApi sinergiApi)
     {
         _pembimbingRepository = pembimbingRepository;
         _unitOfWork = unitOfWork;
@@ -51,6 +54,7 @@ public class PembimbingController : ControllerBase
         _hariLiburService = hariLiburService;
         _autoArchiveService = autoArchiveService;
         _excelService = excelService;
+        _sinergiApi = sinergiApi;
     }
 
     [HttpGet("template")]
@@ -616,6 +620,126 @@ public class PembimbingController : ControllerBase
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
         return Ok(new { message = $"Password untuk dosen '{pembimbing.Nama}' berhasil direset.", defaultUsed = string.IsNullOrWhiteSpace(dto.Password) });
+    }
+
+    [HttpPost("sinkron-sinergi")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SinkronSinergi(CancellationToken cancellationToken)
+    {
+        var apiResult = await _sinergiApi.GetDosenKedokteranHewanAsync(cancellationToken);
+        if (apiResult.IsFailure)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                message = apiResult.Error.Message
+            });
+        }
+
+        var daftarApi = apiResult.Value;
+        var existingByNip = (await _pembimbingRepository.GetAll())
+            .Where(p => !string.IsNullOrWhiteSpace(p.NIP))
+            .GroupBy(p => p.NIP.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingUsersByName = (await _userRepository.GetAll())
+            .Where(u => !string.IsNullOrWhiteSpace(u.Name))
+            .GroupBy(u => u.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        int jumlahBaru = 0;
+        int jumlahUpdate = 0;
+        int jumlahTidakBerubah = 0;
+        int jumlahGagal = 0;
+        var errors = new List<string>();
+        var processedNips = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in daftarApi)
+        {
+            var nip = (item.NIP ?? string.Empty).Trim();
+            var namaFormatted = SinergiApi.FormatNamaGelar(item.NamaLengkap, item.GelarDepan, item.GelarBelakang);
+
+            if (string.IsNullOrWhiteSpace(nip) || string.IsNullOrWhiteSpace(namaFormatted))
+            {
+                jumlahGagal++;
+                errors.Add($"Data dosen tidak lengkap (NIP: '{item.NIP}', Nama: '{item.NamaLengkap}').");
+                continue;
+            }
+
+            if (!processedNips.Add(nip))
+            {
+                continue;
+            }
+
+            if (existingByNip.TryGetValue(nip, out var existing))
+            {
+                if (!string.Equals(existing.Nama, namaFormatted, StringComparison.Ordinal))
+                {
+                    existing.Nama = namaFormatted;
+                    _pembimbingRepository.Update(existing);
+                    jumlahUpdate++;
+                }
+                else
+                {
+                    jumlahTidakBerubah++;
+                }
+                continue;
+            }
+
+            if (existingUsersByName.TryGetValue(nip, out var existingUser))
+            {
+                jumlahGagal++;
+                errors.Add($"NIP {nip} ({namaFormatted}): username sudah dipakai akun lain (role: {existingUser.Role}).");
+                continue;
+            }
+
+            var pembimbing = new Pembimbing
+            {
+                NIP = nip,
+                Nama = namaFormatted
+            };
+
+            var user = new User
+            {
+                Name = nip,
+                PasswordHash = _passwordHasher.HashPassword(null!, nip),
+                Role = UserRoles.Dosen,
+                Pembimbing = pembimbing
+            };
+
+            pembimbing.User = user;
+
+            _pembimbingRepository.Add(pembimbing);
+            _userRepository.Add(user);
+
+            existingByNip[nip] = pembimbing;
+            existingUsersByName[nip] = user;
+            jumlahBaru++;
+        }
+
+        if (jumlahBaru > 0 || jumlahUpdate > 0)
+        {
+            var saveResult = await _unitOfWork.SaveChangesAsync();
+            if (saveResult.IsFailure)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Gagal menyimpan hasil sinkronisasi dosen ke database."
+                });
+            }
+        }
+
+        return Ok(new SinergiSyncResult
+        {
+            Success = true,
+            UnitKerja = ["S1-Program Studi Kedokteran Hewan", "Profesi-Program Studi Dokter Hewan"],
+            StatusFilter = ["Aktif", "Tugas Belajar"],
+            JumlahItem = daftarApi.Count,
+            JumlahBaru = jumlahBaru,
+            JumlahUpdate = jumlahUpdate,
+            JumlahTidakBerubah = jumlahTidakBerubah,
+            JumlahGagal = jumlahGagal,
+            Errors = errors
+        });
     }
 }
 

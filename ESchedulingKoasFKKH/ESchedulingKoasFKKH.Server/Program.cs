@@ -60,6 +60,24 @@ builder.Services.AddHttpClient<SiadiknonaApi>(conf =>
     conf.Timeout = TimeSpan.FromSeconds(20);
 });
 
+builder.Services.AddHttpClient<SinergiApi>(conf =>
+{
+    var baseUrl = builder.Configuration["SinergiApi:BaseUrl"]?.TrimEnd('/')
+        ?? throw new InvalidOperationException("Konfigurasi 'SinergiApi:BaseUrl' belum diatur.");
+    var header = builder.Configuration["SinergiApi:Header"];
+    if (string.IsNullOrWhiteSpace(header))
+        header = "X-Api-Key";
+    var secretKey = builder.Configuration["SinergiApi:SecretKey"] ?? string.Empty;
+
+    conf.BaseAddress = new Uri($"{baseUrl}/api/v1/integrasi/");
+    conf.DefaultRequestHeaders.Add("Accept", "application/json");
+    if (!string.IsNullOrWhiteSpace(secretKey))
+    {
+        conf.DefaultRequestHeaders.Add(header, secretKey);
+    }
+    conf.Timeout = TimeSpan.FromSeconds(20);
+});
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
