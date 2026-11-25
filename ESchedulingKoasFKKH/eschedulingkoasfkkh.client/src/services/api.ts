@@ -340,13 +340,11 @@ export const mahasiswaApi = {
         return handleResponse<void>(res);
     },
 
-    resetPassword: async (id: number, password?: string): Promise<{ message: string; defaultUsed: boolean }> => {
+    resetPassword: async (id: number): Promise<{ message: string }> => {
         const res = await apiFetch(`${BASE_URL}/mahasiswa/${id}/reset-password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
         });
-        return handleResponse<{ message: string; defaultUsed: boolean }>(res);
+        return handleResponse<{ message: string }>(res);
     },
 
     sinkronSiadiknona: async (idTahunAjaran?: number): Promise<SiadiknonaSyncResult> => {
@@ -537,13 +535,11 @@ export const pembimbingApi = {
         return handleResponse<void>(res);
     },
 
-    resetPassword: async (id: number, password?: string): Promise<{ message: string; defaultUsed: boolean }> => {
+    resetPassword: async (id: number): Promise<{ message: string }> => {
         const res = await apiFetch(`${BASE_URL}/pembimbing/${id}/reset-password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
         });
-        return handleResponse<{ message: string; defaultUsed: boolean }>(res);
+        return handleResponse<{ message: string }>(res);
     },
 
     sinkronSinergi: async (): Promise<SinergiSyncResult> => {

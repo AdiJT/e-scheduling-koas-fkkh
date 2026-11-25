@@ -4,7 +4,6 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
-using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
 using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
@@ -552,18 +551,14 @@ public class MahasiswaController : ControllerBase
         };
     }
 
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    [Authorize(Roles = UserRoles.Admin)]
     [HttpPost("{id:int}/reset-password")]
-    public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetUserPasswordDto dto)
+    public async Task<IActionResult> ResetPassword(int id)
     {
         var mahasiswa = await _mahasiswaRepository.Get(id);
         if (mahasiswa is null) return NotFound();
 
-        var newPassword = string.IsNullOrWhiteSpace(dto.Password) ? "12345" : dto.Password.Trim();
-        if (newPassword.Length < 5)
-        {
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["password"] = "Password minimal 5 karakter" });
-        }
+        const string defaultPassword = "123456";
 
         var user = mahasiswa.User;
         if (user is null)
@@ -575,13 +570,13 @@ public class MahasiswaController : ControllerBase
             }
         }
 
-        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.PasswordHash = _passwordHasher.HashPassword(user, defaultPassword);
         _userRepository.Update(user);
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return Ok(new { message = $"Password untuk mahasiswa '{mahasiswa.Nama}' berhasil direset.", defaultUsed = string.IsNullOrWhiteSpace(dto.Password) });
+        return Ok(new { message = $"Password untuk mahasiswa '{mahasiswa.Nama}' berhasil direset ke 123456." });
     }
 }
 

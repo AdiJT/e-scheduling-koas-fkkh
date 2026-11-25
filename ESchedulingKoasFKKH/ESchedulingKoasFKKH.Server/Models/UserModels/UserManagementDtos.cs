@@ -35,8 +35,3 @@ public class UpdateManagedUserDto
 
     public string? Password { get; set; }
 }
-
-public class ResetUserPasswordDto
-{
-    public string? Password { get; set; }
-}

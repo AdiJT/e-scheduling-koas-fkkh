@@ -4,7 +4,6 @@ using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Domain.Services.HariLibur;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
-using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
 using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
@@ -488,18 +487,14 @@ public class PembimbingController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Pengelola}")]
+    [Authorize(Roles = UserRoles.Admin)]
     [HttpPost("{id:int}/reset-password")]
-    public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetUserPasswordDto dto)
+    public async Task<IActionResult> ResetPassword(int id)
     {
         var pembimbing = await _pembimbingRepository.Get(id);
         if (pembimbing is null) return NotFound();
 
-        var newPassword = string.IsNullOrWhiteSpace(dto.Password) ? "12345" : dto.Password.Trim();
-        if (newPassword.Length < 5)
-        {
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["password"] = "Password minimal 5 karakter" });
-        }
+        const string defaultPassword = "123456";
 
         var user = pembimbing.User;
         if (user is null && !string.IsNullOrWhiteSpace(pembimbing.Email))
@@ -515,13 +510,13 @@ public class PembimbingController : ControllerBase
             }
         }
 
-        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.PasswordHash = _passwordHasher.HashPassword(user, defaultPassword);
         _userRepository.Update(user);
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return Ok(new { message = $"Password untuk dosen '{pembimbing.Nama}' berhasil direset.", defaultUsed = string.IsNullOrWhiteSpace(dto.Password) });
+        return Ok(new { message = $"Password untuk dosen '{pembimbing.Nama}' berhasil direset ke 123456." });
     }
 
     [HttpPost("sinkron-sinergi")]
