@@ -5,6 +5,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon, GoogleIcon } from '../components/Icons';
 import logo from "../assets/logo_undana.png";
 
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        oauth2?: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: { access_token?: string; error?: string; error_description?: string }) => void;
+            error_callback?: (error: { type?: string; message?: string }) => void;
+          }) => {
+            requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+          };
+        };
+      };
+    };
+  }
+}
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -12,9 +31,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const { login } = useAuth();
+  const [unregisteredModal, setUnregisteredModal] = useState<{ open: boolean; email?: string; message?: string }>({ open: false });
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +46,69 @@ export default function LoginPage() {
       setUsername(savedUser);
       setRememberMe(true);
     }
+
+    fetch('/api/user/google-config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { clientId?: string } | null) => {
+        if (data?.clientId) {
+          setGoogleClientId(data.clientId);
+        }
+      })
+      .catch(() => {
+        // Non-fatal: tombol Google akan menampilkan pesan saat diklik jika config belum siap
+      });
   }, []);
+
+  const handleGoogleLogin = () => {
+    setError('');
+    if (!googleClientId) {
+      setError('Konfigurasi Google Login belum tersedia di server.');
+      return;
+    }
+    const oauth2 = window.google?.accounts?.oauth2;
+    if (!oauth2) {
+      setError('Layanan Google Sign-In sedang dimuat atau terblokir browser. Silakan muat ulang halaman.');
+      return;
+    }
+
+    setIsGoogleLoading(true);
+    const tokenClient = oauth2.initTokenClient({
+      client_id: googleClientId,
+      scope: 'openid email profile',
+      callback: async (tokenResponse) => {
+        if (tokenResponse.error || !tokenResponse.access_token) {
+          setIsGoogleLoading(false);
+          if (tokenResponse.error && tokenResponse.error !== 'access_denied') {
+            setError(tokenResponse.error_description || 'Gagal otorisasi akun Google.');
+          }
+          return;
+        }
+
+        try {
+          await loginWithGoogle(tokenResponse.access_token);
+          navigate('/dashboard');
+        } catch (err: unknown) {
+          const apiErr = err as { status?: number; code?: string; email?: string; message?: string };
+          if (apiErr?.status === 404 || apiErr?.code === 'ACCOUNT_NOT_REGISTERED') {
+            setUnregisteredModal({
+              open: true,
+              email: apiErr.email,
+              message: apiErr.message,
+            });
+          } else {
+            setError(apiErr?.message || 'Gagal masuk menggunakan akun Google.');
+          }
+        } finally {
+          setIsGoogleLoading(false);
+        }
+      },
+      error_callback: () => {
+        setIsGoogleLoading(false);
+      },
+    });
+
+    tokenClient.requestAccessToken({ prompt: 'select_account' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,11 +230,24 @@ export default function LoginPage() {
           <button
             type="button"
             id="btn-google-login"
-            onClick={() => setShowGoogleModal(true)}
-            className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 rounded-2xl text-sm font-semibold text-slate-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-soft hover:shadow active:scale-[0.98] cursor-pointer group"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading || isLoading}
+            className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 rounded-2xl text-sm font-semibold text-slate-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-soft hover:shadow active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer group"
           >
-            <GoogleIcon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-110" />
-            <span>Masuk dengan Google</span>
+            {isGoogleLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-slate-500 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Memverifikasi Google...</span>
+              </>
+            ) : (
+              <>
+                <GoogleIcon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Masuk dengan Google</span>
+              </>
+            )}
           </button>
 
           {/* Divider */}
@@ -267,28 +363,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Modal Info Preview Google Login */}
-          {showGoogleModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
-              <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center animate-scale-up">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-soft">
-                  <GoogleIcon className="w-8 h-8" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Masuk dengan Google</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                  Tampilan tombol masuk dengan Google sudah aktif di frontend. Untuk saat ini fitur belum dihubungkan ke backend sesuai konfigurasi.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleModal(false)}
-                  className="w-full py-3 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold rounded-xl text-sm shadow-md transition-all cursor-pointer"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Help Section */}
           <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
             <p className="text-xs text-slate-500 text-center">
@@ -309,6 +383,34 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Popup Akun Google Belum Terdaftar di Sistem */}
+      {unregisteredModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center animate-scale-up">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shadow-soft">
+              <GoogleIcon className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Akun Belum Terdaftar</h3>
+            <p className="text-xs text-slate-600 leading-relaxed mb-6">
+              {unregisteredModal.email ? (
+                <>
+                  Email <span className="font-semibold text-slate-800">{unregisteredModal.email}</span> belum terdaftar di sistem E-Scheduling FKKH UNDANA. Silakan hubungi administrator atau gunakan akun email yang sudah terdaftar.
+                </>
+              ) : (
+                unregisteredModal.message || 'Akun Google Anda belum terdaftar di sistem E-Scheduling FKKH UNDANA. Silakan hubungi administrator.'
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => setUnregisteredModal({ open: false })}
+              className="w-full py-3 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold rounded-xl text-sm shadow-md transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

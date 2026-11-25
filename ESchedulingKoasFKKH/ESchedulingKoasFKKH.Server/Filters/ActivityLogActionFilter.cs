@@ -64,7 +64,8 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
 
         // Skip login and ActivityLog endpoints
         if ((string.Equals(controller, "User", StringComparison.OrdinalIgnoreCase) &&
-             string.Equals(action, "Login", StringComparison.OrdinalIgnoreCase)) ||
+             (string.Equals(action, "Login", StringComparison.OrdinalIgnoreCase) ||
+              string.Equals(action, "GoogleLogin", StringComparison.OrdinalIgnoreCase))) ||
             string.Equals(controller, "ActivityLog", StringComparison.OrdinalIgnoreCase))
         {
             await next();

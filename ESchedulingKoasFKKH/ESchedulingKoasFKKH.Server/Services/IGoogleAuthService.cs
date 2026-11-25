@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ESchedulingKoasFKKH.Server.Services;
@@ -11,10 +12,12 @@ public class GoogleTokenPayload
     public string Email { get; set; } = string.Empty;
 
     [JsonPropertyName("email_verified")]
-    public string? EmailVerifiedString { get; set; }
+    public JsonElement? EmailVerifiedElement { get; set; }
 
     public bool EmailVerified =>
-        bool.TryParse(EmailVerifiedString, out var v) ? v : string.Equals(EmailVerifiedString, "true", StringComparison.OrdinalIgnoreCase);
+        EmailVerifiedElement is { ValueKind: JsonValueKind.True } ||
+        (EmailVerifiedElement is { ValueKind: JsonValueKind.String } el &&
+         string.Equals(el.GetString(), "true", StringComparison.OrdinalIgnoreCase));
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -24,6 +27,9 @@ public class GoogleTokenPayload
 
     [JsonPropertyName("aud")]
     public string Aud { get; set; } = string.Empty;
+
+    [JsonPropertyName("azp")]
+    public string? Azp { get; set; }
 }
 
 public class GoogleValidationResult
@@ -42,4 +48,5 @@ public class GoogleValidationResult
 public interface IGoogleAuthService
 {
     Task<GoogleValidationResult> ValidateIdTokenAsync(string idToken, CancellationToken cancellationToken = default);
+    Task<GoogleValidationResult> ValidateAccessTokenAsync(string accessToken, CancellationToken cancellationToken = default);
 }

@@ -10,6 +10,7 @@ interface AuthContextType {
   mahasiswaAccessLoading: boolean;
   refreshMahasiswaAccess: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
+  loginWithGoogle: (accessToken: string) => Promise<void>;
   logout: () => void;
   updateUser: (username: string) => void;
 }
@@ -106,6 +107,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshMahasiswaAccess]);
 
+  const persistSession = async (data: {
+    token?: string;
+    username?: string;
+    role?: string;
+    Role?: string;
+    fullName?: string;
+    profileId?: number;
+    mahasiswaAccess?: MahasiswaAccessStatus | null;
+  }, fallbackUsername: string) => {
+    const token = data.token;
+    const role = data.role || data.Role || '';
+    const resolvedUsername = data.username || fallbackUsername;
+    const fullName = data.fullName;
+    const profileId = data.profileId;
+    const mhsAccess: MahasiswaAccessStatus | null = data.mahasiswaAccess || null;
+
+    if (token) {
+      setIsAuthenticated(true);
+      setUser({ username: resolvedUsername, role, fullName, profileId });
+      setMahasiswaAccess(mhsAccess);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('username', resolvedUsername);
+      localStorage.setItem('role', role);
+      if (fullName) localStorage.setItem('fullName', fullName);
+      if (profileId) localStorage.setItem('profileId', profileId.toString());
+      if (mhsAccess) {
+        localStorage.setItem('mahasiswaAccess', JSON.stringify(mhsAccess));
+      } else {
+        localStorage.removeItem('mahasiswaAccess');
+      }
+      localStorage.setItem('token', token);
+      localStorage.setItem('loginTimestamp', new Date().getTime().toString());
+
+      if (role?.toLowerCase() === 'mahasiswa' && !mhsAccess) {
+        await refreshMahasiswaAccess();
+      }
+    }
+  };
+
   const login = async (username: string, password: string) => {
     try {
       const response = await fetch('/api/user/login', {
@@ -115,39 +155,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Login gagal. Periksa username dan password Anda.');
+        const errData = await response.json().catch(() => null);
+        const firstErr = errData?.errors && typeof errData.errors === 'object'
+          ? (Object.values(errData.errors).flat()[0] as string | undefined)
+          : undefined;
+        throw new Error(firstErr || errData?.message || 'Login gagal. Periksa username/email dan password Anda.');
       }
 
       const data = await response.json();
-      const token = data.token;
-      const role = data.role || data.Role;
-      const fullName = data.fullName;
-      const profileId = data.profileId;
-      const mhsAccess: MahasiswaAccessStatus | null = data.mahasiswaAccess || null;
-      
-      if (token) {
-        setIsAuthenticated(true);
-        setUser({ username, role, fullName, profileId });
-        setMahasiswaAccess(mhsAccess);
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('username', username);
-        localStorage.setItem('role', role);
-        if (fullName) localStorage.setItem('fullName', fullName);
-        if (profileId) localStorage.setItem('profileId', profileId.toString());
-        if (mhsAccess) {
-          localStorage.setItem('mahasiswaAccess', JSON.stringify(mhsAccess));
-        } else {
-          localStorage.removeItem('mahasiswaAccess');
-        }
-        localStorage.setItem('token', token);
-        localStorage.setItem('loginTimestamp', new Date().getTime().toString());
-
-        if (role?.toLowerCase() === 'mahasiswa' && !mhsAccess) {
-          await refreshMahasiswaAccess();
-        }
-      }
+      await persistSession(data, username);
     } catch (err) {
       console.error('Login error:', err);
+      throw err;
+    }
+  };
+
+  const loginWithGoogle = async (accessToken: string) => {
+    try {
+      const response = await fetch('/api/user/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw {
+          status: response.status,
+          code: errData?.code as string | undefined,
+          email: errData?.email as string | undefined,
+          message: (errData?.message as string | undefined) || 'Gagal masuk dengan Google.'
+        };
+      }
+
+      const data = await response.json();
+      await persistSession(data, data.username || '');
+    } catch (err) {
+      console.error('Google login error:', err);
       throw err;
     }
   };
@@ -180,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mahasiswaAccessLoading,
         refreshMahasiswaAccess,
         login,
+        loginWithGoogle,
         logout,
         updateUser,
       }}

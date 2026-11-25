@@ -99,19 +99,24 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("google-login")]
-    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request?.IdToken))
+        var hasAccessToken = !string.IsNullOrWhiteSpace(request?.AccessToken);
+        var hasIdToken = !string.IsNullOrWhiteSpace(request?.IdToken);
+        if (!hasAccessToken && !hasIdToken)
         {
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idToken"] = "Token Google ID wajib disertakan." });
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["google"] = "Token Google wajib disertakan." });
         }
 
-        var validationResult = await _googleAuthService.ValidateIdTokenAsync(request.IdToken);
+        var validationResult = hasAccessToken
+            ? await _googleAuthService.ValidateAccessTokenAsync(request!.AccessToken!, cancellationToken)
+            : await _googleAuthService.ValidateIdTokenAsync(request!.IdToken!, cancellationToken);
+
         if (!validationResult.IsSuccess || validationResult.Payload is null)
         {
-            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            return Unauthorized(new
             {
-                ["google"] = validationResult.ErrorMessage ?? "Autentikasi akun Google gagal."
+                message = validationResult.ErrorMessage ?? "Autentikasi akun Google gagal."
             });
         }
 
@@ -145,7 +150,8 @@ public class UserController : ControllerBase
         {
             return StatusCode(StatusCodes.Status404NotFound, new
             {
-                message = $"Akun Google dengan email '{payload.Email}' belum terdaftar pada sistem E-Scheduling FKKH UNDANA. Silakan hubungi Administrator atau masuk dengan Username/NIP/NIM dan Password.",
+                code = "ACCOUNT_NOT_REGISTERED",
+                message = $"Akun Google dengan email '{payload.Email}' belum terdaftar pada sistem E-Scheduling FKKH UNDANA. Silakan hubungi Administrator atau masuk dengan Email dan Password.",
                 email = payload.Email
             });
         }
@@ -224,6 +230,7 @@ public class UserController : ControllerBase
         return Ok(new
         {
             user.Id,
+            username = user.Name,
             user.Role,
             token = tokenStr,
             fullName,
