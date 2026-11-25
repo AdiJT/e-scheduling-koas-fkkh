@@ -164,6 +164,7 @@ export interface Mahasiswa {
     id: number;
     nim: string;
     nama: string;
+    email?: string | null;
     idKelompok: number | null;
     idTahunAjaran?: number | null;
     tahunAjaran?: {
@@ -273,6 +274,7 @@ export interface MahasiswaAccessStatus {
 export interface CreateMahasiswa {
     nim: string;
     nama: string;
+    email: string;
     idTahunAjaran: number;
 }
 
@@ -280,6 +282,7 @@ export interface UpdateMahasiswa {
     id: number;
     nim: string;
     nama: string;
+    email: string;
     idTahunAjaran: number;
 }
 

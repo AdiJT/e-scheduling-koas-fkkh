@@ -292,7 +292,9 @@ export default function DashboardPage() {
       let userKelNama = mahasiswaAccess?.namaKelompok || '';
       if (isMahasiswa && canMahasiswaViewJadwalKelompok) {
         const myKel = kel.find((k: any) => 
-          k.daftarMahasiswa && k.daftarMahasiswa.some((m: any) => m.nim === user?.username)
+          k.daftarMahasiswa && k.daftarMahasiswa.some((m: any) =>
+            (user?.profileId && m.id === user.profileId) || m.nim === user?.username
+          )
         );
         if (myKel) {
           userKelNama = myKel.nama;
@@ -348,7 +350,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, mahasiswaAccess, user?.username, user?.profileId]);
+  }, [isAdmin, isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, mahasiswaAccess, user]);
 
   useEffect(() => {
     fetchStats();

@@ -335,7 +335,9 @@ export default function KelompokPage() {
                                     T.A. {kel.tahunAjaran}
                                   </span>
                                 )}
-                                {isMahasiswa && kel.daftarMahasiswa?.some(m => m.nim === user?.username) && (
+                                {isMahasiswa && kel.daftarMahasiswa?.some(m =>
+                                  (user?.profileId && m.id === user.profileId) || m.nim === user?.username
+                                ) && (
                                   <span className="inline-block px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[10px] font-bold flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                                     Kelompok Anda

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 
@@ -12,6 +12,10 @@ public class UpdateMahasiswa
 
     [Required]
     public string Nama { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Email wajib diisi")]
+    [EmailAddress(ErrorMessage = "Format email tidak valid")]
+    public string Email { get; set; } = string.Empty;
 
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "Tahun ajaran wajib dipilih")]

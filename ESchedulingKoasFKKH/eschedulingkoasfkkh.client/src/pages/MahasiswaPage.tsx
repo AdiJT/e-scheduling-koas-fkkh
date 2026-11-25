@@ -43,7 +43,7 @@ export default function MahasiswaPage() {
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ nim: '', nama: '', idTahunAjaran: 0 });
+  const [editForm, setEditForm] = useState({ nim: '', nama: '', email: '', idTahunAjaran: 0 });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -69,8 +69,10 @@ export default function MahasiswaPage() {
   }, [fetchData]);
 
   const filteredData = data.filter(mhs => {
-    const matchSearch = mhs.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mhs.nim.includes(searchTerm);
+    const q = searchTerm.toLowerCase();
+    const matchSearch = mhs.nama.toLowerCase().includes(q) ||
+      mhs.nim.toLowerCase().includes(q) ||
+      (mhs.email || '').toLowerCase().includes(q);
     const matchTahunAjaran = filterTahunAjaran === 'all' || mhs.idTahunAjaran?.toString() === filterTahunAjaran;
     return matchSearch && matchTahunAjaran;
   });
@@ -142,14 +144,14 @@ export default function MahasiswaPage() {
   // === EDIT MODAL ===
   const startEdit = (mhs: Mahasiswa) => {
     setEditingId(mhs.id);
-    setEditForm({ nim: mhs.nim, nama: mhs.nama, idTahunAjaran: mhs.idTahunAjaran || 0 });
+    setEditForm({ nim: mhs.nim, nama: mhs.nama, email: mhs.email || '', idTahunAjaran: mhs.idTahunAjaran || 0 });
     setEditErrors({});
     setShowEditModal(true);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ nim: '', nama: '', idTahunAjaran: 0 });
+    setEditForm({ nim: '', nama: '', email: '', idTahunAjaran: 0 });
     setEditErrors({});
     setShowEditModal(false);
   };
@@ -159,10 +161,12 @@ export default function MahasiswaPage() {
     try {
       setSaving(true);
       setEditErrors({});
+      const normalizedEmail = editForm.email.trim().toLowerCase();
       await mahasiswaApi.update(editingId, {
         id: editingId,
-        nim: editForm.nim,
-        nama: editForm.nama,
+        nim: editForm.nim.trim(),
+        nama: editForm.nama.trim(),
+        email: normalizedEmail,
         idTahunAjaran: editForm.idTahunAjaran,
       });
       // Update local state
@@ -171,8 +175,9 @@ export default function MahasiswaPage() {
           m.id === editingId
             ? {
                 ...m,
-                nim: editForm.nim,
-                nama: editForm.nama,
+                nim: editForm.nim.trim(),
+                nama: editForm.nama.trim(),
+                email: normalizedEmail,
                 idTahunAjaran: editForm.idTahunAjaran,
                 tahunAjaran: tahunAjarans.find(ta => ta.id === editForm.idTahunAjaran),
               }
@@ -289,7 +294,7 @@ export default function MahasiswaPage() {
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
-              placeholder="Cari mahasiswa berdasarkan nama atau NIM..."
+              placeholder="Cari mahasiswa berdasarkan nama, NIM, atau email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400
@@ -435,6 +440,9 @@ export default function MahasiswaPage() {
                         <p className="text-xs font-mono text-slate-500 mt-0.5">
                           NIM: {mhs.nim || '-'}
                         </p>
+                        {mhs.email && (
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">{mhs.email}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -538,9 +546,14 @@ export default function MahasiswaPage() {
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
                             {mhs.nama.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-primary-900 leading-snug break-words">
-                            {mhs.nama}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="text-sm font-medium text-primary-900 leading-snug break-words block">
+                              {mhs.nama}
+                            </span>
+                            {mhs.email && (
+                              <span className="text-xs text-slate-500 block mt-0.5">{mhs.email}</span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -706,6 +719,23 @@ export default function MahasiswaPage() {
                 )}
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Login Mahasiswa) <span className="text-red-500">*</span></label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all ${
+                    editErrors.email ? 'border-red-400 bg-red-50' : 'border-slate-200'
+                  }`}
+                  placeholder="Contoh: mahasiswa@gmail.com"
+                />
+                {editErrors.email && (
+                  <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>
+                )}
+              </div>
+
               {/* Tahun Ajaran */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tahun Ajaran <span className="text-red-500">*</span></label>
@@ -831,8 +861,8 @@ export default function MahasiswaPage() {
               <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
                 <p className="font-semibold text-amber-800">Ketentuan Sinkronisasi:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 text-[11px]">
-                  <li>Mahasiswa baru akan dibuatkan akun login otomatis dengan <strong>username &amp; password = NIM</strong>.</li>
-                  <li>Mahasiswa yang sudah terdaftar hanya diperbarui <strong>Nama &amp; Tahun Ajaran</strong> (Kelompok dan password tidak diubah).</li>
+                  <li>Mahasiswa baru akan dibuatkan akun login otomatis dengan <strong>username = Email</strong> dan <strong>password awal = NIM</strong>.</li>
+                  <li>Mahasiswa yang sudah terdaftar diperbarui <strong>Nama, Email (username login), &amp; Tahun Ajaran</strong> (Kelompok dan password tidak diubah).</li>
                 </ul>
               </div>
 

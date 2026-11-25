@@ -122,12 +122,19 @@ public class MahasiswaController : ControllerBase
 
         var existingMahasiswaList = await _mahasiswaRepository.GetAll();
         var existingByNim = existingMahasiswaList
-            .GroupBy(m => m.NIM, StringComparer.OrdinalIgnoreCase)
+            .Where(m => !string.IsNullOrWhiteSpace(m.NIM))
+            .GroupBy(m => m.NIM.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var existingUsernames = new HashSet<string>(
-            (await _userRepository.GetAll()).Select(u => u.Name),
-            StringComparer.OrdinalIgnoreCase);
+        var existingByEmail = existingMahasiswaList
+            .Where(m => !string.IsNullOrWhiteSpace(m.Email))
+            .GroupBy(m => m.Email!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingUsersByName = (await _userRepository.GetAll())
+            .Where(u => !string.IsNullOrWhiteSpace(u.Name))
+            .GroupBy(u => u.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var seenNims = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var errors = new List<string>();
@@ -145,12 +152,14 @@ public class MahasiswaController : ControllerBase
 
             var nim = attr.nim?.Trim() ?? string.Empty;
             var nama = attr.nama?.Trim() ?? string.Empty;
+            var email = attr.email?.Trim().ToLowerInvariant() ?? string.Empty;
 
-            if (string.IsNullOrWhiteSpace(nim) || string.IsNullOrWhiteSpace(nama))
+            if (string.IsNullOrWhiteSpace(nim) || string.IsNullOrWhiteSpace(nama) ||
+                string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
             {
                 jumlahItem++;
                 jumlahGagal++;
-                errors.Add("Terdapat data mahasiswa SIADIKNONA dengan NIM atau Nama kosong.");
+                errors.Add($"Data mahasiswa tidak lengkap (NIM: '{attr.nim}', Nama: '{attr.nama}', Email: '{attr.email}').");
                 continue;
             }
 
@@ -163,12 +172,51 @@ public class MahasiswaController : ControllerBase
             {
                 var namaBerubah = !string.Equals(existing.Nama, nama, StringComparison.Ordinal);
                 var tahunAjaranBerubah = existing.TahunAjaran?.Id != targetTa.Id;
+                var emailBerubah = !string.Equals(existing.Email, email, StringComparison.OrdinalIgnoreCase);
+                var userBerubah = existing.User is not null && !string.Equals(existing.User.Name, email, StringComparison.OrdinalIgnoreCase);
 
-                if (namaBerubah || tahunAjaranBerubah)
+                if (emailBerubah || userBerubah)
                 {
+                    if (existingByEmail.TryGetValue(email, out var otherMhs) && otherMhs.Id != existing.Id)
+                    {
+                        jumlahGagal++;
+                        errors.Add($"NIM '{nim}' ({nama}): email '{email}' sudah dipakai oleh mahasiswa lain ({otherMhs.NIM}).");
+                        continue;
+                    }
+
+                    if (existingUsersByName.TryGetValue(email, out var otherUser) && otherUser.Id != existing.User?.Id)
+                    {
+                        jumlahGagal++;
+                        errors.Add($"NIM '{nim}' ({nama}): email/username '{email}' sudah dipakai akun lain (role: {otherUser.Role}).");
+                        continue;
+                    }
+                }
+
+                if (namaBerubah || tahunAjaranBerubah || emailBerubah || userBerubah)
+                {
+                    if (!string.IsNullOrWhiteSpace(existing.Email) &&
+                        !string.Equals(existing.Email, email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingByEmail.Remove(existing.Email.Trim());
+                    }
+
                     existing.Nama = nama;
+                    existing.Email = email;
                     existing.TahunAjaran = targetTa;
                     _mahasiswaRepository.Update(existing);
+                    existingByEmail[email] = existing;
+
+                    if (existing.User is not null && userBerubah)
+                    {
+                        if (!string.IsNullOrWhiteSpace(existing.User.Name))
+                        {
+                            existingUsersByName.Remove(existing.User.Name.Trim());
+                        }
+                        existing.User.Name = email;
+                        _userRepository.Update(existing.User);
+                        existingUsersByName[email] = existing.User;
+                    }
+
                     jumlahUpdate++;
                 }
                 else
@@ -178,16 +226,23 @@ public class MahasiswaController : ControllerBase
             }
             else
             {
-                if (existingUsernames.Contains(nim))
+                if (existingByEmail.TryGetValue(email, out var conflictMhs))
                 {
                     jumlahGagal++;
-                    errors.Add($"NIM '{nim}' ({nama}): username '{nim}' sudah digunakan oleh akun lain.");
+                    errors.Add($"NIM '{nim}' ({nama}): email '{email}' sudah terdaftar pada mahasiswa lain ({conflictMhs.NIM}).");
+                    continue;
+                }
+
+                if (existingUsersByName.TryGetValue(email, out var existingUser))
+                {
+                    jumlahGagal++;
+                    errors.Add($"NIM '{nim}' ({nama}): email/username '{email}' sudah dipakai oleh akun lain (role: {existingUser.Role}).");
                     continue;
                 }
 
                 var user = new User
                 {
-                    Name = nim,
+                    Name = email,
                     PasswordHash = _passwordHasher.HashPassword(null!, nim),
                     Role = UserRoles.Mahasiswa
                 };
@@ -196,6 +251,7 @@ public class MahasiswaController : ControllerBase
                 {
                     NIM = nim,
                     Nama = nama,
+                    Email = email,
                     User = user,
                     TahunAjaran = targetTa
                 };
@@ -206,7 +262,8 @@ public class MahasiswaController : ControllerBase
                 _userRepository.Add(user);
 
                 existingByNim[nim] = mahasiswa;
-                existingUsernames.Add(nim);
+                existingByEmail[email] = mahasiswa;
+                existingUsersByName[email] = user;
                 jumlahBaru++;
             }
         }
@@ -249,7 +306,12 @@ public class MahasiswaController : ControllerBase
 
         if (!User.IsInRole(UserRoles.Admin) && !User.IsInRole(UserRoles.Pengelola) && !User.IsInRole(UserRoles.Dosen)) 
         {
-            if (!string.Equals(mahasiswa.NIM, User?.Identity?.Name, StringComparison.OrdinalIgnoreCase)) return Forbid();
+            var currentName = User?.Identity?.Name?.Trim();
+            var isOwner = !string.IsNullOrWhiteSpace(currentName) && (
+                string.Equals(mahasiswa.User?.Name, currentName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mahasiswa.Email, currentName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mahasiswa.NIM, currentName, StringComparison.OrdinalIgnoreCase));
+            if (!isOwner) return Forbid();
         }
 
         // Jalankan pengarsipan otomatis agar jadwal yang lewat terarsip
@@ -359,6 +421,7 @@ public class MahasiswaController : ControllerBase
             mahasiswa.Id,
             mahasiswa.NIM,
             mahasiswa.Nama,
+            mahasiswa.Email,
             idKelompok = mahasiswa.Kelompok?.Id,
             namaKelompok = mahasiswa.Kelompok?.Nama,
             kelompok = mahasiswa.Kelompok is null ? null : new
@@ -428,11 +491,17 @@ public class MahasiswaController : ControllerBase
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateMahasiswa create)
     {
-        if (await _mahasiswaRepository.IsExist(create.NIM))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{create.NIM}' sudah digunakan" });
+        var nim = create.NIM.Trim();
+        var email = create.Email.Trim().ToLowerInvariant();
 
-        if (await _userRepository.IsExist(create.NIM))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"Akun dengan user name '{create.NIM}' sudah digunakan" });
+        if (await _mahasiswaRepository.IsExist(nim))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{nim}' sudah digunakan" });
+
+        if (await _mahasiswaRepository.IsEmailExist(email))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{email}' sudah digunakan" });
+
+        if (await _userRepository.IsExist(email))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Akun dengan email/username '{email}' sudah digunakan" });
 
         var tahunAjaran = await _tahunAjaranRepository.Get(create.IdTahunAjaran);
         if (tahunAjaran is null)
@@ -443,15 +512,16 @@ public class MahasiswaController : ControllerBase
 
         var user = new User
         {
-            Name = create.NIM,
-            PasswordHash = _passwordHasher.HashPassword(null, create.NIM),
+            Name = email,
+            PasswordHash = _passwordHasher.HashPassword(null!, nim),
             Role = UserRoles.Mahasiswa
         };
 
         var mahasiswa = new Mahasiswa
         {
-            NIM = create.NIM,
-            Nama = create.Nama,
+            NIM = nim,
+            Nama = create.Nama.Trim(),
+            Email = email,
             User = user,
             TahunAjaran = tahunAjaran
         };
@@ -478,11 +548,17 @@ public class MahasiswaController : ControllerBase
         var mahasiswa = await _mahasiswaRepository.Get(id);
         if (mahasiswa is null) return NotFound();
 
-        if (await _mahasiswaRepository.IsExist(update.NIM, id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{update.NIM}' sudah digunakan" });
+        var nim = update.NIM.Trim();
+        var email = update.Email.Trim().ToLowerInvariant();
 
-        if (await _userRepository.IsExist(update.NIM, mahasiswa.User.Id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"Akun dengan user name '{update.NIM}' sudah digunakan" });
+        if (await _mahasiswaRepository.IsExist(nim, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nim"] = $"NIM '{nim}' sudah digunakan" });
+
+        if (await _mahasiswaRepository.IsEmailExist(email, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{email}' sudah digunakan" });
+
+        if (await _userRepository.IsExist(email, mahasiswa.User.Id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Akun dengan email/username '{email}' sudah digunakan" });
 
         var tahunAjaran = await _tahunAjaranRepository.Get(update.IdTahunAjaran);
         if (tahunAjaran is null)
@@ -491,11 +567,11 @@ public class MahasiswaController : ControllerBase
                 ["idTahunAjaran"] = $"Tahun ajaran dengan id '{update.IdTahunAjaran}' tidak ditemukan"
             });
 
-        mahasiswa.Nama = update.Nama;
-        mahasiswa.NIM = update.NIM;
+        mahasiswa.Nama = update.Nama.Trim();
+        mahasiswa.NIM = nim;
+        mahasiswa.Email = email;
         mahasiswa.TahunAjaran = tahunAjaran;
-        mahasiswa.User.Name = update.NIM;
-        mahasiswa.User.PasswordHash = _passwordHasher.HashPassword(mahasiswa.User, update.NIM);
+        mahasiswa.User.Name = email;
 
         _mahasiswaRepository.Update(mahasiswa);
         _userRepository.Update(mahasiswa.User);
@@ -528,6 +604,7 @@ public class MahasiswaController : ControllerBase
             mahasiswa.Id,
             mahasiswa.NIM,
             mahasiswa.Nama,
+            mahasiswa.Email,
             idKelompok = mahasiswa.Kelompok?.Id,
             namaKelompok = mahasiswa.Kelompok?.Nama,
             kelompok = mahasiswa.Kelompok is null ? null : new
@@ -561,6 +638,10 @@ public class MahasiswaController : ControllerBase
         const string defaultPassword = "123456";
 
         var user = mahasiswa.User;
+        if (user is null && !string.IsNullOrWhiteSpace(mahasiswa.Email))
+        {
+            user = await _userRepository.GetByName(mahasiswa.Email);
+        }
         if (user is null)
         {
             user = await _userRepository.GetByName(mahasiswa.NIM);

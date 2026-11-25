@@ -134,7 +134,7 @@ public class UserController : ControllerBase
         var user = await _userRepository.GetByName(currentUsername);
         if (user is null) return NotFound();
 
-        var targetUsername = user.Role == UserRoles.Dosen
+        var targetUsername = (user.Role == UserRoles.Dosen || user.Role == UserRoles.Mahasiswa)
             ? model.NewUsername.Trim().ToLowerInvariant()
             : model.NewUsername.Trim();
 
@@ -148,6 +148,10 @@ public class UserController : ControllerBase
             if (user.Role == UserRoles.Dosen && user.Pembimbing is not null)
             {
                 user.Pembimbing.Email = targetUsername;
+            }
+            if (user.Role == UserRoles.Mahasiswa && user.Mahasiswa is not null)
+            {
+                user.Mahasiswa.Email = targetUsername;
             }
         }
 

@@ -161,7 +161,7 @@ export default function LoginPage() {
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 
                     focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-glow-blue/20 
                     transition-all duration-300 text-sm"
-                  placeholder="Username, NIM, atau Email Dosen"
+                  placeholder="Username atau Email"
                 />
               </div>
             </div>

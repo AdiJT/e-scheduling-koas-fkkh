@@ -63,13 +63,20 @@ internal class MahasiswaRepository : IMahasiswaRepository
         .Include(x => x.TahunAjaran)
         .FirstOrDefaultAsync(x => x.Id == id);
 
-    public async Task<Mahasiswa?> Get(string nim) => await _appDbContext.Mahasiswa
-        .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
-        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Stase)
-        .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Pembimbing)
-        .Include(x => x.User)
-        .Include(x => x.TahunAjaran)
-        .FirstOrDefaultAsync(x => x.NIM.ToLower() == nim.ToLower());
+    public async Task<Mahasiswa?> Get(string nim)
+    {
+        var normalized = nim.Trim().ToLower();
+        return await _appDbContext.Mahasiswa
+            .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
+            .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Stase)
+            .Include(x => x.Kelompok).ThenInclude(k => k!.DaftarJadwal).ThenInclude(j => j.Pembimbing)
+            .Include(x => x.User)
+            .Include(x => x.TahunAjaran)
+            .FirstOrDefaultAsync(x =>
+                x.NIM.ToLower() == normalized ||
+                (x.Email != null && x.Email.ToLower() == normalized) ||
+                (x.User != null && x.User.Name.ToLower() == normalized));
+    }
 
     public async Task<List<Mahasiswa>> GetAll() => await _appDbContext.Mahasiswa
         .Include(x => x.Kelompok).ThenInclude(k => k!.TahunAjaran)
@@ -79,8 +86,19 @@ internal class MahasiswaRepository : IMahasiswaRepository
         .Include(x => x.TahunAjaran)
         .ToListAsync();
 
-    public async Task<bool> IsExist(string nim, int? id = null) => await _appDbContext.Mahasiswa
-        .AnyAsync(x => x.Id != id && x.NIM.ToLower() == nim.ToLower());
+    public async Task<bool> IsExist(string nim, int? id = null)
+    {
+        var normalized = nim.Trim().ToLower();
+        return await _appDbContext.Mahasiswa
+            .AnyAsync(x => x.Id != id && x.NIM.ToLower() == normalized);
+    }
+
+    public async Task<bool> IsEmailExist(string email, int? id = null)
+    {
+        var normalized = email.Trim().ToLower();
+        return await _appDbContext.Mahasiswa
+            .AnyAsync(x => x.Id != id && x.Email != null && x.Email.ToLower() == normalized);
+    }
 
     public void Update(Mahasiswa mahasiswa) => _appDbContext.Mahasiswa.Update(mahasiswa);
 }

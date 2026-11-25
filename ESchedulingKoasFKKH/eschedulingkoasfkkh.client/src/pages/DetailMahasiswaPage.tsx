@@ -45,7 +45,7 @@ export default function DetailMahasiswaPage() {
 
   // Edit Modal State (Admin only)
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ nim: '', nama: '', idTahunAjaran: 0 });
+  const [editForm, setEditForm] = useState({ nim: '', nama: '', email: '', idTahunAjaran: 0 });
   const [tahunAjarans, setTahunAjarans] = useState<TahunAjaran[]>([]);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -185,6 +185,7 @@ export default function DetailMahasiswaPage() {
     setEditForm({
       nim: mahasiswa.nim,
       nama: mahasiswa.nama,
+      email: mahasiswa.email || mahasiswa.user?.name || '',
       idTahunAjaran: mahasiswa.idTahunAjaran || 0
     });
     setEditErrors({});
@@ -207,8 +208,9 @@ export default function DetailMahasiswaPage() {
       setEditErrors({});
       await mahasiswaApi.update(mahasiswa.id, {
         id: mahasiswa.id,
-        nim: editForm.nim,
-        nama: editForm.nama,
+        nim: editForm.nim.trim(),
+        nama: editForm.nama.trim(),
+        email: editForm.email.trim().toLowerCase(),
         idTahunAjaran: editForm.idTahunAjaran
       });
       setShowEditModal(false);
@@ -397,6 +399,11 @@ export default function DetailMahasiswaPage() {
                     ) : (
                       <span className="text-[10px] sm:text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-slate-100 text-slate-500">
                         Belum ditentukan TA
+                      </span>
+                    )}
+                    {mahasiswa.email && (
+                      <span className="text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                        {mahasiswa.email}
                       </span>
                     )}
                     {mahasiswa.user && (
@@ -1252,6 +1259,19 @@ export default function DetailMahasiswaPage() {
                 {editErrors.nama && <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>}
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email (Login Mahasiswa)</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+                  placeholder="Contoh: mahasiswa@gmail.com"
+                />
+                {editErrors.email && <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>}
+              </div>
+
               {/* Tahun Ajaran */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Tahun Ajaran</label>
@@ -1328,8 +1348,12 @@ export default function DetailMahasiswaPage() {
                   <span className="font-bold text-slate-800 truncate">{mahasiswa.nama}</span>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-slate-500 font-medium shrink-0">NIM (Username):</span>
-                  <span className="font-mono font-bold text-amber-900">{mahasiswa.nim}</span>
+                  <span className="text-slate-500 font-medium shrink-0">Email (Username):</span>
+                  <span className="font-mono font-bold text-amber-900 truncate">{mahasiswa.email || mahasiswa.user?.name || '-'}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 font-medium shrink-0">NIM:</span>
+                  <span className="font-mono text-slate-700">{mahasiswa.nim}</span>
                 </div>
               </div>
 

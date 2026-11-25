@@ -487,6 +487,9 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
                     b.Property<int?>("KelompokId")
                         .HasColumnType("integer");
 
