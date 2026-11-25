@@ -1154,18 +1154,21 @@ export const broadcastApi = {
 export interface ManagedUser {
   id: number;
   username: string;
+  email?: string | null;
   role: 'admin' | 'pengelola';
   isCurrentLoggedInUser: boolean;
 }
 
 export interface CreateManagedUserInput {
   username: string;
+  email: string;
   password: string;
   role: 'admin' | 'pengelola';
 }
 
 export interface UpdateManagedUserInput {
   username: string;
+  email?: string;
   role: 'admin' | 'pengelola';
   password?: string;
 }

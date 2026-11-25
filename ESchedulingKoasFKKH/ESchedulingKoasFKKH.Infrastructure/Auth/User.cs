@@ -99,7 +99,8 @@ internal class UserRepository : IUserRepository
             .FirstOrDefaultAsync(x =>
                 x.Name.ToLower() == trimmed ||
                 (x.Email != null && x.Email.ToLower() == trimmed) ||
-                (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed));
+                (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed) ||
+                (x.Mahasiswa != null && x.Mahasiswa.Email != null && x.Mahasiswa.Email.ToLower() == trimmed));
     }
 
     public async Task<User?> GetByGoogleId(string googleId) => await _appDbContext.User
@@ -118,11 +119,25 @@ internal class UserRepository : IUserRepository
             .FirstOrDefaultAsync(x =>
                 (x.Email != null && x.Email.ToLower() == trimmed) ||
                 (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed) ||
+                (x.Mahasiswa != null && x.Mahasiswa.Email != null && x.Mahasiswa.Email.ToLower() == trimmed) ||
                 x.Name.ToLower() == trimmed);
     }
 
     public async Task<bool> IsExist(string name, int? id = null) => await _appDbContext.User
         .AnyAsync(x => x.Id != id && x.Name.ToLower() == name.Trim().ToLower());
+
+    public async Task<bool> IsEmailExist(string email, int? id = null)
+    {
+        var trimmed = email.Trim().ToLower();
+        return await _appDbContext.User.AnyAsync(x =>
+            x.Id != id &&
+            (
+                (x.Email != null && x.Email.ToLower() == trimmed) ||
+                x.Name.ToLower() == trimmed ||
+                (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed) ||
+                (x.Mahasiswa != null && x.Mahasiswa.Email != null && x.Mahasiswa.Email.ToLower() == trimmed)
+            ));
+    }
 
     public void Update(User user) => _appDbContext.User.Update(user);
 }

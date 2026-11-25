@@ -36,6 +36,7 @@ export default function ManajemenPenggunaPage() {
 
   // Add Form state
   const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'pengelola'>('pengelola');
   const [showAddPassword, setShowAddPassword] = useState(false);
@@ -44,6 +45,7 @@ export default function ManajemenPenggunaPage() {
 
   // Edit Form state
   const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState<'admin' | 'pengelola'>('pengelola');
   const [editPassword, setEditPassword] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
@@ -79,8 +81,11 @@ export default function ManajemenPenggunaPage() {
 
   // Filtered users
   const filteredUsers = useMemo(() => {
+    const term = search.toLowerCase();
     return users.filter((u) => {
-      const matchesSearch = u.username.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch =
+        u.username.toLowerCase().includes(term) ||
+        (u.email || '').toLowerCase().includes(term);
       const matchesRole = roleFilter === 'all' || u.role === roleFilter;
       return matchesSearch && matchesRole;
     });
@@ -89,6 +94,7 @@ export default function ManajemenPenggunaPage() {
   // Open Add Modal
   const handleOpenAdd = () => {
     setNewUsername('');
+    setNewEmail('');
     setNewPassword('');
     setNewRole('pengelola');
     setShowAddPassword(false);
@@ -107,6 +113,14 @@ export default function ManajemenPenggunaPage() {
       setAddError('Username minimal 3 karakter.');
       return;
     }
+    if (!newEmail.trim()) {
+      setAddError('Email wajib diisi.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+      setAddError('Format email tidak valid.');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
       setAddError('Password wajib diisi minimal 6 karakter.');
       return;
@@ -117,6 +131,7 @@ export default function ManajemenPenggunaPage() {
     try {
       const payload: CreateManagedUserInput = {
         username: newUsername.trim(),
+        email: newEmail.trim().toLowerCase(),
         password: newPassword,
         role: newRole,
       };
@@ -129,6 +144,8 @@ export default function ManajemenPenggunaPage() {
       console.error(err);
       if (err.errors && err.errors.username) {
         setAddError(err.errors.username);
+      } else if (err.errors && err.errors.email) {
+        setAddError(err.errors.email);
       } else if (err.errors && err.errors.password) {
         setAddError(err.errors.password);
       } else {
@@ -143,6 +160,7 @@ export default function ManajemenPenggunaPage() {
   const handleOpenEdit = (user: ManagedUser) => {
     setSelectedUser(user);
     setEditUsername(user.username);
+    setEditEmail(user.email || '');
     setEditRole(user.role);
     setEditPassword('');
     setShowEditPassword(false);
@@ -163,6 +181,10 @@ export default function ManajemenPenggunaPage() {
       setEditError('Username minimal 3 karakter.');
       return;
     }
+    if (editEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())) {
+      setEditError('Format email tidak valid.');
+      return;
+    }
     if (editPassword && editPassword.length < 6) {
       setEditError('Password baru minimal 6 karakter jika ingin diubah.');
       return;
@@ -173,6 +195,7 @@ export default function ManajemenPenggunaPage() {
     try {
       const payload: UpdateManagedUserInput = {
         username: editUsername.trim(),
+        email: editEmail.trim().toLowerCase(),
         role: editRole,
         password: editPassword.trim() || undefined,
       };
@@ -185,6 +208,8 @@ export default function ManajemenPenggunaPage() {
       console.error(err);
       if (err.errors && err.errors.username) {
         setEditError(err.errors.username);
+      } else if (err.errors && err.errors.email) {
+        setEditError(err.errors.email);
       } else if (err.errors && err.errors.role) {
         setEditError(err.errors.role);
       } else if (err.errors && err.errors.password) {
@@ -350,7 +375,7 @@ export default function ManajemenPenggunaPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari berdasarkan username..."
+                  placeholder="Cari berdasarkan username atau email..."
                   className="w-full pl-9 sm:pl-10 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:bg-white transition"
                 />
                 {search && (
@@ -498,7 +523,10 @@ export default function ManajemenPenggunaPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-slate-400 font-mono">ID: #{item.id}</span>
+                          <span className="text-[11px] text-slate-500 block truncate">
+                            {item.email || <span className="text-amber-600 italic">Belum ada email</span>}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">ID: #{item.id}</span>
                         </div>
                       </div>
 
@@ -645,7 +673,10 @@ export default function ManajemenPenggunaPage() {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-slate-400">ID User: #{item.id}</span>
+                              <span className="text-xs text-slate-500 block">
+                                {item.email || <span className="text-amber-600 italic">Belum ada email (klik Edit untuk tambah)</span>}
+                              </span>
+                              <span className="text-[11px] text-slate-400">ID User: #{item.id}</span>
                             </div>
                           </div>
                         </td>
@@ -816,6 +847,29 @@ export default function ManajemenPenggunaPage() {
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Digunakan untuk masuk ke dalam sistem (minimal 3 karakter).
+                </p>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Contoh: pengelola@undana.ac.id"
+                    className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Digunakan untuk login dengan email atau akun Google.
                 </p>
               </div>
 
@@ -997,6 +1051,25 @@ export default function ManajemenPenggunaPage() {
                 </div>
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Email <span className="text-slate-400 font-normal">(untuk login Email & Google)</span>
+                </label>
+                <div className="relative">
+                  <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="Contoh: admin@undana.ac.id"
+                    className="w-full pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition"
+                  />
+                </div>
+              </div>
+
               {/* Role Selection */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -1154,6 +1227,12 @@ export default function ManajemenPenggunaPage() {
                 <span className="text-slate-400">Username:</span>
                 <span className="font-bold text-slate-900">{deleteConfirmUser.username}</span>
               </div>
+              {deleteConfirmUser.email && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Email:</span>
+                  <span className="font-medium text-slate-700">{deleteConfirmUser.email}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-400">Role:</span>
                 <span className="font-semibold text-slate-800 uppercase">{deleteConfirmUser.role}</span>

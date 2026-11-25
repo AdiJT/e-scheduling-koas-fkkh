@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -299,6 +300,7 @@ public class UserController : ControllerBase
             {
                 Id = u.Id,
                 Username = u.Name,
+                Email = u.Email,
                 Role = u.Role,
                 IsCurrentLoggedInUser = string.Equals(u.Name, currentUsername, StringComparison.OrdinalIgnoreCase)
             })
@@ -323,9 +325,16 @@ public class UserController : ControllerBase
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["username"] = $"Username '{username}' sudah digunakan" });
         }
 
+        var email = dto.Email.Trim().ToLowerInvariant();
+        if (await _userRepository.IsEmailExist(email))
+        {
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{email}' sudah digunakan oleh pengguna lain" });
+        }
+
         var newUser = new User
         {
             Name = username,
+            Email = email,
             Role = targetRole,
             PasswordHash = ""
         };
@@ -340,6 +349,7 @@ public class UserController : ControllerBase
         {
             Id = newUser.Id,
             Username = newUser.Name,
+            Email = newUser.Email,
             Role = newUser.Role,
             IsCurrentLoggedInUser = string.Equals(newUser.Name, currentUsername, StringComparison.OrdinalIgnoreCase)
         });
@@ -384,6 +394,36 @@ public class UserController : ControllerBase
             user.Name = newUsername;
         }
 
+        if (dto.Email is not null)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email))
+            {
+                if (!string.IsNullOrWhiteSpace(user.Email))
+                {
+                    user.Email = null;
+                    user.GoogleId = null;
+                }
+            }
+            else
+            {
+                var newEmail = dto.Email.Trim().ToLowerInvariant();
+                if (!new EmailAddressAttribute().IsValid(newEmail))
+                {
+                    return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = "Format email tidak valid" });
+                }
+
+                if (!string.Equals(user.Email, newEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (await _userRepository.IsEmailExist(newEmail, user.Id))
+                    {
+                        return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{newEmail}' sudah digunakan oleh pengguna lain" });
+                    }
+                    user.Email = newEmail;
+                    user.GoogleId = null;
+                }
+            }
+        }
+
         user.Role = targetRole;
 
         if (!string.IsNullOrWhiteSpace(dto.Password))
@@ -404,6 +444,7 @@ public class UserController : ControllerBase
         {
             Id = user.Id,
             Username = user.Name,
+            Email = user.Email,
             Role = user.Role,
             IsCurrentLoggedInUser = string.Equals(user.Name, currentUsername, StringComparison.OrdinalIgnoreCase)
         });

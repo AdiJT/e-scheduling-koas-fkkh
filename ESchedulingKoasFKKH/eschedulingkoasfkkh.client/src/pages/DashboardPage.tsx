@@ -15,7 +15,6 @@ import {
   MegaphoneIcon,
   BellIcon,
   UsersIcon,
-  ActivityLogIcon,
 } from '../components/Icons';
 import {
   mahasiswaApi,
@@ -25,7 +24,6 @@ import {
   jadwalApi,
   tahunAjaranApi,
   riwayatKelompokApi,
-  activityLogApi,
   type Jadwal,
 } from '../services/api';
 import { getHolidays } from '../utils/holidays';
@@ -87,7 +85,6 @@ interface Stats {
   jadwalAkanDatang: number;
   jadwalSelesai: number;
   riwayatCount: number;
-  logAktivitasCount: number;
   userKelompokNama?: string;
 }
 
@@ -229,19 +226,6 @@ const allMenuItems: MenuItem[] = [
     icon: UsersIcon,
     adminOnly: true,
   },
-  {
-    id: 'log-aktivitas',
-    label: 'Log Aktivitas',
-    category: 'sistem',
-    categoryLabel: 'Pengaturan',
-    path: '/log-aktivitas',
-    description: 'Rekam jejak perubahan data sistem',
-    gradient: 'from-indigo-600 to-slate-800',
-    statValue: (stats) => stats.logAktivitasCount,
-    statLabel: () => 'Aktivitas Tercatat',
-    icon: ActivityLogIcon,
-    adminOnly: true,
-  },
 ];
 
 export default function DashboardPage() {
@@ -266,7 +250,6 @@ export default function DashboardPage() {
     jadwalAkanDatang: 0,
     jadwalSelesai: 0,
     riwayatCount: 0,
-    logAktivitasCount: 0,
   });
 
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
@@ -278,7 +261,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const [mhs, pemb, stase, kel, jadwal, taList, riwayatList, logResult] = await Promise.all([
+      const [mhs, pemb, stase, kel, jadwal, taList, riwayatList] = await Promise.all([
         mahasiswaApi.getAll().catch(() => []),
         pembimbingApi.getAll().catch(() => []),
         staseApi.getAll().catch(() => []),
@@ -286,7 +269,6 @@ export default function DashboardPage() {
         canMahasiswaViewJadwalKelompok ? jadwalApi.getAll().catch(() => []) : Promise.resolve([]),
         tahunAjaranApi.getAll().catch(() => []),
         riwayatKelompokApi.getAll().catch(() => []),
-        isAdmin ? activityLogApi.getAll({ limit: 1 }).catch(() => null) : Promise.resolve(null),
       ]);
 
       let userKelNama = mahasiswaAccess?.namaKelompok || '';
@@ -341,7 +323,6 @@ export default function DashboardPage() {
         jadwalAkanDatang: akanDatang,
         jadwalSelesai: selesai,
         riwayatCount: riwayatList.length,
-        logAktivitasCount: logResult?.totalKeseluruhan ?? 0,
         userKelompokNama: userKelNama,
       });
       setJadwalList(jadwal);
@@ -350,7 +331,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, mahasiswaAccess, user]);
+  }, [isMahasiswa, isDosen, canMahasiswaViewJadwalKelompok, mahasiswaAccess, user]);
 
   useEffect(() => {
     fetchStats();

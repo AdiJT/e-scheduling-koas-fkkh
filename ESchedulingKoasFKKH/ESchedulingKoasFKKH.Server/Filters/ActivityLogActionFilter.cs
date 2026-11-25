@@ -790,7 +790,8 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             case "CreateManagedUser":
                 if (TryGetArg<CreateManagedUserDto>(args, out var create) && create is not null)
                 {
-                    var target = $"{create.Username} ({create.Role})";
+                    var emailPart = string.IsNullOrWhiteSpace(create.Email) ? "" : $", email: {create.Email.Trim()}";
+                    var target = $"{create.Username} ({create.Role}{emailPart})";
                     return new ActivityMetadata("Manajemen Pengguna", "Tambah", $"Menambahkan akun pengguna {target}", target);
                 }
                 return new ActivityMetadata("Manajemen Pengguna", "Tambah", "Menambahkan akun pengguna baru", null);
@@ -798,7 +799,8 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             case "UpdateManagedUser":
                 if (TryGetArg<UpdateManagedUserDto>(args, out var update) && update is not null)
                 {
-                    var target = $"{update.Username} ({update.Role})";
+                    var emailPart = string.IsNullOrWhiteSpace(update.Email) ? "" : $", email: {update.Email.Trim()}";
+                    var target = $"{update.Username} ({update.Role}{emailPart})";
                     var pwdNote = string.IsNullOrWhiteSpace(update.Password) ? "" : " beserta pembaruan password";
                     return new ActivityMetadata("Manajemen Pengguna", "Ubah", $"Memperbarui akun pengguna {target}{pwdNote}", target);
                 }

@@ -33,6 +33,7 @@ public interface IUserRepository
     Task<User?> GetByEmail(string email);
     Task<List<User>> GetAll();
     Task<bool> IsExist(string name, int? id = null);
+    Task<bool> IsEmailExist(string email, int? id = null);
 
     void Add(User user);
     void Update(User user);

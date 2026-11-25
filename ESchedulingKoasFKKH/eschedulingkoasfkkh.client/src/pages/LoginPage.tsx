@@ -35,6 +35,9 @@ export default function LoginPage() {
   const [googleClientId, setGoogleClientId] = useState('');
   const [mounted, setMounted] = useState(false);
   const [unregisteredModal, setUnregisteredModal] = useState<{ open: boolean; email?: string; message?: string }>({ open: false });
+  const [showPanduanModal, setShowPanduanModal] = useState(false);
+  const [panduanTab, setPanduanTab] = useState<'login' | 'faq'>('login');
+  const [showContactModal, setShowContactModal] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
@@ -115,7 +118,7 @@ export default function LoginPage() {
     setError('');
 
     if (!username.trim() || !password) {
-      setError('Username / Email dan password harus diisi');
+      setError('Email dan password harus diisi');
       return;
     }
 
@@ -135,7 +138,7 @@ export default function LoginPage() {
     } catch (err: unknown) {
       console.error(err);
       const apiErr = err as { message?: string };
-      setError(apiErr?.message || 'Username / Email atau password salah.');
+      setError(apiErr?.message || 'Email atau password salah.');
     } finally {
       setIsLoading(false);
     }
@@ -259,10 +262,10 @@ export default function LoginPage() {
 
           {/* Login Form (Input Manual di Bawah) */}
           <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
-            {/* Username / Email Field */}
+            {/* Email Field */}
             <div className="space-y-2">
               <label htmlFor="username" className="block text-sm font-semibold text-slate-700">
-                Username / Email
+                Email
               </label>
               <div className="relative group">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
@@ -276,7 +279,7 @@ export default function LoginPage() {
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 
                     focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-glow-blue/20 
                     transition-all duration-300 text-sm"
-                  placeholder="Username atau Email"
+                  placeholder="Masukkan email Anda"
                 />
               </div>
             </div>
@@ -311,8 +314,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
+            {/* Remember Me */}
+            <div className="flex items-center">
               <label className="flex items-center gap-2 cursor-pointer group" htmlFor="remember-me">
                 <input
                   type="checkbox"
@@ -325,14 +328,6 @@ export default function LoginPage() {
                   Ingat saya
                 </span>
               </label>
-              <button
-                type="button"
-                className="text-sm text-blue-500 hover:text-blue-700 font-medium transition-colors hover:underline"
-                id="forgot-password"
-                onClick={() => alert('Fitur reset password akan segera hadir!')}
-              >
-                Lupa Password?
-              </button>
             </div>
 
             {/* Login Button */}
@@ -367,11 +362,22 @@ export default function LoginPage() {
           <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
             <p className="text-xs text-slate-500 text-center">
               Butuh bantuan? Hubungi{' '}
-              <button className="text-blue-500 font-medium hover:underline" onClick={() => alert('Fitur hubungi admin akan segera hadir!')}>
+              <button
+                type="button"
+                className="text-blue-600 font-semibold hover:underline cursor-pointer"
+                onClick={() => setShowContactModal(true)}
+              >
                 Administrator
               </button>{' '}
               atau baca{' '}
-              <button className="text-blue-500 font-medium hover:underline" onClick={() => alert('Panduan pengguna akan segera hadir!')}>
+              <button
+                type="button"
+                className="text-blue-600 font-semibold hover:underline cursor-pointer"
+                onClick={() => {
+                  setPanduanTab('login');
+                  setShowPanduanModal(true);
+                }}
+              >
                 Panduan Pengguna
               </button>
             </p>
@@ -383,6 +389,235 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Modal Panduan Pengguna */}
+      {showPanduanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="p-6 pb-4 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-blue-50/60 to-white">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-primary-900 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0">
+                  <BookIcon className="w-6 h-6 text-blue-200" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 leading-tight">Panduan Pengguna</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Sistem Informasi E-Scheduling KOAS FKKH UNDANA</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPanduanModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Tutup"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Tab Navigation (Panduan Login & FAQ) */}
+            <div className="flex border-b border-slate-200/80 px-6 bg-slate-50/80 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPanduanTab('login')}
+                className={`pb-3 px-4 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+                  panduanTab === 'login'
+                    ? 'border-primary-900 text-primary-900 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <LockIcon className="w-4 h-4" />
+                <span>Panduan Login</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPanduanTab('faq')}
+                className={`pb-3 px-4 font-semibold text-xs sm:text-sm transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
+                  panduanTab === 'faq'
+                    ? 'border-primary-900 text-primary-900 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <InfoIcon className="w-4 h-4" />
+                <span>FAQ (Tanya Jawab)</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-slate-700 text-sm">
+              {panduanTab === 'login' ? (
+                <div className="space-y-4">
+                  {/* Cara 1: Login dengan Akun Google */}
+                  <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-soft space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+                          <GoogleIcon className="w-4 h-4" />
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-sm">1. Masuk Menggunakan Akun Google</h4>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        Opsi Cepat & Praktis
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Anda dapat masuk langsung ke sistem E-Scheduling dalam satu kali klik menggunakan akun Google tanpa perlu mengetikkan password.
+                    </p>
+
+                    <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                        <span>⚠️ Ketentuan Email Google:</span>
+                      </div>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        Akun Google yang Anda gunakan <strong>harus merupakan email yang sudah terhubung (ter-connect) ke sistem SIADIKNONA</strong>. Data mahasiswa dan dosen di sistem ini tersinkronisasi otomatis dengan email yang terdaftar di SIADIKNONA.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <p className="font-semibold text-slate-700">Langkah Masuk:</p>
+                      <ol className="list-decimal list-inside space-y-1 pl-1">
+                        <li>Klik tombol <strong>"Masuk dengan Google"</strong> pada bagian atas halaman login.</li>
+                        <li>Pilih akun Google Anda yang terhubung dengan akun SIADIKNONA.</li>
+                        <li>Jika email terverifikasi sesuai, Anda akan langsung diarahkan ke Dashboard.</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* Cara 2: Login Manual dengan Email & Password */}
+                  <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-soft space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+                          <UserIcon className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-sm">2. Masuk Manual dengan Email & Password</h4>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        Opsi Manual
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Bagi pengguna yang ingin masuk tanpa akun Google, Anda dapat menggunakan kombinasi <strong>Email</strong> terdaftar dan <strong>Password</strong> akun Anda.
+                    </p>
+
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <p className="font-semibold text-slate-700">Langkah Masuk:</p>
+                      <ol className="list-decimal list-inside space-y-1 pl-1">
+                        <li>Ketikkan alamat <strong>Email</strong> Anda yang terdaftar pada sistem pada kolom input Email.</li>
+                        <li>Ketikkan <strong>Password</strong> akun Anda pada kolom input Password.</li>
+                        <li>Centang <strong>"Ingat saya"</strong> jika ingin menyimpan sesi login di perangkat ini.</li>
+                        <li>Klik tombol <strong>"Masuk ke Dashboard →"</strong>.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Tab FAQ */
+                <div className="space-y-3">
+                  {[
+                    {
+                      q: 'Email Google apa yang dapat saya gunakan untuk masuk?',
+                      a: 'Anda wajib menggunakan akun Google dengan email yang sudah terhubung atau terdaftar pada profil akun SIADIKNONA Anda. Sistem akan mencocokkan email Google dengan data SIADIKNONA.'
+                    },
+                    {
+                      q: 'Bagaimana jika email saya belum terhubung ke SIADIKNONA?',
+                      a: 'Silakan perbarui data email aktif Anda pada portal SIADIKNONA atau koordinasikan dengan bagian akademik/admin FKKH UNDANA agar data email Anda dapat disinkronkan ke dalam sistem penjadwalan.'
+                    },
+                    {
+                      q: 'Apakah saya masih bisa login dengan email dan password manual?',
+                      a: 'Ya, Anda tetap dapat login secara manual. Cukup masukkan email terdaftar Anda dan password pada form input di bawah tombol Google.'
+                    },
+                    {
+                      q: 'Bagaimana jika saya lupa password akun manual saya?',
+                      a: 'Jika email Anda terdaftar di SIADIKNONA, Anda bisa langsung masuk menggunakan opsi "Masuk dengan Google". Atau, Anda dapat menghubungi Administrator FKKH UNDANA untuk bantuan reset password akun manual.'
+                    },
+                    {
+                      q: 'Muncul pesan "Akun Belum Terdaftar" saat login Google, apa penyebabnya?',
+                      a: 'Pesan ini muncul jika email akun Google yang Anda pilih belum tercatat pada data SIADIKNONA di sistem penjadwalan. Pastikan Anda memilih akun Google yang benar sesuai email di SIADIKNONA.'
+                    }
+                  ].map((item, idx) => (
+                    <div key={idx} className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-1.5">
+                      <p className="font-semibold text-xs sm:text-sm text-slate-800 flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span>{item.q}</span>
+                      </p>
+                      <p className="text-xs text-slate-600 pl-7 leading-relaxed">
+                        {item.a}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 px-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPanduanModal(false);
+                  setShowContactModal(true);
+                }}
+                className="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Butuh Bantuan Lain? Hubungi Admin</span>
+                <span>→</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPanduanModal(false)}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Kontak Administrator */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center animate-scale-up">
+            <div className="w-13 h-13 mx-auto mb-3 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary-900 shadow-soft">
+              <UserIcon className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800 mb-1">Kontak Administrator</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Layanan Bantuan Sistem E-Scheduling KOAS FKKH UNDANA
+            </p>
+
+            <div className="bg-slate-50 rounded-2xl p-3.5 text-left text-xs space-y-2.5 border border-slate-100 mb-5">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Lokasi Sekretariat</span>
+                <span className="text-slate-700 font-medium">Gedung Dekanat FKKH Universitas Nusa Cendana</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Email Akademik</span>
+                <span className="text-blue-600 font-medium font-mono">fkkh@undana.ac.id</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Jam Pelayanan</span>
+                <span className="text-slate-700 font-medium">Senin - Jumat, 08:00 - 16:00 WITA</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowContactModal(false)}
+              className="w-full py-2.5 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold rounded-xl text-xs shadow-md transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Popup Akun Google Belum Terdaftar di Sistem */}
       {unregisteredModal.open && (
