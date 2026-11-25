@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ESchedulingKoasFKKH.Server.Models.PembimbingModels;
 
@@ -12,4 +12,8 @@ public class UpdatePembimbing
 
     [Required]
     public string Nama { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Email wajib diisi")]
+    [EmailAddress(ErrorMessage = "Format email tidak valid")]
+    public string Email { get; set; } = string.Empty;
 }

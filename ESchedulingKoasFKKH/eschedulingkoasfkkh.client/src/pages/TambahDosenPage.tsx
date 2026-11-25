@@ -6,7 +6,7 @@ import { DosenIcon, SaveIcon, InfoIcon } from '../components/Icons';
 
 export default function TambahDosenPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nip: '', nama: '' });
+  const [form, setForm] = useState({ nip: '', nama: '', email: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -25,7 +25,7 @@ export default function TambahDosenPage() {
     setErrors({});
 
     try {
-      await pembimbingApi.create({ nip: form.nip, nama: form.nama });
+      await pembimbingApi.create({ nip: form.nip, nama: form.nama, email: form.email.trim().toLowerCase() });
       setShowSuccess(true);
       setTimeout(() => navigate('/dosen'), 1500);
     } catch (err: unknown) {
@@ -77,7 +77,7 @@ export default function TambahDosenPage() {
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-emerald-500 to-green-500 rounded-full" /> Data Dosen</h2>
             <p className="mt-1 text-xs text-green-600 font-medium flex items-center gap-1.5">
               <InfoIcon className="w-4 h-4 flex-shrink-0" />
-              <span>Informasi: Akun dosen akan otomatis dibuat dengan <b>Username</b> dan <b>Password</b> menggunakan NIP dosen tersebut.</span>
+              <span>Informasi: Akun dosen akan otomatis dibuat dengan <b>Username menggunakan Email</b> dan <b>Password awal menggunakan NIP</b> dosen tersebut.</span>
             </p>
           </div>
           <div className="p-6 space-y-5">
@@ -107,6 +107,20 @@ export default function TambahDosenPage() {
                     ${errors.nama ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
                 />
                 {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Login Dosen) <span className="text-red-500">*</span></label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="Contoh: nama@staf.undana.ac.id"
+                  className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-green-500 focus:bg-white transition-all
+                    ${errors.email ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+                />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
             </div>
           </div>

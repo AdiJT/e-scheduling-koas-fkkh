@@ -47,12 +47,19 @@ internal class PembimbingRepository : IPembimbingRepository
         .Include(x => x.User)
         .FirstOrDefaultAsync(x => x.Id == id);
 
-    public async Task<Pembimbing?> Get(string nip) => await _appDbContext.Pembimbing
-        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
-        .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
-        .Include(x => x.DaftarStase)
-        .Include(x => x.User)
-        .FirstOrDefaultAsync(x => x.NIP == nip || (x.User != null && x.User.Name == nip));
+    public async Task<Pembimbing?> Get(string nip)
+    {
+        var key = nip.Trim().ToLower();
+        return await _appDbContext.Pembimbing
+            .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
+            .Include(x => x.DaftarJadwal).ThenInclude(x => x.Stase)
+            .Include(x => x.DaftarStase)
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x =>
+                x.NIP.ToLower() == key ||
+                (x.Email != null && x.Email.ToLower() == key) ||
+                (x.User != null && x.User.Name.ToLower() == key));
+    }
 
     public async Task<List<Pembimbing>> GetAll() => await _appDbContext.Pembimbing
         .Include(x => x.DaftarJadwal).ThenInclude(x => x.Kelompok).ThenInclude(x => x.DaftarMahasiswa)
@@ -62,7 +69,10 @@ internal class PembimbingRepository : IPembimbingRepository
         .ToListAsync();
 
     public async Task<bool> IsExist(string nip, int? id = null) => await _appDbContext.Pembimbing
-        .AnyAsync(x => x.Id != id && x.NIP.ToLower() == nip.ToLower());
+        .AnyAsync(x => x.Id != id && x.NIP.ToLower() == nip.Trim().ToLower());
+
+    public async Task<bool> IsEmailExist(string email, int? id = null) => await _appDbContext.Pembimbing
+        .AnyAsync(x => x.Id != id && x.Email != null && x.Email.ToLower() == email.Trim().ToLower());
 
     public void Update(Pembimbing pembimbing) => _appDbContext.Pembimbing.Update(pembimbing);
 }

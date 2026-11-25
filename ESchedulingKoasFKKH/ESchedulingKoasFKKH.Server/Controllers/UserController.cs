@@ -70,10 +70,11 @@ public class UserController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(Login login)
     {
-        var user = await _userRepository.GetByName(login.UserName);
+        var loginIdentifier = login.UserName.Trim();
+        var user = await _userRepository.GetByName(loginIdentifier);
         if (user is null)
             return HelpersFunctions.NotFound(
-                new Dictionary<string, string> { ["userName"] = $"User dengan username '{login.UserName}' tidak ditemukan" });
+                new Dictionary<string, string> { ["userName"] = $"User dengan username/email '{login.UserName}' tidak ditemukan" });
 
         if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, login.Password) == PasswordVerificationResult.Failed)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["password"] = $"Password salah" });
@@ -133,13 +134,21 @@ public class UserController : ControllerBase
         var user = await _userRepository.GetByName(currentUsername);
         if (user is null) return NotFound();
 
-        if (user.Name != model.NewUsername)
+        var targetUsername = user.Role == UserRoles.Dosen
+            ? model.NewUsername.Trim().ToLowerInvariant()
+            : model.NewUsername.Trim();
+
+        if (!string.Equals(user.Name, targetUsername, StringComparison.OrdinalIgnoreCase))
         {
-            if (await _userRepository.IsExist(model.NewUsername, user.Id))
+            if (await _userRepository.IsExist(targetUsername, user.Id))
             {
                 return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["newUsername"] = "Username sudah digunakan oleh user lain" });
             }
-            user.Name = model.NewUsername;
+            user.Name = targetUsername;
+            if (user.Role == UserRoles.Dosen && user.Pembimbing is not null)
+            {
+                user.Pembimbing.Email = targetUsername;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(model.NewPassword))

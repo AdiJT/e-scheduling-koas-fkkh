@@ -242,6 +242,7 @@ public class PembimbingController : ControllerBase
                 pembimbing.Id,
                 pembimbing.NIP,
                 pembimbing.Nama,
+                pembimbing.Email,
                 user = pembimbing.User != null ? new
                 {
                     pembimbing.User.Id,
@@ -285,6 +286,7 @@ public class PembimbingController : ControllerBase
             x.Id,
             x.NIP,
             x.Nama,
+            x.Email,
             daftarStase = x.DaftarStase.Select(s => s.Nama).ToList(),
             koordinatorStase = semuaStase.Where(s => s.Koordinator?.Id == x.Id).Select(s => s.Nama).ToList()
         }));
@@ -294,22 +296,30 @@ public class PembimbingController : ControllerBase
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreatePembimbing create)
     {
-        if (await _pembimbingRepository.IsExist(create.NIP))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{create.NIP}' sudah digunakan"});
+        var nip = create.NIP.Trim();
+        var nama = create.Nama.Trim();
+        var email = create.Email.Trim().ToLowerInvariant();
 
-        if (await _userRepository.IsExist(create.NIP))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"Akun dengan user name '{create.NIP}' sudah digunakan" });
+        if (await _pembimbingRepository.IsExist(nip))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{nip}' sudah digunakan" });
+
+        if (await _pembimbingRepository.IsEmailExist(email))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{email}' sudah digunakan" });
+
+        if (await _userRepository.IsExist(email))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Akun dengan email/username '{email}' sudah digunakan" });
 
         var pembimbing = new Pembimbing
         {
-            NIP = create.NIP,
-            Nama = create.Nama,
+            NIP = nip,
+            Nama = nama,
+            Email = email,
         };
 
         var user = new User
         {
-            Name = create.NIP,
-            PasswordHash = _passwordHasher.HashPassword(null, create.NIP),
+            Name = email,
+            PasswordHash = _passwordHasher.HashPassword(null!, nip),
             Role = UserRoles.Dosen,
             Pembimbing = pembimbing,
         };
@@ -330,6 +340,7 @@ public class PembimbingController : ControllerBase
                 pembimbing.Id,
                 pembimbing.NIP,
                 pembimbing.Nama,
+                pembimbing.Email,
                 daftarStase = new List<string>(),
                 koordinatorStase = new List<string>()
             });
@@ -344,20 +355,29 @@ public class PembimbingController : ControllerBase
         var pembimbing = await _pembimbingRepository.Get(id);
         if (pembimbing is null) return NotFound();
 
-        if (await _pembimbingRepository.IsExist(update.NIP, id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{update.NIP}' sudah digunakan" });
+        var nip = update.NIP.Trim();
+        var nama = update.Nama.Trim();
+        var email = update.Email.Trim().ToLowerInvariant();
 
+        if (await _pembimbingRepository.IsExist(nip, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"NIP '{nip}' sudah digunakan" });
 
-        if (await _userRepository.IsExist(update.NIP, pembimbing.User.Id))
-            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["nip"] = $"Akun dengan user name '{update.NIP}' sudah digunakan" });
+        if (await _pembimbingRepository.IsEmailExist(email, id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Email '{email}' sudah digunakan" });
 
-        pembimbing.NIP = update.NIP;
-        pembimbing.Nama = update.Nama;
-        pembimbing.User.Name = update.NIP;
-        pembimbing.User.PasswordHash = _passwordHasher.HashPassword(pembimbing.User, update.NIP);
+        if (pembimbing.User is not null && await _userRepository.IsExist(email, pembimbing.User.Id))
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["email"] = $"Akun dengan email/username '{email}' sudah digunakan" });
 
+        pembimbing.NIP = nip;
+        pembimbing.Nama = nama;
+        pembimbing.Email = email;
         _pembimbingRepository.Update(pembimbing);
-        _userRepository.Update(pembimbing.User);
+
+        if (pembimbing.User is not null)
+        {
+            pembimbing.User.Name = email;
+            _userRepository.Update(pembimbing.User);
+        }
 
         var result = await _unitOfWork.SaveChangesAsync();
         if (result.IsFailure)
@@ -482,6 +502,10 @@ public class PembimbingController : ControllerBase
         }
 
         var user = pembimbing.User;
+        if (user is null && !string.IsNullOrWhiteSpace(pembimbing.Email))
+        {
+            user = await _userRepository.GetByName(pembimbing.Email);
+        }
         if (user is null)
         {
             user = await _userRepository.GetByName(pembimbing.NIP);
@@ -514,9 +538,15 @@ public class PembimbingController : ControllerBase
         }
 
         var daftarApi = apiResult.Value;
-        var existingByNip = (await _pembimbingRepository.GetAll())
+        var allPembimbing = await _pembimbingRepository.GetAll();
+        var existingByNip = allPembimbing
             .Where(p => !string.IsNullOrWhiteSpace(p.NIP))
             .GroupBy(p => p.NIP.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var existingByEmail = allPembimbing
+            .Where(p => !string.IsNullOrWhiteSpace(p.Email))
+            .GroupBy(p => p.Email!.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var existingUsersByName = (await _userRepository.GetAll())
@@ -535,11 +565,13 @@ public class PembimbingController : ControllerBase
         {
             var nip = (item.NIP ?? string.Empty).Trim();
             var namaFormatted = SinergiApi.FormatNamaGelar(item.NamaLengkap, item.GelarDepan, item.GelarBelakang);
+            var email = (item.Email ?? string.Empty).Trim().ToLowerInvariant();
 
-            if (string.IsNullOrWhiteSpace(nip) || string.IsNullOrWhiteSpace(namaFormatted))
+            if (string.IsNullOrWhiteSpace(nip) || string.IsNullOrWhiteSpace(namaFormatted) ||
+                string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
             {
                 jumlahGagal++;
-                errors.Add($"Data dosen tidak lengkap (NIP: '{item.NIP}', Nama: '{item.NamaLengkap}').");
+                errors.Add($"Data dosen tidak lengkap (NIP: '{item.NIP}', Nama: '{item.NamaLengkap}', Email: '{item.Email}').");
                 continue;
             }
 
@@ -550,10 +582,51 @@ public class PembimbingController : ControllerBase
 
             if (existingByNip.TryGetValue(nip, out var existing))
             {
-                if (!string.Equals(existing.Nama, namaFormatted, StringComparison.Ordinal))
+                var namaBerubah = !string.Equals(existing.Nama, namaFormatted, StringComparison.Ordinal);
+                var emailBerubah = !string.Equals(existing.Email, email, StringComparison.OrdinalIgnoreCase);
+                var userBerubah = existing.User is not null && !string.Equals(existing.User.Name, email, StringComparison.OrdinalIgnoreCase);
+
+                if (emailBerubah || userBerubah)
                 {
+                    if (existingByEmail.TryGetValue(email, out var otherPemb) && otherPemb.Id != existing.Id)
+                    {
+                        jumlahGagal++;
+                        errors.Add($"NIP {nip} ({namaFormatted}): email '{email}' sudah dipakai oleh dosen lain ({otherPemb.NIP}).");
+                        continue;
+                    }
+
+                    if (existingUsersByName.TryGetValue(email, out var otherUser) && otherUser.Id != existing.User?.Id)
+                    {
+                        jumlahGagal++;
+                        errors.Add($"NIP {nip} ({namaFormatted}): email/username '{email}' sudah dipakai akun lain (role: {otherUser.Role}).");
+                        continue;
+                    }
+                }
+
+                if (namaBerubah || emailBerubah || userBerubah)
+                {
+                    if (!string.IsNullOrWhiteSpace(existing.Email) &&
+                        !string.Equals(existing.Email, email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingByEmail.Remove(existing.Email.Trim());
+                    }
+
                     existing.Nama = namaFormatted;
+                    existing.Email = email;
                     _pembimbingRepository.Update(existing);
+                    existingByEmail[email] = existing;
+
+                    if (existing.User is not null && userBerubah)
+                    {
+                        if (!string.IsNullOrWhiteSpace(existing.User.Name))
+                        {
+                            existingUsersByName.Remove(existing.User.Name.Trim());
+                        }
+                        existing.User.Name = email;
+                        _userRepository.Update(existing.User);
+                        existingUsersByName[email] = existing.User;
+                    }
+
                     jumlahUpdate++;
                 }
                 else
@@ -563,22 +636,30 @@ public class PembimbingController : ControllerBase
                 continue;
             }
 
-            if (existingUsersByName.TryGetValue(nip, out var existingUser))
+            if (existingByEmail.TryGetValue(email, out var conflictPemb))
             {
                 jumlahGagal++;
-                errors.Add($"NIP {nip} ({namaFormatted}): username sudah dipakai akun lain (role: {existingUser.Role}).");
+                errors.Add($"NIP {nip} ({namaFormatted}): email '{email}' sudah terdaftar pada dosen lain ({conflictPemb.NIP}).");
+                continue;
+            }
+
+            if (existingUsersByName.TryGetValue(email, out var existingUser))
+            {
+                jumlahGagal++;
+                errors.Add($"NIP {nip} ({namaFormatted}): email/username '{email}' sudah dipakai akun lain (role: {existingUser.Role}).");
                 continue;
             }
 
             var pembimbing = new Pembimbing
             {
                 NIP = nip,
-                Nama = namaFormatted
+                Nama = namaFormatted,
+                Email = email
             };
 
             var user = new User
             {
-                Name = nip,
+                Name = email,
                 PasswordHash = _passwordHasher.HashPassword(null!, nip),
                 Role = UserRoles.Dosen,
                 Pembimbing = pembimbing
@@ -590,7 +671,8 @@ public class PembimbingController : ControllerBase
             _userRepository.Add(user);
 
             existingByNip[nip] = pembimbing;
-            existingUsersByName[nip] = user;
+            existingByEmail[email] = pembimbing;
+            existingUsersByName[email] = user;
             jumlahBaru++;
         }
 

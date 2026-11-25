@@ -87,10 +87,10 @@ internal class UserRepository : IUserRepository
         .Include(x => x.Mahasiswa).ThenInclude(m => m!.TahunAjaran)
         .Include(x => x.Mahasiswa).ThenInclude(m => m!.Kelompok).ThenInclude(k => k!.TahunAjaran)
         .Include(x => x.Pembimbing)
-        .FirstOrDefaultAsync(x => x.Name.ToLower() == name.ToLower());
+        .FirstOrDefaultAsync(x => x.Name.ToLower() == name.Trim().ToLower());
 
     public async Task<bool> IsExist(string name, int? id = null) => await _appDbContext.User
-        .AnyAsync(x => x.Id != id && x.Name == name);
+        .AnyAsync(x => x.Id != id && x.Name.ToLower() == name.Trim().ToLower());
 
     public void Update(User user) => _appDbContext.User.Update(user);
 }

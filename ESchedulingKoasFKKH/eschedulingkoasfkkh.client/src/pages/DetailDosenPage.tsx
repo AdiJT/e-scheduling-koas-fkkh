@@ -47,7 +47,7 @@ export default function DetailDosenPage() {
 
   // Edit Modal State (Admin only)
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ nip: '', nama: '' });
+  const [editForm, setEditForm] = useState({ nip: '', nama: '', email: '' });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -92,7 +92,7 @@ export default function DetailDosenPage() {
           ).map(s => ({ id: s.id, nama: s.nama, jumlahHari: s.waktu || 0 }));
 
       // 3. Resolve Jadwal Bimbingan (strictly for stases taught by this lecturer or specifically assigned)
-      let jadwalList: JadwalBimbinganDosen[] = (data.jadwalBimbingan && data.jadwalBimbingan.length > 0)
+      const jadwalList: JadwalBimbinganDosen[] = (data.jadwalBimbingan && data.jadwalBimbingan.length > 0)
         ? data.jadwalBimbingan
         : [];
 
@@ -144,7 +144,7 @@ export default function DetailDosenPage() {
       }
 
       // 4. Resolve Riwayat Bimbingan (strictly for stases taught by this lecturer or specifically assigned)
-      let riwayatList: RiwayatBimbinganDosen[] = (data.riwayatBimbingan && data.riwayatBimbingan.length > 0)
+      const riwayatList: RiwayatBimbinganDosen[] = (data.riwayatBimbingan && data.riwayatBimbingan.length > 0)
         ? data.riwayatBimbingan
         : [];
 
@@ -238,7 +238,8 @@ export default function DetailDosenPage() {
     if (!dosen) return;
     setEditForm({
       nip: dosen.nip,
-      nama: dosen.nama
+      nama: dosen.nama,
+      email: dosen.email || ''
     });
     setEditErrors({});
     setShowEditModal(true);
@@ -252,7 +253,8 @@ export default function DetailDosenPage() {
       await pembimbingApi.update(dosen.id, {
         id: dosen.id,
         nip: editForm.nip,
-        nama: editForm.nama
+        nama: editForm.nama,
+        email: editForm.email.trim().toLowerCase()
       });
       setShowEditModal(false);
       await fetchData();
@@ -455,8 +457,11 @@ export default function DetailDosenPage() {
                     )}
                   </div>
                   <h2 className="text-lg sm:text-2xl font-bold text-primary-900 tracking-tight truncate">{dosen.nama}</h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5 flex items-center gap-2">
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span>Dosen Pembimbing Klinik Fakultas Kedokteran Hewan</span>
+                    {dosen.email && (
+                      <span className="text-emerald-700 font-medium">• {dosen.email}</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1342,6 +1347,19 @@ export default function DetailDosenPage() {
                   placeholder="Contoh: Drg. Nama Dosen, Sp.KG"
                 />
                 {editErrors.nama && <p className="text-xs text-red-500 mt-1">{editErrors.nama}</p>}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email (Login Dosen)</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3.5 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-emerald-400 focus:bg-white transition-all"
+                  placeholder="Contoh: nama@staf.undana.ac.id"
+                />
+                {editErrors.email && <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>}
               </div>
 
               <div className="pt-3 sm:pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center sm:justify-end gap-2">

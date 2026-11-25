@@ -365,6 +365,7 @@ export interface Pembimbing {
     id: number;
     nip: string;
     nama: string;
+    email?: string | null;
     daftarStase: string[];
     koordinatorStase: string[];
 }
@@ -441,12 +442,14 @@ export interface PembimbingDetail extends Pembimbing {
 export interface CreatePembimbing {
     nip: string;
     nama: string;
+    email: string;
 }
 
 export interface UpdatePembimbing {
     id: number;
     nip: string;
     nama: string;
+    email: string;
 }
 
 export interface DosenDeleteBlockKoordinator {

@@ -288,6 +288,7 @@ public class SinergiApiDosen
     public string NamaLengkap { get; set; } = string.Empty;
     public string? GelarDepan { get; set; }
     public string? GelarBelakang { get; set; }
+    public string? Email { get; set; }
     public int IdUnitKerja { get; set; }
     public string NamaUnitKerja { get; set; } = string.Empty;
     public bool? StatusAktif { get; set; }

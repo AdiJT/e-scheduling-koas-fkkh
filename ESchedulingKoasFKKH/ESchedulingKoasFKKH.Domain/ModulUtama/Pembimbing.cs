@@ -7,6 +7,7 @@ public class Pembimbing : Entity<int>
 {
     public required string NIP { get; set; }
     public required string Nama { get; set; }
+    public string? Email { get; set; }
 
     public List<Jadwal> DaftarJadwal { get; set; } = [];
     public List<Stase> DaftarStase { get; set; } = [];
@@ -19,6 +20,7 @@ public interface IPembimbingRepository
     Task<Pembimbing?> Get(string nip);
     Task<List<Pembimbing>> GetAll();
     Task<bool> IsExist(string nip, int? id = null);
+    Task<bool> IsEmailExist(string email, int? id = null);
 
     void Add(Pembimbing pembimbing);
     void Update(Pembimbing pembimbing);
