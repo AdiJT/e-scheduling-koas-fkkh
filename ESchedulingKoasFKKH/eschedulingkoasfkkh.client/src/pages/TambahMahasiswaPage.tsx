@@ -7,7 +7,7 @@ import SearchableSelect from '../components/SearchableSelect';
 
 export default function TambahMahasiswaPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nim: '', nama: '', idTahunAjaran: '' });
+  const [form, setForm] = useState({ nim: '', nama: '', email: '', idTahunAjaran: '' });
   const [tahunAjarans, setTahunAjarans] = useState<TahunAjaran[]>([]);
   const [isLoadingTahun, setIsLoadingTahun] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,8 +49,9 @@ export default function TambahMahasiswaPage() {
 
     try {
       await mahasiswaApi.create({ 
-        nim: form.nim, 
-        nama: form.nama, 
+        nim: form.nim.trim(), 
+        nama: form.nama.trim(), 
+        email: form.email.trim().toLowerCase(),
         idTahunAjaran: Number(form.idTahunAjaran) 
       });
       setShowSuccess(true);
@@ -104,7 +105,7 @@ export default function TambahMahasiswaPage() {
             <h2 className="text-lg font-bold text-primary-900 flex items-center gap-2"><span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Data Mahasiswa</h2>
             <p className="mt-1 text-xs text-blue-600 font-medium flex items-center gap-1.5">
               <InfoIcon className="w-4 h-4 flex-shrink-0" />
-              <span>Informasi: Akun mahasiswa akan otomatis dibuat dengan <b>Username</b> dan <b>Password</b> menggunakan NIM mahasiswa tersebut.</span>
+              <span>Informasi: Akun mahasiswa akan otomatis dibuat dengan <b>Username = Email</b> dan <b>Password awal = NIM</b> mahasiswa tersebut.</span>
             </p>
           </div>
           <div className="p-6 space-y-5">
@@ -135,6 +136,21 @@ export default function TambahMahasiswaPage() {
                 />
                 {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama}</p>}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Login Mahasiswa) <span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                placeholder="Contoh: mahasiswa@gmail.com"
+                className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all
+                  ${errors.email ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}
+              />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
             </div>
 
             <div>
