@@ -89,6 +89,38 @@ internal class UserRepository : IUserRepository
         .Include(x => x.Pembimbing)
         .FirstOrDefaultAsync(x => x.Name.ToLower() == name.Trim().ToLower());
 
+    public async Task<User?> GetByNameOrEmail(string identifier)
+    {
+        var trimmed = identifier.Trim().ToLower();
+        return await _appDbContext.User
+            .Include(x => x.Mahasiswa).ThenInclude(m => m!.TahunAjaran)
+            .Include(x => x.Mahasiswa).ThenInclude(m => m!.Kelompok).ThenInclude(k => k!.TahunAjaran)
+            .Include(x => x.Pembimbing)
+            .FirstOrDefaultAsync(x =>
+                x.Name.ToLower() == trimmed ||
+                (x.Email != null && x.Email.ToLower() == trimmed) ||
+                (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed));
+    }
+
+    public async Task<User?> GetByGoogleId(string googleId) => await _appDbContext.User
+        .Include(x => x.Mahasiswa).ThenInclude(m => m!.TahunAjaran)
+        .Include(x => x.Mahasiswa).ThenInclude(m => m!.Kelompok).ThenInclude(k => k!.TahunAjaran)
+        .Include(x => x.Pembimbing)
+        .FirstOrDefaultAsync(x => x.GoogleId == googleId);
+
+    public async Task<User?> GetByEmail(string email)
+    {
+        var trimmed = email.Trim().ToLower();
+        return await _appDbContext.User
+            .Include(x => x.Mahasiswa).ThenInclude(m => m!.TahunAjaran)
+            .Include(x => x.Mahasiswa).ThenInclude(m => m!.Kelompok).ThenInclude(k => k!.TahunAjaran)
+            .Include(x => x.Pembimbing)
+            .FirstOrDefaultAsync(x =>
+                (x.Email != null && x.Email.ToLower() == trimmed) ||
+                (x.Pembimbing != null && x.Pembimbing.Email != null && x.Pembimbing.Email.ToLower() == trimmed) ||
+                x.Name.ToLower() == trimmed);
+    }
+
     public async Task<bool> IsExist(string name, int? id = null) => await _appDbContext.User
         .AnyAsync(x => x.Id != id && x.Name.ToLower() == name.Trim().ToLower());
 

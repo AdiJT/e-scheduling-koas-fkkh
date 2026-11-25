@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configuration
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection(GoogleAuthOptions.SectionName));
 builder.Services.ConfigureOptions<JwtBearerOptionsSetup>();
 
 // Add services to the container.
@@ -44,6 +45,7 @@ builder.Services.AddScoped<IJadwalAutoScheduler, JadwalAutoScheduler>();
 builder.Services.AddScoped<IAutoArchiveService, AutoArchiveService>();
 builder.Services.AddScoped<INotifikasiService, NotifikasiService>();
 builder.Services.AddScoped<IMahasiswaAccessService, MahasiswaAccessService>();
+builder.Services.AddHttpClient<IGoogleAuthService, GoogleAuthService>();
 
 builder.Services.AddHttpClient<SiadiknonaApi>(conf =>
 {

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon } from '../components/Icons';
+import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon, GoogleIcon } from '../components/Icons';
 import logo from "../assets/logo_undana.png";
 
 export default function LoginPage() {
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -129,21 +130,39 @@ export default function LoginPage() {
           </div>
 
           {/* Welcome Text */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="text-3xl font-bold text-primary-900 mb-2">Selamat Datang! 👋</h2>
             <p className="text-slate-500">Silakan masuk untuk melanjutkan ke dashboard</p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm flex items-center gap-3 animate-scale-in shadow-sm">
-                <InfoIcon className="w-5 h-5 text-red-500" />
-                <span>{error}</span>
-              </div>
-            )}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm flex items-center gap-3 animate-scale-in shadow-sm">
+              <InfoIcon className="w-5 h-5 text-red-500" />
+              <span>{error}</span>
+            </div>
+          )}
 
+          {/* Google Sign-In Button (Opsi Atas) */}
+          <button
+            type="button"
+            id="btn-google-login"
+            onClick={() => setShowGoogleModal(true)}
+            className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 rounded-2xl text-sm font-semibold text-slate-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-soft hover:shadow active:scale-[0.98] cursor-pointer group"
+          >
+            <GoogleIcon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-110" />
+            <span>Masuk dengan Google</span>
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">atau masuk dengan email</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          {/* Login Form (Input Manual di Bawah) */}
+          <form onSubmit={handleSubmit} className="space-y-5" id="login-form">
             {/* Username / Email Field */}
             <div className="space-y-2">
               <label htmlFor="username" className="block text-sm font-semibold text-slate-700">
@@ -248,25 +267,27 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          {/*<div className="flex items-center gap-3 my-6">*/}
-          {/*  <div className="flex-1 h-px bg-slate-200" />*/}
-          {/*  <span className="text-xs text-slate-400 font-medium">atau</span>*/}
-          {/*  <div className="flex-1 h-px bg-slate-200" />*/}
-          {/*</div>*/}
-
-          {/* SSO Button (decorative) */}
-          {/*<button*/}
-          {/*  type="button"*/}
-          {/*  className="w-full py-3 px-4 bg-white border-2 border-slate-200 rounded-2xl text-sm font-medium text-slate-600 */}
-          {/*    hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 */}
-          {/*    flex items-center justify-center gap-3 shadow-soft"*/}
-          {/*  onClick={() => alert('SSO Login akan segera tersedia!')}*/}
-          {/*  id="btn-sso"*/}
-          {/*>*/}
-          {/*  <span className="text-lg">🏫</span>*/}
-          {/*  Masuk dengan SSO Universitas*/}
-          {/*</button>*/}
+          {/* Modal Info Preview Google Login */}
+          {showGoogleModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+              <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center animate-scale-up">
+                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-soft">
+                  <GoogleIcon className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Masuk dengan Google</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                  Tampilan tombol masuk dengan Google sudah aktif di frontend. Untuk saat ini fitur belum dihubungkan ke backend sesuai konfigurasi.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleModal(false)}
+                  className="w-full py-3 bg-gradient-to-r from-primary-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold rounded-xl text-sm shadow-md transition-all cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Help Section */}
           <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">

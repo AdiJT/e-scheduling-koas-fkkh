@@ -1,4 +1,4 @@
-﻿using ESchedulingKoasFKKH.Domain.Abstracts;
+using ESchedulingKoasFKKH.Domain.Abstracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 
 namespace ESchedulingKoasFKKH.Domain.Auth;
@@ -8,6 +8,9 @@ public class User : Entity<int>
     public required string Name { get; set; }
     public required string PasswordHash { get; set; }
     public required string Role { get; set; }
+    public string? Email { get; set; }
+    public string? GoogleId { get; set; }
+    public string? AvatarUrl { get; set; }
 
     public Mahasiswa? Mahasiswa { get; set; }
     public Pembimbing? Pembimbing { get; set; }
@@ -25,6 +28,9 @@ public interface IUserRepository
 {
     Task<User?> Get(int id);
     Task<User?> GetByName(string name);
+    Task<User?> GetByNameOrEmail(string identifier);
+    Task<User?> GetByGoogleId(string googleId);
+    Task<User?> GetByEmail(string email);
     Task<List<User>> GetAll();
     Task<bool> IsExist(string name, int? id = null);
 

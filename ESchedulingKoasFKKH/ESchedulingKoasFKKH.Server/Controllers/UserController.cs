@@ -23,6 +23,8 @@ public class UserController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _jwtOptions;
+    private readonly GoogleAuthOptions _googleAuthOptions;
+    private readonly IGoogleAuthService _googleAuthService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMahasiswaAccessService _mahasiswaAccessService;
 
@@ -30,12 +32,16 @@ public class UserController : ControllerBase
         IUserRepository userRepository,
         IPasswordHasher<User> passwordHasher,
         IOptions<JwtOptions> jwtOptions,
+        IOptions<GoogleAuthOptions> googleAuthOptions,
+        IGoogleAuthService googleAuthService,
         IUnitOfWork unitOfWork,
         IMahasiswaAccessService mahasiswaAccessService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtOptions = jwtOptions.Value;
+        _googleAuthOptions = googleAuthOptions.Value;
+        _googleAuthService = googleAuthService;
         _unitOfWork = unitOfWork;
         _mahasiswaAccessService = mahasiswaAccessService;
     }
@@ -67,11 +73,21 @@ public class UserController : ControllerBase
         return Forbid();
     }
 
+    [HttpGet("google-config")]
+    public IActionResult GetGoogleConfig()
+    {
+        return Ok(new
+        {
+            clientId = _googleAuthOptions.ClientId,
+            isConfigured = !string.IsNullOrWhiteSpace(_googleAuthOptions.ClientId)
+        });
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login(Login login)
     {
         var loginIdentifier = login.UserName.Trim();
-        var user = await _userRepository.GetByName(loginIdentifier);
+        var user = await _userRepository.GetByNameOrEmail(loginIdentifier);
         if (user is null)
             return HelpersFunctions.NotFound(
                 new Dictionary<string, string> { ["userName"] = $"User dengan username/email '{login.UserName}' tidak ditemukan" });
@@ -79,6 +95,90 @@ public class UserController : ControllerBase
         if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, login.Password) == PasswordVerificationResult.Failed)
             return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["password"] = $"Password salah" });
 
+        return await GenerateLoginResponseAsync(user);
+    }
+
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request?.IdToken))
+        {
+            return HelpersFunctions.BadRequest(new Dictionary<string, string> { ["idToken"] = "Token Google ID wajib disertakan." });
+        }
+
+        var validationResult = await _googleAuthService.ValidateIdTokenAsync(request.IdToken);
+        if (!validationResult.IsSuccess || validationResult.Payload is null)
+        {
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["google"] = validationResult.ErrorMessage ?? "Autentikasi akun Google gagal."
+            });
+        }
+
+        var payload = validationResult.Payload;
+        var googleEmail = payload.Email.Trim().ToLowerInvariant();
+
+        // 1. Try lookup by GoogleId
+        var user = await _userRepository.GetByGoogleId(payload.Sub);
+
+        // 2. Try lookup by direct Email or Username
+        if (user is null)
+        {
+            user = await _userRepository.GetByNameOrEmail(googleEmail);
+        }
+
+        // 3. Try lookup if email prefix matches Mahasiswa NIM (e.g. 2201001@student.undana.ac.id)
+        if (user is null && googleEmail.Contains('@'))
+        {
+            var prefix = googleEmail.Split('@')[0].Trim();
+            if (!string.IsNullOrWhiteSpace(prefix))
+            {
+                var possibleMhsUser = await _userRepository.GetByName(prefix);
+                if (possibleMhsUser != null && string.Equals(possibleMhsUser.Role, UserRoles.Mahasiswa, StringComparison.OrdinalIgnoreCase))
+                {
+                    user = possibleMhsUser;
+                }
+            }
+        }
+
+        if (user is null)
+        {
+            return StatusCode(StatusCodes.Status404NotFound, new
+            {
+                message = $"Akun Google dengan email '{payload.Email}' belum terdaftar pada sistem E-Scheduling FKKH UNDANA. Silakan hubungi Administrator atau masuk dengan Username/NIP/NIM dan Password.",
+                email = payload.Email
+            });
+        }
+
+        // Link or update Google ID & Avatar URL if needed
+        var hasUpdates = false;
+        if (string.IsNullOrWhiteSpace(user.GoogleId) || user.GoogleId != payload.Sub)
+        {
+            user.GoogleId = payload.Sub;
+            hasUpdates = true;
+        }
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            user.Email = payload.Email;
+            hasUpdates = true;
+        }
+        if (!string.IsNullOrWhiteSpace(payload.Picture) && user.AvatarUrl != payload.Picture)
+        {
+            user.AvatarUrl = payload.Picture;
+            hasUpdates = true;
+        }
+
+        if (hasUpdates)
+        {
+            _userRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return await GenerateLoginResponseAsync(user);
+    }
+
+    private async Task<IActionResult> GenerateLoginResponseAsync(User user)
+    {
         var claims = new Claim[]
         {
             new(JwtRegisteredClaimNames.Sub, user.Name),
@@ -121,7 +221,17 @@ public class UserController : ControllerBase
             mahasiswaAccess = await _mahasiswaAccessService.EvaluateByUsernameAsync(user.Name);
         }
 
-        return Ok(new { user.Id, user.Role, token = tokenStr, fullName, profileId, mahasiswaAccess });
+        return Ok(new
+        {
+            user.Id,
+            user.Role,
+            token = tokenStr,
+            fullName,
+            profileId,
+            avatarUrl = user.AvatarUrl,
+            email = user.Email,
+            mahasiswaAccess
+        });
     }
 
     [Authorize]
