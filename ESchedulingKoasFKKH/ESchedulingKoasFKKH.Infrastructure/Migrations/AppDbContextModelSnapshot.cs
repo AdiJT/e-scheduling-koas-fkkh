@@ -512,16 +512,32 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Sumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Manual");
+
                     b.Property<DateOnly>("TanggalMulai")
                         .HasColumnType("date");
 
                     b.Property<DateOnly>("TanggalSelesai")
                         .HasColumnType("date");
 
+                    b.Property<string>("Tipe")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Kampus");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Sumber");
 
                     b.HasIndex("TanggalMulai", "TanggalSelesai");
 
@@ -533,8 +549,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Isra Mikraj Muhammad SAW",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 1, 16),
                             TanggalSelesai = new DateOnly(2026, 1, 16),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -542,8 +560,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 2,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Cuti Bersama & Tahun Baru Imlek",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 2, 16),
                             TanggalSelesai = new DateOnly(2026, 2, 17),
+                            Tipe = "Cuti Bersama",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -551,8 +571,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 3,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "1 Ramadhan",
+                            Sumber = "Manual",
                             TanggalMulai = new DateOnly(2026, 2, 19),
                             TanggalSelesai = new DateOnly(2026, 2, 19),
+                            Tipe = "Kampus",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -560,8 +582,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 4,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Libur Ramadhan & Idul Fitri",
+                            Sumber = "Manual",
                             TanggalMulai = new DateOnly(2026, 3, 16),
                             TanggalSelesai = new DateOnly(2026, 3, 30),
+                            Tipe = "Kampus",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -569,8 +593,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 5,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Libur Paskah",
+                            Sumber = "Manual",
                             TanggalMulai = new DateOnly(2026, 4, 1),
                             TanggalSelesai = new DateOnly(2026, 4, 7),
+                            Tipe = "Kampus",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -578,8 +604,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 6,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Hari Buruh Internasional",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 1),
                             TanggalSelesai = new DateOnly(2026, 5, 1),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -587,8 +615,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 7,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Kenaikan Isa Al Masih",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 14),
                             TanggalSelesai = new DateOnly(2026, 5, 14),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -596,8 +626,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 8,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Cuti Bersama Kenaikan Isa Al Masih",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 15),
                             TanggalSelesai = new DateOnly(2026, 5, 15),
+                            Tipe = "Cuti Bersama",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -605,8 +637,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 9,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Hari Raya Idul Adha",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 27),
                             TanggalSelesai = new DateOnly(2026, 5, 27),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -614,8 +648,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 10,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Cuti Bersama Idul Adha",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 28),
                             TanggalSelesai = new DateOnly(2026, 5, 28),
+                            Tipe = "Cuti Bersama",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -623,8 +659,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 11,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Hari Raya Waisak",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 5, 31),
                             TanggalSelesai = new DateOnly(2026, 5, 31),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -632,8 +670,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 12,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Hari Lahir Pancasila",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 6, 1),
                             TanggalSelesai = new DateOnly(2026, 6, 1),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -641,8 +681,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 13,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "1 Muharam (Tahun Baru Islam)",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 6, 16),
                             TanggalSelesai = new DateOnly(2026, 6, 16),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -650,8 +692,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 14,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Hari Proklamasi Kemerdekaan RI",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 8, 17),
                             TanggalSelesai = new DateOnly(2026, 8, 17),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -659,8 +703,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 15,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Maulid Nabi Muhammad SAW",
+                            Sumber = "API",
                             TanggalMulai = new DateOnly(2026, 8, 25),
                             TanggalSelesai = new DateOnly(2026, 8, 25),
+                            Tipe = "Nasional",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -668,8 +714,10 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                             Id = 16,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nama = "Libur Natal dan Tahun Baru",
+                            Sumber = "Manual",
                             TanggalMulai = new DateOnly(2026, 12, 22),
                             TanggalSelesai = new DateOnly(2027, 1, 2),
+                            Tipe = "Kampus",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });

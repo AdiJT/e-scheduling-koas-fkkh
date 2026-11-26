@@ -63,6 +63,17 @@ builder.Services.AddHttpClient<SiadiknonaApi>(conf =>
     conf.Timeout = TimeSpan.FromSeconds(20);
 });
 
+builder.Services.AddHttpClient<TanggalMerahApi>(conf =>
+{
+    var baseUrl = builder.Configuration["TanggalMerahApi:BaseUrl"]?.TrimEnd('/');
+    if (string.IsNullOrWhiteSpace(baseUrl))
+        baseUrl = "https://tanggalmerah.upset.dev/api";
+
+    conf.BaseAddress = new Uri($"{baseUrl}/");
+    conf.DefaultRequestHeaders.Add("Accept", "application/json");
+    conf.Timeout = TimeSpan.FromSeconds(15);
+});
+
 builder.Services.AddHttpClient<SinergiApi>(conf =>
 {
     var baseUrl = builder.Configuration["SinergiApi:BaseUrl"]?.TrimEnd('/')
@@ -79,6 +90,17 @@ builder.Services.AddHttpClient<SinergiApi>(conf =>
         conf.DefaultRequestHeaders.Add(header, secretKey);
     }
     conf.Timeout = TimeSpan.FromSeconds(20);
+});
+
+builder.Services.AddHttpClient<TanggalMerahApi>(conf =>
+{
+    var baseUrl = builder.Configuration["TanggalMerahApi:BaseUrl"]?.TrimEnd('/');
+    if (string.IsNullOrWhiteSpace(baseUrl))
+        baseUrl = "https://tanggalmerah.upset.dev/api";
+
+    conf.BaseAddress = new Uri($"{baseUrl}/");
+    conf.DefaultRequestHeaders.Add("Accept", "application/json");
+    conf.Timeout = TimeSpan.FromSeconds(15);
 });
 
 var app = builder.Build();

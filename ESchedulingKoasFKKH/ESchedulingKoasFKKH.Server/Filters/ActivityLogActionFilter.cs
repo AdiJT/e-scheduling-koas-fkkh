@@ -901,6 +901,13 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
                 }
                 return new ActivityMetadata(modul, "Hapus", "Menghapus hari libur kalender", "Pengaturan Kalender");
 
+            case "SinkronHariLibur":
+                if (TryGetIntArg(args, "tahun", out var syncTahun))
+                {
+                    return new ActivityMetadata(modul, "Sinkron", $"Menyinkronkan hari libur nasional tahun {syncTahun} dari Tanggal Merah API", $"Hari Libur {syncTahun}");
+                }
+                return new ActivityMetadata(modul, "Sinkron", "Menyinkronkan hari libur nasional dari Tanggal Merah API", "Pengaturan Kalender");
+
             default:
                 return BuildFallbackMetadata("PengaturanSistem", action, "POST");
         }

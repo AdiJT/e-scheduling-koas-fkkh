@@ -107,6 +107,10 @@ export default function PengaturanSistemPage() {
   const [loadingLibur, setLoadingLibur] = useState(true);
   const [liburSearch, setLiburSearch] = useState('');
   const [filterTahun, setFilterTahun] = useState<string>(String(new Date().getFullYear()));
+  const [filterSumber, setFilterSumber] = useState<'all' | 'API' | 'Manual'>('all');
+  const [syncYears, setSyncYears] = useState<number[]>([2026, 2027]);
+  const [syncYear, setSyncYear] = useState<number>(new Date().getFullYear());
+  const [syncingLibur, setSyncingLibur] = useState(false);
   const [showLiburModal, setShowLiburModal] = useState(false);
   const [editingLibur, setEditingLibur] = useState<HariLiburDto | null>(null);
   const [isRentangLibur, setIsRentangLibur] = useState(false);
@@ -115,6 +119,7 @@ export default function PengaturanSistemPage() {
     tanggalSelesai: '',
     nama: '',
     keterangan: '',
+    tipe: 'Kampus',
   });
   const [liburErrors, setLiburErrors] = useState<Record<string, string>>({});
   const [savingLibur, setSavingLibur] = useState(false);
@@ -175,11 +180,25 @@ export default function PengaturanSistemPage() {
     }
   }, []);
 
+  const fetchSyncYears = useCallback(async () => {
+    try {
+      const res = await pengaturanSistemApi.getHariLiburTahunTersedia();
+      if (Array.isArray(res.years) && res.years.length > 0) {
+        setSyncYears(res.years);
+        const nowYear = new Date().getFullYear();
+        setSyncYear(res.years.includes(nowYear) ? nowYear : res.years[res.years.length - 1]);
+      }
+    } catch {
+      // Gunakan fallback tahun default jika gagal mengambil daftar tahun API
+    }
+  }, []);
+
   useEffect(() => {
     fetchFaq();
     fetchKontak();
     fetchHariLibur();
-  }, [fetchFaq, fetchKontak, fetchHariLibur]);
+    fetchSyncYears();
+  }, [fetchFaq, fetchKontak, fetchHariLibur, fetchSyncYears]);
 
   // =========================================================
   // FAQ HANDLERS
@@ -363,6 +382,7 @@ export default function PengaturanSistemPage() {
       tanggalSelesai: initialDate,
       nama: '',
       keterangan: '',
+      tipe: 'Kampus',
     });
     setLiburErrors({});
     setShowLiburModal(true);
@@ -376,6 +396,7 @@ export default function PengaturanSistemPage() {
       tanggalSelesai: item.tanggalSelesai,
       nama: item.nama,
       keterangan: item.keterangan || '',
+      tipe: item.tipe || 'Kampus',
     });
     setLiburErrors({});
     setShowLiburModal(true);
@@ -404,11 +425,12 @@ export default function PengaturanSistemPage() {
         tanggalSelesai: finalEnd,
         nama: liburForm.nama.trim(),
         keterangan: liburForm.keterangan.trim() || null,
+        tipe: liburForm.tipe || 'Kampus',
       };
 
       if (editingLibur) {
         await pengaturanSistemApi.updateHariLibur(editingLibur.id, payload);
-        setSuccessMessage(`Hari libur "${payload.nama}" berhasil diperbarui.`);
+        setSuccessMessage(`Hari libur "${payload.nama}" berhasil diperbarui (tersimpan sebagai Manual).`);
       } else {
         await pengaturanSistemApi.createHariLibur(payload);
         setSuccessMessage(`Hari libur "${payload.nama}" berhasil ditambahkan ke kalender.`);
@@ -421,6 +443,36 @@ export default function PengaturanSistemPage() {
       else setLiburErrors({ general: err?.message || 'Gagal menyimpan hari libur.' });
     } finally {
       setSavingLibur(false);
+    }
+  };
+
+  const handleSinkronLibur = async () => {
+    try {
+      setSyncingLibur(true);
+      setPageError('');
+      setSuccessMessage('');
+      const res = await pengaturanSistemApi.sinkronHariLibur(syncYear);
+      const parts = [
+        `${res.jumlahNasional} Nasional`,
+        `${res.jumlahCutiBersama} Cuti Bersama`,
+      ];
+      if (res.jumlahDigantiKeApi > 0) {
+        parts.push(`${res.jumlahDigantiKeApi} entri manual 1 hari diperbarui ke API`);
+      }
+      if (res.jumlahDilewati > 0) {
+        parts.push(`${res.jumlahDilewati} dilewati karena tercakup rentang libur manual`);
+      }
+      setSuccessMessage(
+        `Sinkronisasi hari libur tahun ${res.tahun} selesai: ${res.jumlahDisinkron} tersimpan (${parts.join(', ')}).`
+      );
+      if (filterTahun !== 'all' && filterTahun !== String(res.tahun)) {
+        setFilterTahun(String(res.tahun));
+      }
+      await fetchHariLibur();
+    } catch (err: any) {
+      setPageError(err?.message || `Gagal menyinkronkan hari libur tahun ${syncYear}.`);
+    } finally {
+      setSyncingLibur(false);
     }
   };
 
@@ -466,7 +518,7 @@ export default function PengaturanSistemPage() {
 
   const availableYears = useMemo(() => {
     const nowYear = new Date().getFullYear();
-    const set = new Set<number>([nowYear, nowYear + 1, 2026]);
+    const set = new Set<number>([nowYear, nowYear + 1, 2026, ...syncYears]);
     for (const h of hariLiburList) {
       const yStart = Number(h.tanggalMulai.slice(0, 4));
       const yEnd = Number(h.tanggalSelesai.slice(0, 4));
@@ -474,7 +526,7 @@ export default function PengaturanSistemPage() {
       if (!Number.isNaN(yEnd)) set.add(yEnd);
     }
     return Array.from(set).sort((a, b) => a - b);
-  }, [hariLiburList]);
+  }, [hariLiburList, syncYears]);
 
   const filteredLibur = useMemo(() => {
     const q = liburSearch.trim().toLowerCase();
@@ -482,13 +534,17 @@ export default function PengaturanSistemPage() {
       const matchYear =
         filterTahun === 'all' ||
         (h.tanggalMulai <= `${filterTahun}-12-31` && h.tanggalSelesai >= `${filterTahun}-01-01`);
+      const matchSumber =
+        filterSumber === 'all' ||
+        (h.sumber || 'Manual').toLowerCase() === filterSumber.toLowerCase();
       const matchSearch =
         !q ||
         h.nama.toLowerCase().includes(q) ||
+        (h.tipe && h.tipe.toLowerCase().includes(q)) ||
         (h.keterangan && h.keterangan.toLowerCase().includes(q));
-      return matchYear && matchSearch;
+      return matchYear && matchSumber && matchSearch;
     });
-  }, [hariLiburList, filterTahun, liburSearch]);
+  }, [hariLiburList, filterTahun, filterSumber, liburSearch]);
 
   const previewWaUrl = formatWhatsAppUrl(kontakForm.whatsApp);
 
@@ -999,9 +1055,9 @@ export default function PengaturanSistemPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2.5 flex-1">
-              <div className="relative flex-1 sm:flex-initial sm:w-64">
+              <div className="relative flex-1 sm:flex-initial sm:w-60">
                 <SearchIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -1024,20 +1080,56 @@ export default function PengaturanSistemPage() {
                   </option>
                 ))}
               </select>
+
+              <select
+                value={filterSumber}
+                onChange={e => setFilterSumber(e.target.value as 'all' | 'API' | 'Manual')}
+                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+              >
+                <option value="all">Semua Sumber</option>
+                <option value="API">API Nasional</option>
+                <option value="Manual">Manual / Kampus</option>
+              </select>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={fetchHariLibur}
-                className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl transition-colors cursor-pointer"
+                className="p-2.5 bg-slate-50 hover:bg-slate-100 active:scale-95 text-slate-600 border border-slate-200 rounded-xl transition-all cursor-pointer shrink-0"
                 title="Muat Ulang Hari Libur"
               >
                 <RefreshIcon className={`w-4 h-4 ${loadingLibur ? 'animate-spin' : ''}`} />
               </button>
 
+              <select
+                value={syncYear}
+                onChange={e => setSyncYear(Number(e.target.value))}
+                disabled={syncingLibur}
+                aria-label="Pilih tahun sinkronisasi hari libur"
+                className="pl-3.5 pr-9 py-2.5 min-w-[92px] bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer disabled:opacity-60"
+              >
+                {syncYears.map(y => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                id="btn-sinkron-hari-libur"
+                type="button"
+                onClick={handleSinkronLibur}
+                disabled={syncingLibur}
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 active:scale-95 disabled:opacity-60 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                title="Tarik & sinkronkan hari libur nasional & cuti bersama dari Tanggal Merah API"
+              >
+                <RefreshIcon className={`w-4 h-4 shrink-0 ${syncingLibur ? 'animate-spin' : ''}`} />
+                <span>{syncingLibur ? 'Menyinkronkan...' : 'Sinkron API'}</span>
+              </button>
+
               <button
                 onClick={openCreateLibur}
-                className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <span>+</span>
                 <span>Tambah Hari Libur</span>
@@ -1087,7 +1179,29 @@ export default function PengaturanSistemPage() {
                             </span>
                           </td>
                           <td className="py-3.5 px-4">
-                            <p className="font-bold text-primary-900">{item.nama}</p>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className="font-bold text-primary-900">{item.nama}</p>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  item.tipe === 'Nasional'
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : item.tipe === 'Cuti Bersama'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                }`}
+                              >
+                                {item.tipe || 'Kampus'}
+                              </span>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  item.sumber === 'API'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {item.sumber || 'Manual'}
+                              </span>
+                            </div>
                             {item.keterangan && (
                               <p className="text-xs text-slate-500 mt-0.5">{item.keterangan}</p>
                             )}
@@ -1228,6 +1342,12 @@ export default function PengaturanSistemPage() {
               </div>
             )}
 
+            {editingLibur?.sumber === 'API' && (
+              <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 font-medium">
+                Data ini berasal dari Tanggal Merah API. Jika disimpan setelah diedit, sumbernya otomatis berubah menjadi <strong>Manual</strong> agar tidak tertimpa saat sinkron ulang.
+              </div>
+            )}
+
             <form onSubmit={handleSaveLibur} className="space-y-4">
               <label className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer select-none">
                 <input
@@ -1297,6 +1417,20 @@ export default function PengaturanSistemPage() {
                   placeholder="Contoh: Libur Natal & Tahun Baru"
                 />
                 {liburErrors.nama && <p className="text-xs text-rose-600 mt-1">{liburErrors.nama}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Tipe Hari Libur</label>
+                <select
+                  value={liburForm.tipe}
+                  onChange={e => setLiburForm({ ...liburForm, tipe: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="Kampus">Kampus / Akademik (FKKH / UNDANA)</option>
+                  <option value="Nasional">Libur Nasional</option>
+                  <option value="Cuti Bersama">Cuti Bersama</option>
+                </select>
+                {liburErrors.tipe && <p className="text-xs text-rose-600 mt-1">{liburErrors.tipe}</p>}
               </div>
 
               <div>

@@ -26,4 +26,5 @@ public class HariLiburRequest
     public DateOnly? TanggalSelesai { get; set; }
     public string Nama { get; set; } = string.Empty;
     public string? Keterangan { get; set; }
+    public string? Tipe { get; set; }
 }

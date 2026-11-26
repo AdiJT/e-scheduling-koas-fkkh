@@ -1305,6 +1305,8 @@ export interface HariLiburDto {
   tanggalSelesai: string;
   nama: string;
   keterangan?: string | null;
+  tipe: string;
+  sumber: string;
   jumlahHari: number;
   updatedAt?: string;
 }
@@ -1314,6 +1316,23 @@ export interface HariLiburInput {
   tanggalSelesai?: string;
   nama: string;
   keterangan?: string | null;
+  tipe?: string;
+}
+
+export interface HariLiburTahunTersediaResponse {
+  years: number[];
+  fromApi: boolean;
+}
+
+export interface SinkronHariLiburResult {
+  tahun: number;
+  totalDariApi: number;
+  jumlahDisinkron: number;
+  jumlahBaru: number;
+  jumlahDigantiKeApi: number;
+  jumlahDilewati: number;
+  jumlahNasional: number;
+  jumlahCutiBersama: number;
 }
 
 export const pengaturanSistemApi = {
@@ -1395,6 +1414,18 @@ export const pengaturanSistemApi = {
       method: 'DELETE',
     });
     return handleResponse<void>(res);
+  },
+
+  getHariLiburTahunTersedia: async (): Promise<HariLiburTahunTersediaResponse> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/hari-libur/tahun-tersedia`);
+    return handleResponse<HariLiburTahunTersediaResponse>(res);
+  },
+
+  sinkronHariLibur: async (tahun: number): Promise<SinkronHariLiburResult> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/hari-libur/sinkron?tahun=${tahun}`, {
+      method: 'POST',
+    });
+    return handleResponse<SinkronHariLiburResult>(res);
   },
 };
 

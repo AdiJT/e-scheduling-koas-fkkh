@@ -4,6 +4,7 @@ using ESchedulingKoasFKKH.Domain.Contracts;
 using ESchedulingKoasFKKH.Domain.ModulUtama;
 using ESchedulingKoasFKKH.Server.Helpers;
 using ESchedulingKoasFKKH.Server.Models.PengaturanSistemModels;
+using ESchedulingKoasFKKH.Server.Services.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,17 +17,20 @@ public class PengaturanSistemController : ControllerBase
     private readonly IFaqRepository _faqRepository;
     private readonly IKontakSettingRepository _kontakRepository;
     private readonly IHariLiburRepository _hariLiburRepository;
+    private readonly TanggalMerahApi _tanggalMerahApi;
     private readonly IUnitOfWork _unitOfWork;
 
     public PengaturanSistemController(
         IFaqRepository faqRepository,
         IKontakSettingRepository kontakRepository,
         IHariLiburRepository hariLiburRepository,
+        TanggalMerahApi tanggalMerahApi,
         IUnitOfWork unitOfWork)
     {
         _faqRepository = faqRepository;
         _kontakRepository = kontakRepository;
         _hariLiburRepository = hariLiburRepository;
+        _tanggalMerahApi = tanggalMerahApi;
         _unitOfWork = unitOfWork;
     }
 
@@ -240,14 +244,194 @@ public class PengaturanSistemController : ControllerBase
         return Ok(items.Select(MapHariLiburDto));
     }
 
+    [HttpGet("hari-libur/tahun-tersedia")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> GetHariLiburTahunTersedia(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var years = await _tanggalMerahApi.GetAvailableYearsAsync(cancellationToken);
+            if (years.Count > 0)
+            {
+                return Ok(new { years, fromApi = true });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Fallback ke daftar tahun lokal jika API sedang tidak dapat diakses
+        }
+
+        var currentYear = DateTime.Today.Year;
+        return Ok(new
+        {
+            years = new[] { currentYear - 1, currentYear, currentYear + 1 }.Distinct().OrderBy(y => y).ToArray(),
+            fromApi = false
+        });
+    }
+
+    [HttpPost("hari-libur/sinkron")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SinkronHariLibur([FromQuery] int tahun, CancellationToken cancellationToken)
+    {
+        if (tahun < 2000 || tahun > 2100)
+        {
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["tahun"] = "Tahun sinkronisasi harus berada di antara 2000 dan 2100."
+            });
+        }
+
+        List<TanggalMerahHolidayItem> apiItems;
+        try
+        {
+            apiItems = await _tanggalMerahApi.GetHolidaysByYearAsync(tahun, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = ex.Message });
+        }
+
+        if (apiItems.Count == 0)
+        {
+            return HelpersFunctions.BadRequest(new Dictionary<string, string>
+            {
+                ["tahun"] = $"Data hari libur tahun {tahun} belum tersedia di Tanggal Merah API."
+            });
+        }
+
+        var groupedApi = apiItems
+            .GroupBy(x => x.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Nama = string.Join(" / ", g.Select(x => x.Name.Trim()).Where(n => !string.IsNullOrEmpty(n)).Distinct(StringComparer.OrdinalIgnoreCase)),
+                Tipe = g.Any(x => string.Equals(x.Tipe, "Nasional", StringComparison.OrdinalIgnoreCase))
+                    ? "Nasional"
+                    : "Cuti Bersama"
+            })
+            .ToList();
+
+        var existingYearRows = await _hariLiburRepository.GetTrackedByTahun(tahun);
+
+        // Hapus entri sumber API yang dimulai di tahun ini sebelum menulis ulang hasil sinkron
+        var apiRowsToReplace = existingYearRows
+            .Where(x => string.Equals(x.Sumber, "API", StringComparison.OrdinalIgnoreCase) && x.TanggalMulai.Year == tahun)
+            .ToList();
+        if (apiRowsToReplace.Count > 0)
+        {
+            _hariLiburRepository.DeleteRange(apiRowsToReplace);
+        }
+
+        // Ambil entri Manual yang tersisa (atau entri rentang multi-hari lintas tahun)
+        var apiToReplaceIds = apiRowsToReplace.Select(x => x.Id).ToHashSet();
+        var survivingRows = existingYearRows.Where(x => !apiToReplaceIds.Contains(x.Id)).ToList();
+
+        var blockingRanges = survivingRows
+            .Where(x => x.TanggalSelesai > x.TanggalMulai)
+            .ToList();
+
+        var manualSingleByDate = survivingRows
+            .Where(x => string.Equals(x.Sumber, "Manual", StringComparison.OrdinalIgnoreCase) && x.TanggalSelesai == x.TanggalMulai)
+            .GroupBy(x => x.TanggalMulai)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var now = DateTime.Now;
+        var jumlahDisinkron = 0;
+        var jumlahBaru = 0;
+        var jumlahDigantiKeApi = 0;
+        var jumlahDilewati = 0;
+        var jumlahNasional = 0;
+        var jumlahCutiBersama = 0;
+
+        foreach (var item in groupedApi)
+        {
+            // Aturan 1: Lewati jika tanggal sudah tercakup rentang libur multi-hari (mis. Libur Ramadhan / Paskah / Natal)
+            if (blockingRanges.Any(r => r.TanggalMulai <= item.Date && item.Date <= r.TanggalSelesai))
+            {
+                jumlahDilewati++;
+                continue;
+            }
+
+            if (item.Tipe == "Nasional")
+                jumlahNasional++;
+            else
+                jumlahCutiBersama++;
+
+            // Aturan 3: Jika sebelumnya Admin menambah manual 1 hari di tanggal yang sama, ganti menjadi sumber API (0 duplikat)
+            if (manualSingleByDate.TryGetValue(item.Date, out var existingManuals) && existingManuals.Count > 0)
+            {
+                var target = existingManuals[0];
+                target.Nama = item.Nama;
+                target.Tipe = item.Tipe;
+                target.Sumber = "API";
+                target.Keterangan = "Disinkronkan dari Tanggal Merah API";
+                target.UpdatedAt = now;
+                _hariLiburRepository.Update(target);
+
+                if (existingManuals.Count > 1)
+                {
+                    _hariLiburRepository.DeleteRange(existingManuals.Skip(1));
+                }
+
+                jumlahDigantiKeApi++;
+                jumlahDisinkron++;
+                continue;
+            }
+
+            _hariLiburRepository.Add(new HariLibur
+            {
+                TanggalMulai = item.Date,
+                TanggalSelesai = item.Date,
+                Nama = item.Nama,
+                Tipe = item.Tipe,
+                Sumber = "API",
+                Keterangan = "Disinkronkan dari Tanggal Merah API",
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            jumlahBaru++;
+            jumlahDisinkron++;
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            tahun,
+            totalDariApi = groupedApi.Count,
+            jumlahDisinkron,
+            jumlahBaru,
+            jumlahDigantiKeApi,
+            jumlahDilewati,
+            jumlahNasional,
+            jumlahCutiBersama
+        });
+    }
+
     [HttpPost("hari-libur")]
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> CreateHariLibur([FromBody] HariLiburRequest request)
     {
-        var (errors, tanggalSelesai) = ValidateHariLiburRequest(request);
+        var (errors, tanggalSelesai, tipe) = ValidateHariLiburRequest(request);
         if (errors.Count > 0)
         {
             return HelpersFunctions.BadRequest(errors);
+        }
+
+        var apiRowsToAbsorb = await ValidateHariLiburOverlapAsync(request.TanggalMulai, tanggalSelesai, null, errors);
+        if (errors.Count > 0)
+        {
+            return HelpersFunctions.BadRequest(errors);
+        }
+
+        if (apiRowsToAbsorb.Count > 0)
+        {
+            _hariLiburRepository.DeleteRange(apiRowsToAbsorb);
         }
 
         var now = DateTime.Now;
@@ -257,6 +441,8 @@ public class PengaturanSistemController : ControllerBase
             TanggalSelesai = tanggalSelesai,
             Nama = request.Nama.Trim(),
             Keterangan = NormalizeOptional(request.Keterangan),
+            Tipe = tipe,
+            Sumber = "Manual",
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -277,16 +463,30 @@ public class PengaturanSistemController : ControllerBase
             return HelpersFunctions.NotFound(new Dictionary<string, string> { ["id"] = "Data hari libur tidak ditemukan." });
         }
 
-        var (errors, tanggalSelesai) = ValidateHariLiburRequest(request);
+        var (errors, tanggalSelesai, tipe) = ValidateHariLiburRequest(request);
         if (errors.Count > 0)
         {
             return HelpersFunctions.BadRequest(errors);
+        }
+
+        var apiRowsToAbsorb = await ValidateHariLiburOverlapAsync(request.TanggalMulai, tanggalSelesai, id, errors);
+        if (errors.Count > 0)
+        {
+            return HelpersFunctions.BadRequest(errors);
+        }
+
+        if (apiRowsToAbsorb.Count > 0)
+        {
+            _hariLiburRepository.DeleteRange(apiRowsToAbsorb);
         }
 
         existing.TanggalMulai = request.TanggalMulai;
         existing.TanggalSelesai = tanggalSelesai;
         existing.Nama = request.Nama.Trim();
         existing.Keterangan = NormalizeOptional(request.Keterangan);
+        existing.Tipe = tipe;
+        // Aturan 2: Data hasil API yang diedit Admin otomatis berubah menjadi Manual agar tidak tertimpa saat sinkron ulang
+        existing.Sumber = "Manual";
         existing.UpdatedAt = DateTime.Now;
 
         _hariLiburRepository.Update(existing);
@@ -325,7 +525,7 @@ public class PengaturanSistemController : ControllerBase
         return errors;
     }
 
-    private static (Dictionary<string, string> Errors, DateOnly TanggalSelesai) ValidateHariLiburRequest(HariLiburRequest request)
+    private static (Dictionary<string, string> Errors, DateOnly TanggalSelesai, string Tipe) ValidateHariLiburRequest(HariLiburRequest request)
     {
         var errors = new Dictionary<string, string>();
         var tanggalSelesai = request.TanggalSelesai ?? request.TanggalMulai;
@@ -345,7 +545,67 @@ public class PengaturanSistemController : ControllerBase
             errors["tanggalSelesai"] = "Rentang hari libur maksimal 90 hari per entri.";
         }
 
-        return (errors, tanggalSelesai);
+        var tipe = NormalizeTipeHariLibur(request.Tipe);
+        if (tipe is null)
+        {
+            errors["tipe"] = "Tipe hari libur harus salah satu dari: Kampus, Nasional, atau Cuti Bersama.";
+            tipe = "Kampus";
+        }
+
+        return (errors, tanggalSelesai, tipe);
+    }
+
+    private async Task<List<HariLibur>> ValidateHariLiburOverlapAsync(
+        DateOnly tanggalMulai,
+        DateOnly tanggalSelesai,
+        int? excludeId,
+        Dictionary<string, string> errors)
+    {
+        var overlapping = await _hariLiburRepository.GetTrackedOverlapping(tanggalMulai, tanggalSelesai, excludeId);
+        if (overlapping.Count == 0)
+        {
+            return [];
+        }
+
+        var isSingleDay = tanggalMulai == tanggalSelesai;
+        if (isSingleDay)
+        {
+            var conflict = overlapping[0];
+            errors["tanggalMulai"] = $"Tanggal {tanggalMulai:dd/MM/yyyy} sudah terdaftar sebagai hari libur ('{conflict.Nama}'). Edit entri yang ada agar tidak terjadi pendobelan.";
+            return [];
+        }
+
+        // Rentang multi-hari tidak boleh bertabrakan dengan entri Manual atau rentang multi-hari lain,
+        // namun boleh menyerap hari libur API 1 hari yang tercakup di dalamnya tanpa mendobel.
+        var blocking = overlapping
+            .Where(x => !string.Equals(x.Sumber, "API", StringComparison.OrdinalIgnoreCase) || x.TanggalSelesai > x.TanggalMulai)
+            .ToList();
+
+        if (blocking.Count > 0)
+        {
+            var conflict = blocking[0];
+            var rangeLabel = conflict.TanggalSelesai == conflict.TanggalMulai
+                ? $"{conflict.TanggalMulai:dd/MM/yyyy}"
+                : $"{conflict.TanggalMulai:dd/MM/yyyy} s.d. {conflict.TanggalSelesai:dd/MM/yyyy}";
+            errors["tanggalMulai"] = $"Rentang tanggal beririsan dengan hari libur '{conflict.Nama}' ({rangeLabel}).";
+            return [];
+        }
+
+        return overlapping;
+    }
+
+    private static string? NormalizeTipeHariLibur(string? rawTipe)
+    {
+        if (string.IsNullOrWhiteSpace(rawTipe))
+            return "Kampus";
+
+        return rawTipe.Trim().ToLowerInvariant() switch
+        {
+            "kampus" => "Kampus",
+            "nasional" => "Nasional",
+            "cuti bersama" => "Cuti Bersama",
+            _ => null
+        };
     }
 
     private static bool IsValidEmail(string email)
@@ -391,6 +651,8 @@ public class PengaturanSistemController : ControllerBase
         tanggalSelesai = item.TanggalSelesai,
         nama = item.Nama,
         keterangan = item.Keterangan,
+        tipe = item.Tipe,
+        sumber = item.Sumber,
         jumlahHari = (item.TanggalSelesai.DayNumber - item.TanggalMulai.DayNumber) + 1,
         updatedAt = item.UpdatedAt
     };
