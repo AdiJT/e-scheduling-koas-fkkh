@@ -108,6 +108,8 @@ export default function PengaturanSistemPage() {
   const [liburSearch, setLiburSearch] = useState('');
   const [filterTahun, setFilterTahun] = useState<string>(String(new Date().getFullYear()));
   const [filterSumber, setFilterSumber] = useState<'all' | 'API' | 'Manual'>('all');
+  const [liburPage, setLiburPage] = useState(1);
+  const [liburPageSize, setLiburPageSize] = useState(10);
   const [syncYears, setSyncYears] = useState<number[]>([2026, 2027]);
   const [syncYear, setSyncYear] = useState<number>(new Date().getFullYear());
   const [syncingLibur, setSyncingLibur] = useState(false);
@@ -545,6 +547,37 @@ export default function PengaturanSistemPage() {
       return matchYear && matchSumber && matchSearch;
     });
   }, [hariLiburList, filterTahun, filterSumber, liburSearch]);
+
+  useEffect(() => {
+    setLiburPage(1);
+  }, [liburSearch, filterTahun, filterSumber, liburPageSize]);
+
+  const totalLiburItems = filteredLibur.length;
+  const liburTotalPages = Math.max(1, Math.ceil(totalLiburItems / liburPageSize));
+  const safeLiburPage = Math.min(liburPage, liburTotalPages);
+  const liburStartIndex = (safeLiburPage - 1) * liburPageSize;
+  const liburEndIndex = Math.min(liburStartIndex + liburPageSize, totalLiburItems);
+  const paginatedLibur = useMemo(
+    () => filteredLibur.slice(liburStartIndex, liburEndIndex),
+    [filteredLibur, liburStartIndex, liburEndIndex]
+  );
+
+  const liburPageNumbers = useMemo(() => {
+    const pages: (number | 'ellipsis-left' | 'ellipsis-right')[] = [];
+    if (liburTotalPages <= 7) {
+      for (let p = 1; p <= liburTotalPages; p++) pages.push(p);
+      return pages;
+    }
+
+    pages.push(1);
+    const start = Math.max(2, safeLiburPage - 1);
+    const end = Math.min(liburTotalPages - 1, safeLiburPage + 1);
+    if (start > 2) pages.push('ellipsis-left');
+    for (let p = start; p <= end; p++) pages.push(p);
+    if (end < liburTotalPages - 1) pages.push('ellipsis-right');
+    pages.push(liburTotalPages);
+    return pages;
+  }, [liburTotalPages, safeLiburPage]);
 
   const previewWaUrl = formatWhatsAppUrl(kontakForm.whatsApp);
 
@@ -1138,6 +1171,36 @@ export default function PengaturanSistemPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 overflow-hidden">
+            {!loadingLibur && totalLiburItems > 0 && (
+              <div className="px-4 sm:px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <p className="text-slate-500 font-medium">
+                  Menampilkan <span className="text-primary-900 font-bold">{liburStartIndex + 1}</span> -{' '}
+                  <span className="text-primary-900 font-bold">{liburEndIndex}</span> dari{' '}
+                  <span className="text-primary-900 font-bold">{totalLiburItems}</span> Hari Libur
+                </p>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="libur-page-size" className="text-slate-500 font-medium whitespace-nowrap">
+                    Tampilkan:
+                  </label>
+                  <select
+                    id="libur-page-size"
+                    value={liburPageSize}
+                    onChange={(e) => {
+                      setLiburPageSize(Number(e.target.value));
+                      setLiburPage(1);
+                    }}
+                    className="pl-2.5 pr-7 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-slate-500 font-medium">data</span>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -1163,11 +1226,11 @@ export default function PengaturanSistemPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredLibur.map((item, idx) => {
+                    paginatedLibur.map((item, idx) => {
                       const isRange = item.tanggalSelesai !== item.tanggalMulai;
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3.5 px-4 font-semibold text-slate-500">{idx + 1}</td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-500">{liburStartIndex + idx + 1}</td>
                           <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">
                             {isRange
                               ? `${formatDateDisplay(item.tanggalMulai)} – ${formatDateDisplay(item.tanggalSelesai)}`
@@ -1231,6 +1294,53 @@ export default function PengaturanSistemPage() {
                 </tbody>
               </table>
             </div>
+
+            {!loadingLibur && liburTotalPages > 1 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-xs font-medium text-slate-500">
+                  Halaman <span className="text-primary-900 font-bold">{safeLiburPage}</span> dari{' '}
+                  <span className="text-primary-900 font-bold">{liburTotalPages}</span>
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setLiburPage(Math.max(safeLiburPage - 1, 1))}
+                    disabled={safeLiburPage === 1}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    Sebelumnya
+                  </button>
+                  {liburPageNumbers.map((pageItem) =>
+                    typeof pageItem === 'number' ? (
+                      <button
+                        key={pageItem}
+                        type="button"
+                        onClick={() => setLiburPage(pageItem)}
+                        className={`min-w-[32px] h-8 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          pageItem === safeLiburPage
+                            ? 'bg-primary-900 text-white shadow-sm'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageItem}
+                      </button>
+                    ) : (
+                      <span key={pageItem} className="px-1.5 text-xs font-semibold text-slate-400">
+                        ...
+                      </span>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setLiburPage(Math.min(safeLiburPage + 1, liburTotalPages))}
+                    disabled={safeLiburPage === liburTotalPages}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    Berikutnya
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
