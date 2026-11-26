@@ -137,10 +137,53 @@ public class JadwalController : ControllerBase
         return Forbid();
     }
 
+    private async Task<IActionResult?> ValidasiKesiapanPembimbingStaseAsync()
+    {
+        var semuaStase = await _staseRepository.GetAll();
+        if (semuaStase.Count == 0)
+        {
+            const string msgKosong = "Belum ada data stase di sistem. Silakan buat data stase dan tambahkan minimal 1 dosen pembimbing terlebih dahulu.";
+            return BadRequest(new
+            {
+                code = "STASE_KOSONG",
+                message = msgKosong,
+                totalStase = 0,
+                staseTanpaPembimbing = Array.Empty<object>(),
+                errors = new Dictionary<string, string> { ["general"] = msgKosong }
+            });
+        }
+
+        var missing = JadwalAutoScheduler.CariStaseTanpaPembimbing(semuaStase);
+        if (missing.Count > 0)
+        {
+            var message = JadwalAutoScheduler.BuatRingkasanErrorStase(missing);
+            return BadRequest(new
+            {
+                code = "STASE_BELUM_ADA_PEMBIMBING",
+                message,
+                totalStase = semuaStase.Count,
+                staseTanpaPembimbing = missing.Select(m => new
+                {
+                    id = m.Id,
+                    nama = m.Nama,
+                    jenis = m.Jenis,
+                    subStaseTanpaPembimbing = m.SubStaseTanpaPembimbing
+                }),
+                errors = new Dictionary<string, string> { ["general"] = message }
+            });
+        }
+
+        return null;
+    }
+
     [HttpPost]
     [Authorize(Roles = UserRoles.Admin)]
     public async Task<IActionResult> Create(CreateJadwal create)
     {
+        var pembimbingBlock = await ValidasiKesiapanPembimbingStaseAsync();
+        if (pembimbingBlock is not null)
+            return pembimbingBlock;
+
         var kelompok = await _kelompokRepository.Get(create.IdKelompok);
         if (kelompok is null)
             return HelpersFunctions.NotFound(new Dictionary<string, string>
@@ -336,6 +379,10 @@ public class JadwalController : ControllerBase
                 }
             });
         }
+
+        var pembimbingBlock = await ValidasiKesiapanPembimbingStaseAsync();
+        if (pembimbingBlock is not null)
+            return pembimbingBlock;
 
         var result = await _jadwalAutoScheduler.GenerateAsync(generate.IdTahunAjaran, generate.TanggalMulai, cancellationToken);
         if (result.IsFailure)

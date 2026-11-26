@@ -7,6 +7,35 @@ import { calculateEndDate, formatDateDisplay } from '../utils/holidays';
 import { SaveIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
 import SearchableSelect from '../components/SearchableSelect';
 
+interface StaseKurangPembimbingItem {
+  id: number;
+  nama: string;
+  jenis: string;
+  subStaseKosong: string[];
+}
+
+function getStaseTanpaPembimbing(staseList: Stase[]): StaseKurangPembimbingItem[] {
+  const hasil: StaseKurangPembimbingItem[] = [];
+  for (const s of staseList) {
+    const daftarSub = [...(s.daftarSubStase || [])].sort((a, b) => a.urutan - b.urutan);
+    if (daftarSub.length > 0) {
+      const subKosong = daftarSub
+        .filter((sub) => (!sub.daftarDefaultPembimbing || sub.daftarDefaultPembimbing.length === 0) && !sub.idDefaultPembimbing)
+        .map((sub) => sub.nama);
+      if (subKosong.length > 0) {
+        hasil.push({ id: s.id, nama: s.nama, jenis: s.jenis, subStaseKosong: subKosong });
+      }
+      continue;
+    }
+
+    const hasPembimbing = (s.daftarPembimbing && s.daftarPembimbing.length > 0) || Boolean(s.idKoordinator);
+    if (!hasPembimbing) {
+      hasil.push({ id: s.id, nama: s.nama, jenis: s.jenis, subStaseKosong: [] });
+    }
+  }
+  return hasil;
+}
+
 export default function TambahJadwalPage() {
   const navigate = useNavigate();
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
@@ -103,10 +132,24 @@ export default function TambahJadwalPage() {
     }));
   };
 
+  const staseTanpaPembimbing = getStaseTanpaPembimbing(staseList);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
+
+    if (staseList.length === 0) {
+      setErrors({ general: 'Belum ada data stase di sistem. Silakan buat data stase terlebih dahulu.' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (staseTanpaPembimbing.length > 0) {
+      setErrors({ general: `Masih terdapat ${staseTanpaPembimbing.length} stase yang belum memiliki minimal 1 dosen pembimbing. Lengkapi data stase terlebih dahulu.` });
+      setIsSubmitting(false);
+      return;
+    }
 
     if (!filterTahunAjaran) {
       setErrors({ filterTahunAjaran: 'Tahun ajaran wajib dipilih terlebih dahulu.' });
@@ -184,7 +227,82 @@ export default function TambahJadwalPage() {
           <p className="text-slate-500 text-sm">Memuat data kelompok, stase, dan dosen...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+        <div className="space-y-6 animate-fade-in-up">
+          {staseList.length === 0 && (
+            <div className="p-5 bg-amber-50 border border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-amber-900">
+              <div>
+                <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Belum Ada Data Stase</span>
+                </h3>
+                <p className="text-xs text-amber-800 mt-1">
+                  Jadwal belum dapat dibuat karena belum ada data stase di sistem. Silakan buat stase beserta dosen pembimbingnya terlebih dahulu.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/stase')}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition-colors shrink-0 cursor-pointer"
+              >
+                Buat / Kelola Stase →
+              </button>
+            </div>
+          )}
+
+          {staseTanpaPembimbing.length > 0 && (
+            <div className="p-5 bg-amber-50/90 border border-amber-300 rounded-2xl space-y-3 text-amber-900 shadow-soft">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Lengkapi Dosen Pembimbing Stase Terlebih Dahulu ({staseTanpaPembimbing.length}/{staseList.length} Stase)</span>
+                  </h3>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Jadwal belum dapat dibuat sebelum seluruh stase (dan seluruh sub-stase di dalamnya) memiliki minimal 1 dosen pembimbing.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/stase')}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition-colors shrink-0 self-start sm:self-center cursor-pointer"
+                >
+                  Kelola Semua Stase →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                {staseTanpaPembimbing.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-2 bg-white border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-800">{item.nama}</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600">
+                          {item.jenis}
+                        </span>
+                      </div>
+                      {item.subStaseKosong.length > 0 && (
+                        <p className="text-[11px] text-rose-700 mt-0.5">
+                          Sub-stase kosong ({item.subStaseKosong.length}): {item.subStaseKosong.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/stase/${item.id}`)}
+                      className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-lg text-[11px] shrink-0 transition-colors cursor-pointer"
+                    >
+                      Atur →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100/80 overflow-hidden" id="form-tambah-jadwal">
@@ -408,8 +526,8 @@ export default function TambahJadwalPage() {
               </div>
               <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
                 <button type="button" onClick={() => navigate('/jadwal')} className="px-6 py-2.5 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-xl transition-all text-sm">Batal</button>
-                <button type="submit" disabled={isSubmitting}
-                  className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-red transition-all text-sm disabled:opacity-70 flex items-center gap-2" id="btn-submit-jadwal">
+                <button type="submit" disabled={isSubmitting || staseList.length === 0 || staseTanpaPembimbing.length > 0}
+                  className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-md hover:shadow-glow-red transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" id="btn-submit-jadwal">
                   {isSubmitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</> : <><SaveIcon className="w-5 h-5" /> Simpan Jadwal</>}
                 </button>
               </div>
@@ -438,6 +556,7 @@ export default function TambahJadwalPage() {
               </ul>
             </div>
           </div>
+        </div>
         </div>
       )}
     </Layout>

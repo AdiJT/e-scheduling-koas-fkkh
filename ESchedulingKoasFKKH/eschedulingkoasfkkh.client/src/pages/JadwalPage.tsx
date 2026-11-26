@@ -129,6 +129,35 @@ const eventStyleGetter = (event: any) => {
   };
 };
 
+interface StaseKurangPembimbingItem {
+  id: number;
+  nama: string;
+  jenis: string;
+  subStaseKosong: string[];
+}
+
+function getStaseTanpaPembimbing(staseList: Stase[]): StaseKurangPembimbingItem[] {
+  const hasil: StaseKurangPembimbingItem[] = [];
+  for (const s of staseList) {
+    const daftarSub = [...(s.daftarSubStase || [])].sort((a, b) => a.urutan - b.urutan);
+    if (daftarSub.length > 0) {
+      const subKosong = daftarSub
+        .filter((sub) => (!sub.daftarDefaultPembimbing || sub.daftarDefaultPembimbing.length === 0) && !sub.idDefaultPembimbing)
+        .map((sub) => sub.nama);
+      if (subKosong.length > 0) {
+        hasil.push({ id: s.id, nama: s.nama, jenis: s.jenis, subStaseKosong: subKosong });
+      }
+      continue;
+    }
+
+    const hasPembimbing = (s.daftarPembimbing && s.daftarPembimbing.length > 0) || Boolean(s.idKoordinator);
+    if (!hasPembimbing) {
+      hasil.push({ id: s.id, nama: s.nama, jenis: s.jenis, subStaseKosong: [] });
+    }
+  }
+  return hasil;
+}
+
 export default function JadwalPage() {
   const navigate = useNavigate();
   const { user, mahasiswaAccess } = useAuth();
@@ -185,6 +214,8 @@ export default function JadwalPage() {
   const [generateTahunAjaran, setGenerateTahunAjaran] = useState<number | ''>('');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
+  const [staseList, setStaseList] = useState<Stase[]>([]);
+  const [staseLoaded, setStaseLoaded] = useState(false);
   
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
@@ -195,10 +226,11 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const [result, taData, kData] = await Promise.all([
+      const [result, taData, kData, sData] = await Promise.all([
         jadwalApi.getAll(undefined, undefined, filterTahunAjaran ? Number(filterTahunAjaran) : undefined),
         tahunAjaranApi.getAll(),
-        kelompokApi.getAll()
+        kelompokApi.getAll(),
+        !isMahasiswa ? staseApi.getAll().catch(() => null) : Promise.resolve(null)
       ]);
 
       setData(result);
@@ -207,6 +239,10 @@ export default function JadwalPage() {
         : taData;
       setTahunAjaranList(visibleTa.sort((a, b) => b.tahun - a.tahun));
       setKelompokList(kData);
+      if (sData) {
+        setStaseList(sData);
+        setStaseLoaded(true);
+      }
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
     } finally {
@@ -418,6 +454,8 @@ export default function JadwalPage() {
     setEditConfirmed(false);
   };
 
+  const staseTanpaPembimbing = getStaseTanpaPembimbing(staseList);
+
   const openGenerateModal = () => {
     setGenerateStartDate((current) => current || getDefaultGenerateDate());
     setGenerateError(null);
@@ -428,9 +466,27 @@ export default function JadwalPage() {
       setGenerateTahunAjaran(activeTa ? activeTa.id : '');
     }
     setShowGenerateModal(true);
+    staseApi.getAll()
+      .then((sData) => {
+        setStaseList(sData);
+        setStaseLoaded(true);
+      })
+      .catch(() => {});
   };
 
   const handleGenerate = async () => {
+    if (!staseLoaded) return;
+
+    if (staseList.length === 0) {
+      setGenerateError('Belum ada data stase di sistem. Silakan buat stase terlebih dahulu sebelum membuat jadwal.');
+      return;
+    }
+
+    if (staseTanpaPembimbing.length > 0) {
+      setGenerateError(`Masih ada ${staseTanpaPembimbing.length} stase yang belum memiliki minimal 1 dosen pembimbing. Lengkapi data stase terlebih dahulu.`);
+      return;
+    }
+
     if (!generateTahunAjaran) {
       setGenerateError('Tahun ajaran target wajib dipilih.');
       return;
@@ -1467,8 +1523,8 @@ export default function JadwalPage() {
       )}
 
       {showGenerateModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md mx-4 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-lg mx-auto animate-scale-in my-auto">
             <div className="mb-5">
               <h3 className="text-lg font-bold text-primary-900 mb-1">Generate Jadwal Otomatis</h3>
               <p className="text-sm text-slate-500">
@@ -1477,9 +1533,89 @@ export default function JadwalPage() {
             </div>
 
             {generateError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-red-700 text-xs font-medium animate-fade-in">
-                <InfoIcon className="w-4 h-4 text-red-500 shrink-0" />
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 text-xs font-medium animate-fade-in">
+                <InfoIcon className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <span>{generateError}</span>
+              </div>
+            )}
+
+            {/* Peringatan Kesiapan Pembimbing Stase */}
+            {staseLoaded && staseList.length === 0 && (
+              <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-2 animate-fade-in">
+                <p className="font-bold text-sm flex items-center gap-2 text-amber-950">
+                  <span>⚠️</span>
+                  <span>Belum Ada Data Stase</span>
+                </p>
+                <p className="text-amber-800 leading-relaxed">
+                  Jadwal belum dapat dibuat karena belum ada stase yang terdaftar di sistem. Silakan buat data stase beserta dosen pembimbingnya terlebih dahulu.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setShowGenerateModal(false); navigate('/stase'); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  <span>Buat / Kelola Stase →</span>
+                </button>
+              </div>
+            )}
+
+            {staseLoaded && staseTanpaPembimbing.length > 0 && (
+              <div className="mb-5 p-4 bg-amber-50/90 border border-amber-300 rounded-xl text-xs text-amber-900 space-y-3 animate-fade-in">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-sm text-amber-950 flex items-center gap-1.5">
+                      <span>⚠️</span>
+                      <span>Lengkapi Dosen Pembimbing Stase Terlebih Dahulu</span>
+                    </p>
+                    <p className="text-amber-800 leading-relaxed">
+                      Setiap stase (dan seluruh sub-stase di dalamnya) wajib memiliki minimal 1 dosen pembimbing sebelum jadwal dapat dibuat.
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-950 font-bold text-[11px] shrink-0">
+                    {staseTanpaPembimbing.length}/{staseList.length} Stase
+                  </span>
+                </div>
+
+                <div className="max-h-44 overflow-y-auto pr-1 space-y-1.5">
+                  {staseTanpaPembimbing.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 bg-white/90 border border-amber-200 rounded-lg px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-slate-800">{item.nama}</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600">
+                            {item.jenis}
+                          </span>
+                        </div>
+                        {item.subStaseKosong.length > 0 && (
+                          <p className="text-[11px] text-rose-700 mt-0.5">
+                            Sub-stase belum ada pembimbing ({item.subStaseKosong.length}): {item.subStaseKosong.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setShowGenerateModal(false); navigate(`/stase/${item.id}`); }}
+                        className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-md text-[11px] shrink-0 transition-colors cursor-pointer"
+                      >
+                        Atur →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-amber-200/70">
+                  <span className="text-[11px] text-amber-800">Klik <strong>Atur</strong> pada stase untuk menambahkan pembimbing.</span>
+                  <button
+                    type="button"
+                    onClick={() => { setShowGenerateModal(false); navigate('/stase'); }}
+                    className="font-bold text-amber-950 hover:text-amber-700 underline cursor-pointer shrink-0"
+                  >
+                    Buka Kelola Stase →
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1559,6 +1695,9 @@ export default function JadwalPage() {
                 onClick={handleGenerate}
                 disabled={
                   isGenerating || 
+                  !staseLoaded ||
+                  staseList.length === 0 ||
+                  staseTanpaPembimbing.length > 0 ||
                   !generateStartDate || 
                   !generateTahunAjaran || 
                   kelompokList.filter(k => k.idTahunAjaran === Number(generateTahunAjaran)).length === 0

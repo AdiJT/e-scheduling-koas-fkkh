@@ -20,6 +20,14 @@ public sealed class GenerateJadwalResult
     public List<GenerateJadwalKelompokSummary> KelompokDilewati { get; init; } = [];
 }
 
+public sealed class StaseTanpaPembimbingInfo
+{
+    public required int Id { get; init; }
+    public required string Nama { get; init; }
+    public required string Jenis { get; init; }
+    public List<string> SubStaseTanpaPembimbing { get; init; } = [];
+}
+
 public sealed class GenerateJadwalKelompokSummary
 {
     public required int Id { get; init; }
@@ -54,12 +62,88 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
         _hariLiburService = hariLiburService;
     }
 
+    internal static List<StaseTanpaPembimbingInfo> CariStaseTanpaPembimbing(IEnumerable<Stase> staseList)
+    {
+        var hasil = new List<StaseTanpaPembimbingInfo>();
+
+        foreach (var stase in staseList.OrderBy(s => s.Id).ThenBy(s => s.Nama))
+        {
+            var daftarSub = (stase.DaftarSubStase ?? [])
+                .OrderBy(sub => sub.Urutan)
+                .ThenBy(sub => sub.Id)
+                .ToList();
+
+            if (daftarSub.Count > 0)
+            {
+                var subKosong = daftarSub
+                    .Where(sub => sub.DaftarDefaultPembimbing is null || sub.DaftarDefaultPembimbing.Count == 0)
+                    .Select(sub => sub.Nama)
+                    .ToList();
+
+                if (subKosong.Count > 0)
+                {
+                    hasil.Add(new StaseTanpaPembimbingInfo
+                    {
+                        Id = stase.Id,
+                        Nama = stase.Nama,
+                        Jenis = stase.Jenis.ToString(),
+                        SubStaseTanpaPembimbing = subKosong
+                    });
+                }
+                continue;
+            }
+
+            var hasPembimbing = (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
+                || stase.Koordinator is not null;
+
+            if (!hasPembimbing)
+            {
+                hasil.Add(new StaseTanpaPembimbingInfo
+                {
+                    Id = stase.Id,
+                    Nama = stase.Nama,
+                    Jenis = stase.Jenis.ToString()
+                });
+            }
+        }
+
+        return hasil;
+    }
+
+    internal static string BuatRingkasanErrorStase(List<StaseTanpaPembimbingInfo> missing)
+    {
+        var bagian = missing.Select(m => m.SubStaseTanpaPembimbing.Count > 0
+            ? $"{m.Nama} (sub-stase kosong: {string.Join(", ", m.SubStaseTanpaPembimbing)})"
+            : m.Nama);
+
+        return $"Tidak dapat membuat jadwal karena masih terdapat {missing.Count} stase yang belum memiliki minimal 1 dosen pembimbing: {string.Join("; ", bagian)}. Lengkapi dosen pembimbing pada stase terlebih dahulu.";
+    }
+
+    private static Pembimbing? PilihPembimbingAcak(Stase stase)
+    {
+        if (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
+        {
+            return stase.DaftarPembimbing[Random.Shared.Next(stase.DaftarPembimbing.Count)];
+        }
+        return stase.Koordinator;
+    }
+
     public async Task<Result<GenerateJadwalResult>> GenerateAsync(int idTahunAjaran, DateOnly? tanggalMulaiAcuan = null, CancellationToken cancellationToken = default)
     {
         var staseList = await _staseRepository.GetAll();
+        if (staseList.Count == 0)
+        {
+            return new Error("Jadwal.Generate", "Belum ada data stase di sistem. Silakan buat data stase dan tambahkan minimal 1 dosen pembimbing terlebih dahulu.");
+        }
+
+        var staseTanpaPembimbing = CariStaseTanpaPembimbing(staseList);
+        if (staseTanpaPembimbing.Count > 0)
+        {
+            return new Error("Jadwal.Generate", BuatRingkasanErrorStase(staseTanpaPembimbing));
+        }
+
         var semuaKelompok = await _kelompokRepository.GetAll();
         var kelompokList = semuaKelompok.Where(x => x.IdTahunAjaran == idTahunAjaran).ToList();
-        var allPembimbing = await _pembimbingRepository.GetAll();
 
         if (kelompokList.Count == 0)
         {
@@ -72,9 +156,6 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
             TanggalMulaiAcuan = tanggalMulaiAcuanFinal,
             KelompokDiproses = kelompokList.Count,
         };
-
-        if (staseList.Count == 0)
-            return result;
 
         var pemakaianStaseTerpisah = BangunPetaPemakaianStaseTerpisah(staseList);
         var staseSeminar = staseList.FirstOrDefault(x => x.Jenis == JenisStase.Seminar);
@@ -120,20 +201,9 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                 var tanggalSelesai = kandidat.TanggalSelesai;
 
                 // Pilih Pembimbing untuk stase biasa (jika stase tidak memiliki sub-stase)
-                Pembimbing? pembimbingStase = null;
-                if (stase.DaftarSubStase.Count == 0)
-                {
-                    if (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
-                    {
-                        var indexAcak = Random.Shared.Next(stase.DaftarPembimbing.Count);
-                        pembimbingStase = stase.DaftarPembimbing[indexAcak];
-                    }
-                    else if (allPembimbing.Count > 0)
-                    {
-                        var indexAcak = Random.Shared.Next(allPembimbing.Count);
-                        pembimbingStase = allPembimbing[indexAcak];
-                    }
-                }
+                Pembimbing? pembimbingStase = stase.DaftarSubStase.Count == 0
+                    ? PilihPembimbingAcak(stase)
+                    : null;
 
                 var newJadwal = new Jadwal
                 {
@@ -145,22 +215,9 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
 
                 foreach (var sub in stase.DaftarSubStase)
                 {
-                    Pembimbing? pembimbingAcak = null;
-                    if (sub.DaftarDefaultPembimbing is not null && sub.DaftarDefaultPembimbing.Count > 0)
-                    {
-                        var indexAcak = Random.Shared.Next(sub.DaftarDefaultPembimbing.Count);
-                        pembimbingAcak = sub.DaftarDefaultPembimbing[indexAcak];
-                    }
-                    else if (stase.DaftarPembimbing is not null && stase.DaftarPembimbing.Count > 0)
-                    {
-                        var indexAcak = Random.Shared.Next(stase.DaftarPembimbing.Count);
-                        pembimbingAcak = stase.DaftarPembimbing[indexAcak];
-                    }
-                    else if (allPembimbing.Count > 0)
-                    {
-                        var indexAcak = Random.Shared.Next(allPembimbing.Count);
-                        pembimbingAcak = allPembimbing[indexAcak];
-                    }
+                    var pembimbingAcak = sub.DaftarDefaultPembimbing is not null && sub.DaftarDefaultPembimbing.Count > 0
+                        ? sub.DaftarDefaultPembimbing[Random.Shared.Next(sub.DaftarDefaultPembimbing.Count)]
+                        : PilihPembimbingAcak(stase);
 
                     newJadwal.DaftarJadwalSubStase.Add(new JadwalSubStase
                     {
@@ -190,7 +247,8 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                     {
                         TanggalMulai = tanggalBerikutnya,
                         Kelompok = kelompok,
-                        Stase = staseSeminar
+                        Stase = staseSeminar,
+                        Pembimbing = PilihPembimbingAcak(staseSeminar)
                     };
 
                     _jadwalRepository.Add(jadwalSeminar);
@@ -206,7 +264,8 @@ internal sealed class JadwalAutoScheduler : IJadwalAutoScheduler
                         {
                             TanggalMulai = GeserKeHariKerja(jadwalSeminar.TanggalSelesai(_hariLiburService).AddDays(1)),
                             Kelompok = kelompok,
-                            Stase = staseUjian
+                            Stase = staseUjian,
+                            Pembimbing = PilihPembimbingAcak(staseUjian)
                         };
                         _jadwalRepository.Add(jadwalUjian);
                         staseDibuat.Add(staseUjian.Nama);
