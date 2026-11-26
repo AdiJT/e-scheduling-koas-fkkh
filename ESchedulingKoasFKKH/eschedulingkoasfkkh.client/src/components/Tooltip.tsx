@@ -5,9 +5,10 @@ interface TooltipProps {
   content: string;
   children: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
+  className?: string;
 }
 
-export default function Tooltip({ content, children, position = 'bottom' }: TooltipProps) {
+export default function Tooltip({ content, children, position = 'bottom', className = '' }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,7 @@ export default function Tooltip({ content, children, position = 'bottom' }: Tool
   return (
     <div
       ref={triggerRef}
-      className="inline-flex items-center justify-center"
+      className={`inline-flex items-center justify-center ${className}`}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >

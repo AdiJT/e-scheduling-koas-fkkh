@@ -17,6 +17,7 @@ import {
   MegaphoneIcon,
   UsersIcon,
   ActivityLogIcon,
+  SettingsIcon,
 } from './Icons';
 
 interface NavItem {
@@ -103,7 +104,8 @@ const navSections = (userRole?: string, canMahasiswaViewJadwalKelompok = true): 
       title: 'Pengaturan Sistem',
       items: [
         { id: 'manajemen-pengguna', label: 'Manajemen Pengguna', icon: UsersIcon, path: '/manajemen-pengguna' },
-        { id: 'log-aktivitas', label: 'Log Aktivitas', icon: ActivityLogIcon, path: '/log-aktivitas' }
+        { id: 'log-aktivitas', label: 'Log Aktivitas', icon: ActivityLogIcon, path: '/log-aktivitas' },
+        { id: 'pengaturan-sistem', label: 'Pengaturan Sistem', icon: SettingsIcon, path: '/pengaturan-sistem' }
       ]
     });
   }

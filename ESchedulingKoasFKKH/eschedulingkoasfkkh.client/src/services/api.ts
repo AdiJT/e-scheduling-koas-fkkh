@@ -1256,4 +1256,147 @@ export const activityLogApi = {
   },
 };
 
+// ============================================================
+// PENGATURAN SISTEM API (FAQ, Kontak, Hari Libur Kalender)
+// ============================================================
+export interface FaqItemDto {
+  id: number;
+  pertanyaan: string;
+  jawaban: string;
+  urutan: number;
+  isAktif: boolean;
+  updatedAt?: string;
+}
+
+export interface FaqItemInput {
+  pertanyaan: string;
+  jawaban: string;
+  urutan: number;
+  isAktif: boolean;
+}
+
+export interface KontakSettingDto {
+  id: number;
+  judul: string;
+  subJudul: string;
+  lokasi: string;
+  email: string;
+  telepon?: string | null;
+  whatsApp?: string | null;
+  jamPelayanan: string;
+  catatan?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface KontakSettingInput {
+  judul: string;
+  subJudul: string;
+  lokasi: string;
+  email: string;
+  telepon?: string | null;
+  whatsApp?: string | null;
+  jamPelayanan: string;
+  catatan?: string | null;
+}
+
+export interface HariLiburDto {
+  id: number;
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  nama: string;
+  keterangan?: string | null;
+  jumlahHari: number;
+  updatedAt?: string;
+}
+
+export interface HariLiburInput {
+  tanggalMulai: string;
+  tanggalSelesai?: string;
+  nama: string;
+  keterangan?: string | null;
+}
+
+export const pengaturanSistemApi = {
+  getFaqPublic: async (): Promise<FaqItemDto[]> => {
+    const res = await fetch(`${BASE_URL}/pengaturan-sistem/faq`);
+    return handleResponse<FaqItemDto[]>(res);
+  },
+
+  getFaqAdmin: async (): Promise<FaqItemDto[]> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/faq?includeInactive=true`);
+    return handleResponse<FaqItemDto[]>(res);
+  },
+
+  createFaq: async (data: FaqItemInput): Promise<FaqItemDto> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/faq`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<FaqItemDto>(res);
+  },
+
+  updateFaq: async (id: number, data: FaqItemInput): Promise<FaqItemDto> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/faq/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<FaqItemDto>(res);
+  },
+
+  deleteFaq: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/faq/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+
+  getKontak: async (): Promise<KontakSettingDto> => {
+    const res = await fetch(`${BASE_URL}/pengaturan-sistem/kontak`);
+    return handleResponse<KontakSettingDto>(res);
+  },
+
+  updateKontak: async (data: KontakSettingInput): Promise<KontakSettingDto> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/kontak`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<KontakSettingDto>(res);
+  },
+
+  getHariLibur: async (tahun?: number): Promise<HariLiburDto[]> => {
+    const qs = tahun !== undefined ? `?tahun=${tahun}` : '';
+    const res = await fetch(`${BASE_URL}/pengaturan-sistem/hari-libur${qs}`);
+    return handleResponse<HariLiburDto[]>(res);
+  },
+
+  createHariLibur: async (data: HariLiburInput): Promise<HariLiburDto> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/hari-libur`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<HariLiburDto>(res);
+  },
+
+  updateHariLibur: async (id: number, data: HariLiburInput): Promise<HariLiburDto> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/hari-libur/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<HariLiburDto>(res);
+  },
+
+  deleteHariLibur: async (id: number): Promise<void> => {
+    const res = await apiFetch(`${BASE_URL}/pengaturan-sistem/hari-libur/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
+  },
+};
+
+
 

@@ -407,6 +407,273 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.ToTable("Broadcast", (string)null);
                 });
 
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.FaqItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsAktif")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Jawaban")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Pertanyaan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Urutan")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Urutan");
+
+                    b.ToTable("FaqItem", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsAktif = true,
+                            Jawaban = "Anda wajib menggunakan akun Google dengan email yang sudah terhubung atau terdaftar pada profil akun SIADIKNONA Anda. Sistem akan mencocokkan email Google dengan data SIADIKNONA.",
+                            Pertanyaan = "Email Google apa yang dapat saya gunakan untuk masuk?",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Urutan = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsAktif = true,
+                            Jawaban = "Silakan perbarui data email aktif Anda pada portal SIADIKNONA atau koordinasikan dengan bagian akademik/admin FKKH UNDANA agar data email Anda dapat disinkronkan ke dalam sistem penjadwalan.",
+                            Pertanyaan = "Bagaimana jika email saya belum terhubung ke SIADIKNONA?",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Urutan = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsAktif = true,
+                            Jawaban = "Ya, Anda tetap dapat login secara manual. Cukup masukkan email terdaftar Anda dan password pada form input di bawah tombol Google.",
+                            Pertanyaan = "Apakah saya masih bisa login dengan email dan password manual?",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Urutan = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsAktif = true,
+                            Jawaban = "Jika email Anda terdaftar di SIADIKNONA, Anda bisa langsung masuk menggunakan opsi \"Masuk dengan Google\". Atau, Anda dapat menghubungi Administrator FKKH UNDANA untuk bantuan reset password akun manual.",
+                            Pertanyaan = "Bagaimana jika saya lupa password akun manual saya?",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Urutan = 4
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsAktif = true,
+                            Jawaban = "Pesan ini muncul jika email akun Google yang Anda pilih belum tercatat pada data SIADIKNONA di sistem penjadwalan. Pastikan Anda memilih akun Google yang benar sesuai email di SIADIKNONA.",
+                            Pertanyaan = "Muncul pesan \"Akun Belum Terdaftar\" saat login Google, apa penyebabnya?",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Urutan = 5
+                        });
+                });
+
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.HariLibur", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Keterangan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nama")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("TanggalMulai")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("TanggalSelesai")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TanggalMulai", "TanggalSelesai");
+
+                    b.ToTable("HariLibur", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Isra Mikraj Muhammad SAW",
+                            TanggalMulai = new DateOnly(2026, 1, 16),
+                            TanggalSelesai = new DateOnly(2026, 1, 16),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Cuti Bersama & Tahun Baru Imlek",
+                            TanggalMulai = new DateOnly(2026, 2, 16),
+                            TanggalSelesai = new DateOnly(2026, 2, 17),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "1 Ramadhan",
+                            TanggalMulai = new DateOnly(2026, 2, 19),
+                            TanggalSelesai = new DateOnly(2026, 2, 19),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Libur Ramadhan & Idul Fitri",
+                            TanggalMulai = new DateOnly(2026, 3, 16),
+                            TanggalSelesai = new DateOnly(2026, 3, 30),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Libur Paskah",
+                            TanggalMulai = new DateOnly(2026, 4, 1),
+                            TanggalSelesai = new DateOnly(2026, 4, 7),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Hari Buruh Internasional",
+                            TanggalMulai = new DateOnly(2026, 5, 1),
+                            TanggalSelesai = new DateOnly(2026, 5, 1),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Kenaikan Isa Al Masih",
+                            TanggalMulai = new DateOnly(2026, 5, 14),
+                            TanggalSelesai = new DateOnly(2026, 5, 14),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Cuti Bersama Kenaikan Isa Al Masih",
+                            TanggalMulai = new DateOnly(2026, 5, 15),
+                            TanggalSelesai = new DateOnly(2026, 5, 15),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Hari Raya Idul Adha",
+                            TanggalMulai = new DateOnly(2026, 5, 27),
+                            TanggalSelesai = new DateOnly(2026, 5, 27),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Cuti Bersama Idul Adha",
+                            TanggalMulai = new DateOnly(2026, 5, 28),
+                            TanggalSelesai = new DateOnly(2026, 5, 28),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Hari Raya Waisak",
+                            TanggalMulai = new DateOnly(2026, 5, 31),
+                            TanggalSelesai = new DateOnly(2026, 5, 31),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Hari Lahir Pancasila",
+                            TanggalMulai = new DateOnly(2026, 6, 1),
+                            TanggalSelesai = new DateOnly(2026, 6, 1),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "1 Muharam (Tahun Baru Islam)",
+                            TanggalMulai = new DateOnly(2026, 6, 16),
+                            TanggalSelesai = new DateOnly(2026, 6, 16),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Hari Proklamasi Kemerdekaan RI",
+                            TanggalMulai = new DateOnly(2026, 8, 17),
+                            TanggalSelesai = new DateOnly(2026, 8, 17),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Maulid Nabi Muhammad SAW",
+                            TanggalMulai = new DateOnly(2026, 8, 25),
+                            TanggalSelesai = new DateOnly(2026, 8, 25),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nama = "Libur Natal dan Tahun Baru",
+                            TanggalMulai = new DateOnly(2026, 12, 22),
+                            TanggalSelesai = new DateOnly(2027, 1, 2),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
+                });
+
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Jadwal", b =>
                 {
                     b.Property<int>("Id")
@@ -486,6 +753,67 @@ namespace ESchedulingKoasFKKH.Infrastructure.Migrations
                     b.HasIndex("IdTahunAjaran");
 
                     b.ToTable("Kelompok");
+                });
+
+            modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.KontakSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Catatan")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("JamPelayanan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Judul")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Lokasi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SubJudul")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Telepon")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("WhatsApp")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("KontakSetting", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "fkkh@undana.ac.id",
+                            JamPelayanan = "Senin - Jumat, 08:00 - 16:00 WITA",
+                            Judul = "Kontak Administrator",
+                            Lokasi = "Gedung Dekanat FKKH Universitas Nusa Cendana",
+                            SubJudul = "Layanan Bantuan Sistem E-Scheduling KOAS FKKH UNDANA",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
                 });
 
             modelBuilder.Entity("ESchedulingKoasFKKH.Domain.ModulUtama.Mahasiswa", b =>

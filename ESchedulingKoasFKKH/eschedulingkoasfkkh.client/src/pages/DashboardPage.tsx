@@ -15,6 +15,11 @@ import {
   MegaphoneIcon,
   BellIcon,
   UsersIcon,
+  PhoneIcon,
+  MailIcon,
+  MapPinIcon,
+  ClockIcon,
+  SettingsIcon,
 } from '../components/Icons';
 import {
   mahasiswaApi,
@@ -24,9 +29,12 @@ import {
   jadwalApi,
   tahunAjaranApi,
   riwayatKelompokApi,
+  pengaturanSistemApi,
   type Jadwal,
+  type KontakSettingDto,
+  type HariLiburDto,
 } from '../services/api';
-import { getHolidays } from '../utils/holidays';
+import { getHolidays, setDynamicHolidays } from '../utils/holidays';
 import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { Calendar, dateFnsLocalizer, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
@@ -253,6 +261,8 @@ export default function DashboardPage() {
   });
 
   const [jadwalList, setJadwalList] = useState<Jadwal[]>([]);
+  const [kontakInfo, setKontakInfo] = useState<KontakSettingDto | null>(null);
+  const [hariLiburList, setHariLiburList] = useState<HariLiburDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [calendarView, setCalendarView] = useState<View>('month');
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -261,7 +271,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const [mhs, pemb, stase, kel, jadwal, taList, riwayatList] = await Promise.all([
+      const [mhs, pemb, stase, kel, jadwal, taList, riwayatList, kontakData, liburData] = await Promise.all([
         mahasiswaApi.getAll().catch(() => []),
         pembimbingApi.getAll().catch(() => []),
         staseApi.getAll().catch(() => []),
@@ -269,7 +279,19 @@ export default function DashboardPage() {
         canMahasiswaViewJadwalKelompok ? jadwalApi.getAll().catch(() => []) : Promise.resolve([]),
         tahunAjaranApi.getAll().catch(() => []),
         riwayatKelompokApi.getAll().catch(() => []),
+        pengaturanSistemApi.getKontak().catch(() => null),
+        pengaturanSistemApi.getHariLibur().catch(() => []),
       ]);
+
+      if (kontakData) {
+        setKontakInfo(kontakData);
+      }
+      if (Array.isArray(liburData)) {
+        setHariLiburList(liburData);
+        if (liburData.length > 0) {
+          setDynamicHolidays(liburData);
+        }
+      }
 
       let userKelNama = mahasiswaAccess?.namaKelompok || '';
       if (isMahasiswa && canMahasiswaViewJadwalKelompok) {
@@ -432,18 +454,134 @@ export default function DashboardPage() {
   const holidaysCurrentYear = getHolidays(currentYear);
   const holidaysNextYear = getHolidays(currentYear + 1);
   const allHolidays = [...holidaysCurrentYear, ...holidaysNextYear];
-  
-  const holidayEvents = allHolidays.map((h, i) => ({
-    id: `holiday_${currentYear}_${i}`,
-    title: `Libur: ${h.name}`,
-    start: new Date(h.date + 'T00:00:00'),
-    end: new Date(h.date + 'T23:59:59'),
-    type: 'holiday',
-    idKelompok: 0,
-    jadwalId: 0,
-  }));
+
+  const holidayEvents = hariLiburList.length > 0
+    ? hariLiburList.map(h => ({
+        id: `holiday_${h.id}`,
+        title: `Libur: ${h.nama}`,
+        start: new Date(h.tanggalMulai + 'T00:00:00'),
+        end: new Date(h.tanggalSelesai + 'T23:59:59'),
+        type: 'holiday',
+        idKelompok: 0,
+        jadwalId: 0,
+      }))
+    : allHolidays.map((h, i) => ({
+        id: `holiday_${currentYear}_${i}`,
+        title: `Libur: ${h.name}`,
+        start: new Date(h.date + 'T00:00:00'),
+        end: new Date(h.date + 'T23:59:59'),
+        type: 'holiday',
+        idKelompok: 0,
+        jadwalId: 0,
+      }));
 
   const calendarEvents = [...jadwalEvents, ...holidayEvents];
+
+  const waDigits = kontakInfo?.whatsApp?.replace(/\D/g, '') || '';
+  const waHref = waDigits
+    ? `https://wa.me/${waDigits.startsWith('0') ? `62${waDigits.slice(1)}` : waDigits}`
+    : '';
+
+  const renderKontakCard = () => (
+    <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-5">
+      <div className="flex items-start justify-between gap-2 mb-3.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <PhoneIcon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-primary-900 truncate">
+              {kontakInfo?.judul || 'Kontak Administrator'}
+            </h3>
+            <p className="text-[11px] text-slate-500 line-clamp-1">
+              {kontakInfo?.subJudul || 'Layanan Bantuan Sistem E-Scheduling KOAS'}
+            </p>
+          </div>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/pengaturan-sistem?tab=kontak')}
+            className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
+          >
+            <SettingsIcon className="w-3.5 h-3.5" />
+            <span>Atur</span>
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2.5 text-xs bg-slate-50/80 border border-slate-100 rounded-xl p-3.5">
+        <div className="flex items-start gap-2.5">
+          <MapPinIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase text-slate-400 block">Lokasi Sekretariat</span>
+            <span className="text-slate-700 font-medium">
+              {kontakInfo?.lokasi || 'Gedung Dekanat FKKH Universitas Nusa Cendana'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2.5">
+          <MailIcon className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase text-slate-400 block">Email Akademik</span>
+            <a
+              href={`mailto:${kontakInfo?.email || 'fkkh@undana.ac.id'}`}
+              className="text-blue-600 font-mono font-semibold hover:underline break-all"
+            >
+              {kontakInfo?.email || 'fkkh@undana.ac.id'}
+            </a>
+          </div>
+        </div>
+
+        {kontakInfo?.telepon && (
+          <div className="flex items-start gap-2.5">
+            <PhoneIcon className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Telepon</span>
+              <span className="text-slate-700 font-medium">{kontakInfo.telepon}</span>
+            </div>
+          </div>
+        )}
+
+        {kontakInfo?.whatsApp && (
+          <div className="flex items-start gap-2.5">
+            <PhoneIcon className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">WhatsApp</span>
+              {waHref ? (
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-700 font-semibold hover:underline"
+                >
+                  {kontakInfo.whatsApp}
+                </a>
+              ) : (
+                <span className="text-slate-700 font-medium">{kontakInfo.whatsApp}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-start gap-2.5">
+          <ClockIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase text-slate-400 block">Jam Pelayanan</span>
+            <span className="text-slate-700 font-medium">
+              {kontakInfo?.jamPelayanan || 'Senin - Jumat, 08:00 - 16:00 WITA'}
+            </span>
+          </div>
+        </div>
+
+        {kontakInfo?.catatan && (
+          <div className="pt-2 border-t border-slate-200/70 text-[11px] text-slate-600">
+            {kontakInfo.catatan}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <Layout>
@@ -565,48 +703,52 @@ export default function DashboardPage() {
 
       {/* Calendar & Schedule Breakdown Section */}
       {isMahasiswa && !canMahasiswaViewJadwalKelompok ? (
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-6 animate-fade-in-up">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                  mahasiswaAccess?.sudahSelesaiAtauTerlewat
-                    ? 'bg-slate-100 text-slate-700 border-slate-300'
-                    : 'bg-sky-50 text-sky-700 border-sky-200'
-                }`}>
-                  Status Periode: {mahasiswaAccess?.statusPeriode || 'Selesai'}
-                </span>
-                {mahasiswaAccess?.namaKelompok && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {mahasiswaAccess.namaKelompok}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100/90 p-6 animate-fade-in-up">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    mahasiswaAccess?.sudahSelesaiAtauTerlewat
+                      ? 'bg-slate-100 text-slate-700 border-slate-300'
+                      : 'bg-sky-50 text-sky-700 border-sky-200'
+                  }`}>
+                    Status Periode: {mahasiswaAccess?.statusPeriode || 'Selesai'}
                   </span>
-                )}
-                {mahasiswaAccess?.tahunAjaran && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                    T.A. {mahasiswaAccess.tahunAjaran}
-                  </span>
-                )}
+                  {mahasiswaAccess?.namaKelompok && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {mahasiswaAccess.namaKelompok}
+                    </span>
+                  )}
+                  {mahasiswaAccess?.tahunAjaran && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      T.A. {mahasiswaAccess.tahunAjaran}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-lg font-bold text-primary-900">
+                  {mahasiswaAccess?.sudahSelesaiAtauTerlewat
+                    ? 'Masa Periode Aktif KOAS Anda Telah Selesai'
+                    : 'Periode Aktif KOAS Anda Belum Dimulai'}
+                </h2>
+                <p className="text-sm text-slate-600 max-w-2xl">
+                  {mahasiswaAccess?.alasanPembatasan || 'Akses jadwal aktif dan kelompok tidak tersedia. Anda dapat meninjau arsip riwayat kelompok Anda.'}
+                </p>
+                <p className="text-xs text-slate-500 font-medium">
+                  Tercatat <span className="font-bold text-teal-700">{stats.riwayatCount} Arsip Stase</span> dalam riwayat kelompok Anda.
+                </p>
               </div>
-              <h2 className="text-lg font-bold text-primary-900">
-                {mahasiswaAccess?.sudahSelesaiAtauTerlewat
-                  ? 'Masa Periode Aktif KOAS Anda Telah Selesai'
-                  : 'Periode Aktif KOAS Anda Belum Dimulai'}
-              </h2>
-              <p className="text-sm text-slate-600 max-w-2xl">
-                {mahasiswaAccess?.alasanPembatasan || 'Akses jadwal aktif dan kelompok tidak tersedia. Anda dapat meninjau arsip riwayat kelompok Anda.'}
-              </p>
-              <p className="text-xs text-slate-500 font-medium">
-                Tercatat <span className="font-bold text-teal-700">{stats.riwayatCount} Arsip Stase</span> dalam riwayat kelompok Anda.
-              </p>
+              <button
+                onClick={() => navigate('/riwayat-kelompok')}
+                className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              >
+                <HistoryIcon className="w-4 h-4" />
+                <span>Lihat Riwayat Kelompok Saya →</span>
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/riwayat-kelompok')}
-              className="px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-            >
-              <HistoryIcon className="w-4 h-4" />
-              <span>Lihat Riwayat Kelompok Saya →</span>
-            </button>
           </div>
+
+          {renderKontakCard()}
         </div>
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -617,12 +759,22 @@ export default function DashboardPage() {
               <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
               Kalender Jadwal Rotasi
             </h2>
-            <button
-              onClick={() => navigate('/jadwal')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-            >
-              Buka Halaman Jadwal →
-            </button>
+            <div className="flex items-center gap-3">
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/pengaturan-sistem?tab=kalender')}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                >
+                  Atur Hari Libur
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/jadwal')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+              >
+                Buka Halaman Jadwal →
+              </button>
+            </div>
           </div>
           <div className="p-5 flex-1 min-h-[500px] overflow-x-auto pb-6">
             <div className="min-w-[800px] h-full">
@@ -770,6 +922,8 @@ export default function DashboardPage() {
               <span>→</span>
             </button>
           </div>
+
+          {renderKontakCard()}
         </div>
       </div>
       )}

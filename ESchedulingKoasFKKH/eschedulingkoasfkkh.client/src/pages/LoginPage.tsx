@@ -2,8 +2,59 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon, GoogleIcon } from '../components/Icons';
+import { InfoIcon, MahasiswaIcon, DetailIcon as EyeIcon, EyeOffIcon, StethoscopeIcon, BookIcon, UserIcon, LockIcon, GoogleIcon, PhoneIcon, MailIcon, MapPinIcon, ClockIcon } from '../components/Icons';
+import { pengaturanSistemApi, type FaqItemDto, type KontakSettingDto } from '../services/api';
 import logo from "../assets/logo_undana.png";
+
+const DEFAULT_FAQ_LIST: FaqItemDto[] = [
+  {
+    id: 1,
+    pertanyaan: 'Email Google apa yang dapat saya gunakan untuk masuk?',
+    jawaban: 'Anda wajib menggunakan akun Google dengan email yang sudah terhubung atau terdaftar pada profil akun SIADIKNONA Anda. Sistem akan mencocokkan email Google dengan data SIADIKNONA.',
+    urutan: 1,
+    isAktif: true,
+  },
+  {
+    id: 2,
+    pertanyaan: 'Bagaimana jika email saya belum terhubung ke SIADIKNONA?',
+    jawaban: 'Silakan perbarui data email aktif Anda pada portal SIADIKNONA atau koordinasikan dengan bagian akademik/admin FKKH UNDANA agar data email Anda dapat disinkronkan ke dalam sistem penjadwalan.',
+    urutan: 2,
+    isAktif: true,
+  },
+  {
+    id: 3,
+    pertanyaan: 'Apakah saya masih bisa login dengan email dan password manual?',
+    jawaban: 'Ya, Anda tetap dapat login secara manual. Cukup masukkan email terdaftar Anda dan password pada form input di bawah tombol Google.',
+    urutan: 3,
+    isAktif: true,
+  },
+  {
+    id: 4,
+    pertanyaan: 'Bagaimana jika saya lupa password akun manual saya?',
+    jawaban: 'Jika email Anda terdaftar di SIADIKNONA, Anda bisa langsung masuk menggunakan opsi "Masuk dengan Google". Atau, Anda dapat menghubungi Administrator FKKH UNDANA untuk bantuan reset password akun manual.',
+    urutan: 4,
+    isAktif: true,
+  },
+  {
+    id: 5,
+    pertanyaan: 'Muncul pesan "Akun Belum Terdaftar" saat login Google, apa penyebabnya?',
+    jawaban: 'Pesan ini muncul jika email akun Google yang Anda pilih belum tercatat pada data SIADIKNONA di sistem penjadwalan. Pastikan Anda memilih akun Google yang benar sesuai email di SIADIKNONA.',
+    urutan: 5,
+    isAktif: true,
+  },
+];
+
+const DEFAULT_KONTAK: KontakSettingDto = {
+  id: 0,
+  judul: 'Kontak Administrator',
+  subJudul: 'Layanan Bantuan Sistem E-Scheduling KOAS FKKH UNDANA',
+  lokasi: 'Gedung Dekanat FKKH Universitas Nusa Cendana',
+  email: 'fkkh@undana.ac.id',
+  telepon: null,
+  whatsApp: null,
+  jamPelayanan: 'Senin - Jumat, 08:00 - 16:00 WITA',
+  catatan: null,
+};
 
 declare global {
   interface Window {
@@ -38,6 +89,8 @@ export default function LoginPage() {
   const [showPanduanModal, setShowPanduanModal] = useState(false);
   const [panduanTab, setPanduanTab] = useState<'login' | 'faq'>('login');
   const [showContactModal, setShowContactModal] = useState(false);
+  const [faqList, setFaqList] = useState<FaqItemDto[]>(DEFAULT_FAQ_LIST);
+  const [kontakInfo, setKontakInfo] = useState<KontakSettingDto>(DEFAULT_KONTAK);
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
@@ -60,6 +113,18 @@ export default function LoginPage() {
       .catch(() => {
         // Non-fatal: tombol Google akan menampilkan pesan saat diklik jika config belum siap
       });
+
+    Promise.all([
+      pengaturanSistemApi.getFaqPublic().catch(() => null),
+      pengaturanSistemApi.getKontak().catch(() => null),
+    ]).then(([faqData, kontakData]) => {
+      if (Array.isArray(faqData)) {
+        setFaqList(faqData);
+      }
+      if (kontakData && kontakData.email) {
+        setKontakInfo(kontakData);
+      }
+    });
   }, []);
 
   const handleGoogleLogin = () => {
@@ -518,40 +583,25 @@ export default function LoginPage() {
               ) : (
                 /* Tab FAQ */
                 <div className="space-y-3">
-                  {[
-                    {
-                      q: 'Email Google apa yang dapat saya gunakan untuk masuk?',
-                      a: 'Anda wajib menggunakan akun Google dengan email yang sudah terhubung atau terdaftar pada profil akun SIADIKNONA Anda. Sistem akan mencocokkan email Google dengan data SIADIKNONA.'
-                    },
-                    {
-                      q: 'Bagaimana jika email saya belum terhubung ke SIADIKNONA?',
-                      a: 'Silakan perbarui data email aktif Anda pada portal SIADIKNONA atau koordinasikan dengan bagian akademik/admin FKKH UNDANA agar data email Anda dapat disinkronkan ke dalam sistem penjadwalan.'
-                    },
-                    {
-                      q: 'Apakah saya masih bisa login dengan email dan password manual?',
-                      a: 'Ya, Anda tetap dapat login secara manual. Cukup masukkan email terdaftar Anda dan password pada form input di bawah tombol Google.'
-                    },
-                    {
-                      q: 'Bagaimana jika saya lupa password akun manual saya?',
-                      a: 'Jika email Anda terdaftar di SIADIKNONA, Anda bisa langsung masuk menggunakan opsi "Masuk dengan Google". Atau, Anda dapat menghubungi Administrator FKKH UNDANA untuk bantuan reset password akun manual.'
-                    },
-                    {
-                      q: 'Muncul pesan "Akun Belum Terdaftar" saat login Google, apa penyebabnya?',
-                      a: 'Pesan ini muncul jika email akun Google yang Anda pilih belum tercatat pada data SIADIKNONA di sistem penjadwalan. Pastikan Anda memilih akun Google yang benar sesuai email di SIADIKNONA.'
-                    }
-                  ].map((item, idx) => (
-                    <div key={idx} className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-1.5">
-                      <p className="font-semibold text-xs sm:text-sm text-slate-800 flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
-                          {idx + 1}
-                        </span>
-                        <span>{item.q}</span>
-                      </p>
-                      <p className="text-xs text-slate-600 pl-7 leading-relaxed">
-                        {item.a}
-                      </p>
+                  {faqList.length === 0 ? (
+                    <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+                      Belum ada daftar FAQ yang tersedia saat ini.
                     </div>
-                  ))}
+                  ) : (
+                    faqList.map((item, idx) => (
+                      <div key={item.id ?? idx} className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-1.5">
+                        <p className="font-semibold text-xs sm:text-sm text-slate-800 flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <span>{item.pertanyaan}</span>
+                        </p>
+                        <p className="text-xs text-slate-600 pl-7 leading-relaxed whitespace-pre-line">
+                          {item.jawaban}
+                        </p>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -588,24 +638,68 @@ export default function LoginPage() {
             <div className="w-13 h-13 mx-auto mb-3 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-primary-900 shadow-soft">
               <UserIcon className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-bold text-slate-800 mb-1">Kontak Administrator</h3>
+            <h3 className="text-base font-bold text-slate-800 mb-1">{kontakInfo.judul || 'Kontak Administrator'}</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Layanan Bantuan Sistem E-Scheduling KOAS FKKH UNDANA
+              {kontakInfo.subJudul || 'Layanan Bantuan Sistem E-Scheduling KOAS FKKH UNDANA'}
             </p>
 
             <div className="bg-slate-50 rounded-2xl p-3.5 text-left text-xs space-y-2.5 border border-slate-100 mb-5">
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Lokasi Sekretariat</span>
-                <span className="text-slate-700 font-medium">Gedung Dekanat FKKH Universitas Nusa Cendana</span>
+              <div className="flex items-start gap-2.5">
+                <MapPinIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Lokasi Sekretariat</span>
+                  <span className="text-slate-700 font-medium">{kontakInfo.lokasi}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Email Akademik</span>
-                <span className="text-blue-600 font-medium font-mono">fkkh@undana.ac.id</span>
+              <div className="flex items-start gap-2.5">
+                <MailIcon className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Email Akademik</span>
+                  <a href={`mailto:${kontakInfo.email}`} className="text-blue-600 font-medium font-mono hover:underline">
+                    {kontakInfo.email}
+                  </a>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Jam Pelayanan</span>
-                <span className="text-slate-700 font-medium">Senin - Jumat, 08:00 - 16:00 WITA</span>
+              {kontakInfo.telepon && (
+                <div className="flex items-start gap-2.5">
+                  <PhoneIcon className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Telepon</span>
+                    <span className="text-slate-700 font-medium">{kontakInfo.telepon}</span>
+                  </div>
+                </div>
+              )}
+              {kontakInfo.whatsApp && (() => {
+                const digits = kontakInfo.whatsApp.replace(/\D/g, '');
+                const waUrl = digits ? `https://wa.me/${digits.startsWith('0') ? `62${digits.slice(1)}` : digits}` : '';
+                return (
+                  <div className="flex items-start gap-2.5">
+                    <PhoneIcon className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-semibold">WhatsApp</span>
+                      {waUrl ? (
+                        <a href={waUrl} target="_blank" rel="noreferrer" className="text-emerald-700 font-semibold hover:underline">
+                          {kontakInfo.whatsApp}
+                        </a>
+                      ) : (
+                        <span className="text-slate-700 font-medium">{kontakInfo.whatsApp}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+              <div className="flex items-start gap-2.5">
+                <ClockIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Jam Pelayanan</span>
+                  <span className="text-slate-700 font-medium">{kontakInfo.jamPelayanan}</span>
+                </div>
               </div>
+              {kontakInfo.catatan && (
+                <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 text-[11px] text-blue-800">
+                  {kontakInfo.catatan}
+                </div>
+              )}
             </div>
 
             <button

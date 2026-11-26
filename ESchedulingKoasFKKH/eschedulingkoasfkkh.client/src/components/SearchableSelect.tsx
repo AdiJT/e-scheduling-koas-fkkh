@@ -6,6 +6,7 @@ export interface SelectOption {
   label: string;
   subLabel?: string;
   badge?: string;
+  badgeClassName?: string;
   disabled?: boolean;
 }
 
@@ -78,6 +79,7 @@ export default function SearchableSelect({
             label: String(opt.label ?? opt.value ?? ''),
             subLabel: opt.subLabel,
             badge: opt.badge,
+            badgeClassName: opt.badgeClassName,
             disabled: opt.disabled,
           };
         }
@@ -406,7 +408,7 @@ export default function SearchableSelect({
             <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
               <span className="font-semibold text-slate-900 truncate">{selectedOption.label}</span>
               {selectedOption.badge && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border shrink-0 ${theme.badge}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border shrink-0 ${selectedOption.badgeClassName || theme.badge}`}>
                   {selectedOption.badge}
                 </span>
               )}
@@ -532,7 +534,7 @@ export default function SearchableSelect({
                             {option.label}
                           </span>
                           {option.badge && (
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold border ${theme.badge}`}>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${option.badgeClassName || theme.badge}`}>
                               {option.badge}
                             </span>
                           )}

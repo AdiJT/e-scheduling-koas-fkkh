@@ -5,6 +5,19 @@ import { kelompokApi, tahunAjaranApi, type TahunAjaran } from '../services/api';
 import { KelompokIcon, SaveIcon, InfoIcon } from '../components/Icons';
 import SearchableSelect from '../components/SearchableSelect';
 
+const getTahunAjaranBadgeClass = (status?: string): string | undefined => {
+  switch (status) {
+    case 'Berjalan':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'Akan Datang':
+      return 'bg-sky-100 text-sky-800 border-sky-200';
+    case 'Selesai':
+      return 'bg-slate-100 text-slate-600 border-slate-300';
+    default:
+      return undefined;
+  }
+};
+
 export default function TambahKelompokPage() {
   const navigate = useNavigate();
   const [nama, setNama] = useState('');
@@ -135,6 +148,7 @@ export default function TambahKelompokPage() {
                   value: ta.id,
                   label: `${ta.tahun} - ${ta.semester}`,
                   badge: ta.status || undefined,
+                  badgeClassName: getTahunAjaranBadgeClass(ta.status),
                 }))}
                 placeholder="-- Pilih Tahun Ajaran --"
                 searchPlaceholder="Cari tahun ajaran..."

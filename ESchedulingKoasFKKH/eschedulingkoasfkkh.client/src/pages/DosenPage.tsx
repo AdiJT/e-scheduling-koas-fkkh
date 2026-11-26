@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { pembimbingApi, type Pembimbing, type DosenDeleteConflictError, type SinergiSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,16 @@ export default function DosenPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteBlockInfo, setDeleteBlockInfo] = useState<DosenDeleteConflictError | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<{ current: number; total: number } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [bulkDeleteSummary, setBulkDeleteSummary] = useState<{
+    deletedCount: number;
+    blocked: DosenDeleteConflictError[];
+    failed: { nama: string; nip: string; reason: string }[];
+  } | null>(null);
 
   // Sync SINERGI state
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -51,6 +61,7 @@ export default function DosenPage() {
       setError(null);
       const result = await pembimbingApi.getAll();
       setData(result);
+      setSelectedIds([]);
     } catch {
       setError('Gagal memuat data dosen. Pastikan server backend sedang berjalan.');
     } finally {
@@ -96,6 +107,36 @@ export default function DosenPage() {
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   const paginatedData = sortedData.slice(startIndex, endIndex);
 
+  // === SELECTION ===
+  const pageIds = useMemo(() => paginatedData.map(d => d.id), [paginatedData]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+  const somePageSelected = pageIds.some(id => selectedIds.includes(id)) && !allPageSelected;
+  const selectedDosenList = useMemo(
+    () => data.filter(d => selectedIds.includes(d.id)),
+    [data, selectedIds]
+  );
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]));
+  };
+
+  const toggleSelectPage = () => {
+    if (allPageSelected) {
+      const pageIdSet = new Set(pageIds);
+      setSelectedIds(prev => prev.filter(id => !pageIdSet.has(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedIds(filteredData.map(d => d.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+  };
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -123,6 +164,7 @@ export default function DosenPage() {
       setDeleting(true);
       await pembimbingApi.delete(selectedId);
       setData(prev => prev.filter(d => d.id !== selectedId));
+      setSelectedIds(prev => prev.filter(id => id !== selectedId));
     } catch (err: unknown) {
       const apiErr = err as Partial<DosenDeleteConflictError> & { status?: number; message?: string };
       if (
@@ -149,6 +191,75 @@ export default function DosenPage() {
       setDeleting(false);
       setShowDeleteModal(false);
       setSelectedId(null);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    const targets = selectedDosenList;
+    if (targets.length === 0) return;
+
+    setBulkDeleting(true);
+    setError(null);
+    setSuccessMessage(null);
+    setBulkDeleteProgress({ current: 0, total: targets.length });
+
+    const deletedIds: number[] = [];
+    const blocked: DosenDeleteConflictError[] = [];
+    const failed: { nama: string; nip: string; reason: string }[] = [];
+
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      setBulkDeleteProgress({ current: i + 1, total: targets.length });
+      try {
+        await pembimbingApi.delete(target.id);
+        deletedIds.push(target.id);
+      } catch (err: unknown) {
+        const apiErr = err as Partial<DosenDeleteConflictError> & { status?: number; message?: string };
+        if (
+          apiErr?.status === 409 &&
+          (Array.isArray(apiErr.koordinatorStase) ||
+            Array.isArray(apiErr.jadwalUtama) ||
+            Array.isArray(apiErr.jadwalSubStase))
+        ) {
+          blocked.push({
+            status: 409,
+            message: apiErr.message || 'Dosen tidak dapat dihapus karena masih aktif bertugas.',
+            namaDosen: apiErr.namaDosen || target.nama || '-',
+            nip: apiErr.nip || target.nip || '-',
+            koordinatorStase: apiErr.koordinatorStase || [],
+            jadwalUtama: apiErr.jadwalUtama || [],
+            jadwalSubStase: apiErr.jadwalSubStase || [],
+            langkahPenyelesaian: apiErr.langkahPenyelesaian || [],
+          });
+        } else {
+          failed.push({
+            nama: target.nama,
+            nip: target.nip,
+            reason: apiErr?.message || 'Gagal menghapus data dosen.',
+          });
+        }
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      const deletedSet = new Set(deletedIds);
+      setData(prev => prev.filter(d => !deletedSet.has(d.id)));
+    }
+    setSelectedIds([]);
+    setBulkDeleting(false);
+    setBulkDeleteProgress(null);
+    setShowBulkDeleteModal(false);
+
+    if (blocked.length === 0 && failed.length === 0) {
+      setSuccessMessage(`Berhasil menghapus ${deletedIds.length} data dosen.`);
+    } else if (deletedIds.length === 0 && blocked.length === 1 && failed.length === 0) {
+      setDeleteBlockInfo(blocked[0]);
+    } else {
+      setBulkDeleteSummary({
+        deletedCount: deletedIds.length,
+        blocked,
+        failed,
+      });
     }
   };
 
@@ -258,12 +369,19 @@ export default function DosenPage() {
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error & Success Alert */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
           <span className="text-red-500 text-lg">⚠️</span>
           <p className="text-sm text-red-700 flex-1">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg cursor-pointer">✕</button>
+        </div>
+      )}
+      {successMessage && (
+        <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-emerald-600 text-lg">✅</span>
+          <p className="text-sm text-emerald-800 font-medium flex-1">{successMessage}</p>
+          <button onClick={() => setSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-700 text-lg cursor-pointer">✕</button>
         </div>
       )}
 
@@ -294,36 +412,38 @@ export default function DosenPage() {
             </Tooltip>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Sinkron SINERGI Button (Admin Only) */}
-            {!isPengelola && (
-              <Tooltip content="Tarik & sinkronkan dosen Kedokteran Hewan (Aktif & Tugas Belajar) dari SINERGI" position="bottom">
+          {!isPengelola && (
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+              {/* Sinkron SINERGI Button (Admin Only) */}
+              <Tooltip
+                content="Tarik & sinkronkan dosen Kedokteran Hewan (Aktif & Tugas Belajar) dari SINERGI"
+                position="bottom"
+                className="w-full sm:w-auto"
+              >
                 <button
                   onClick={openSyncModal}
-                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
-                    font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                  className="w-full sm:w-auto justify-center px-3.5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
+                    font-semibold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                   id="btn-sync-sinergi"
                 >
-                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
+                  <RefreshIcon className="w-4 h-4 text-indigo-600 shrink-0" />
                   <span className="hidden sm:inline">Sinkron SINERGI</span>
                   <span className="sm:hidden">SINERGI</span>
                 </button>
               </Tooltip>
-            )}
 
-            {/* Add Dosen Button (Admin Only) */}
-            {!isPengelola && (
+              {/* Add Dosen Button (Admin Only) */}
               <button
                 onClick={() => navigate('/dosen/tambah')}
-                className="w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
+                className="w-full sm:w-auto px-4 sm:px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
                   text-white font-semibold rounded-xl shadow-md hover:shadow-glow-green 
-                  active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
+                  active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                 id="btn-tambah-dosen"
               >
                 <span className="text-sm font-bold leading-none">+</span> Tambah Dosen
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -348,9 +468,20 @@ export default function DosenPage() {
           <>
             {/* Table Header Info */}
             <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <p className="text-slate-500 font-medium">
-                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Dosen
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-slate-500 font-medium">
+                  Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Dosen
+                </p>
+                {!isPengelola && paginatedData.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleSelectPage}
+                    className="md:hidden text-xs font-semibold text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                  >
+                    {allPageSelected ? 'Batal' : 'Pilih Semua'}
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <label className="text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
                 <select
@@ -367,11 +498,62 @@ export default function DosenPage() {
               </div>
             </div>
 
+            {/* Bulk Action Bar */}
+            {!isPengelola && selectedIds.length > 0 && (
+              <div className="px-3.5 sm:px-5 py-2.5 bg-emerald-50 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-2.5 animate-fade-in">
+                <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm">
+                  <span className="font-bold text-emerald-900">
+                    {selectedIds.length} dosen dipilih
+                  </span>
+                  {selectedIds.length < filteredData.length && (
+                    <button
+                      type="button"
+                      onClick={selectAllFiltered}
+                      className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+                    >
+                      Pilih semua ({filteredData.length})
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-lg text-xs transition-colors cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkDeleteModal(true)}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    id="btn-bulk-delete-dosen"
+                  >
+                    <DeleteIcon className="w-3.5 h-3.5" />
+                    <span>Hapus Terpilih ({selectedIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Mobile View: Card List (Screens < md) */}
             <div className="md:hidden divide-y divide-slate-100">
-              {paginatedData.map((dsn, index) => (
-                <div key={dsn.id} className="p-3.5 hover:bg-slate-50/70 transition-colors">
+              {paginatedData.map((dsn, index) => {
+                const isSelected = selectedIds.includes(dsn.id);
+                return (
+                <div key={dsn.id} className={`p-3.5 transition-colors ${isSelected ? 'bg-emerald-50/50' : 'hover:bg-slate-50/70'}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
+                    {!isPengelola && (
+                      <div className="pt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(dsn.id)}
+                          aria-label={`Pilih ${dsn.nama}`}
+                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <div
                       className="flex items-start gap-2.5 flex-1 cursor-pointer"
                       onClick={() => navigate(`/dosen/${dsn.id}`)}
@@ -456,7 +638,8 @@ export default function DosenPage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop View: Full Table (Screens >= md) */}
@@ -464,6 +647,20 @@ export default function DosenPage() {
               <table className="w-full table-auto" id="table-dosen">
                 <thead>
                   <tr className="bg-gradient-to-r from-emerald-600 to-green-700 text-white">
+                    {!isPengelola && (
+                      <th className="px-3.5 py-3.5 text-center whitespace-nowrap w-11">
+                        <input
+                          type="checkbox"
+                          checked={allPageSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = somePageSelected;
+                          }}
+                          onChange={toggleSelectPage}
+                          aria-label="Pilih semua dosen di halaman ini"
+                          className="w-4 h-4 rounded border-white/60 bg-white/90 text-emerald-600 focus:ring-white/40 cursor-pointer align-middle"
+                        />
+                      </th>
+                    )}
                     <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-12">No</th>
                     <th
                       onClick={() => handleSort('nip')}
@@ -490,8 +687,26 @@ export default function DosenPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedData.map((dsn, index) => (
-                    <tr key={dsn.id} className="hover:bg-green-50/30 transition-colors duration-150 group">
+                  {paginatedData.map((dsn, index) => {
+                    const isSelected = selectedIds.includes(dsn.id);
+                    return (
+                    <tr
+                      key={dsn.id}
+                      className={`transition-colors duration-150 group ${
+                        isSelected ? 'bg-emerald-50/50 hover:bg-emerald-50/80' : 'hover:bg-green-50/30'
+                      }`}
+                    >
+                      {!isPengelola && (
+                        <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(dsn.id)}
+                            aria-label={`Pilih ${dsn.nama}`}
+                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer align-middle"
+                          />
+                        </td>
+                      )}
                       <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
 
                       {/* NIP */}
@@ -587,7 +802,8 @@ export default function DosenPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -767,6 +983,150 @@ export default function DosenPage() {
                 {deleting ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
                 ) : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md animate-scale-in">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h3 className="text-lg font-bold text-primary-900 mb-1">
+                Hapus {selectedDosenList.length} Dosen Terpilih?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Data dan akun login dosen yang dihapus tidak dapat dikembalikan.
+              </p>
+            </div>
+
+            <div className="max-h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-1.5 mb-5">
+              {selectedDosenList.map((dsn, idx) => (
+                <div key={dsn.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-slate-100 text-xs">
+                  <span className="font-semibold text-slate-800 truncate">
+                    {idx + 1}. {dsn.nama}
+                  </span>
+                  <span className="font-mono text-slate-500 shrink-0">{dsn.nip}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all duration-200 text-sm cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md hover:shadow-glow-red transition-all duration-200 text-sm disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
+                id="btn-confirm-bulk-delete-dosen"
+              >
+                {bulkDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>
+                      Menghapus{bulkDeleteProgress ? ` (${bulkDeleteProgress.current}/${bulkDeleteProgress.total})` : '...'}
+                    </span>
+                  </>
+                ) : (
+                  `Ya, Hapus (${selectedDosenList.length})`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Summary Modal (Partial / Blocked) */}
+      {bulkDeleteSummary && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            <div className="p-5 bg-gradient-to-r from-amber-500 to-red-600 text-white flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-lg leading-tight">Ringkasan Hapus Massal Dosen</h3>
+                <p className="text-xs text-amber-50 mt-0.5">
+                  {bulkDeleteSummary.deletedCount} berhasil dihapus • {bulkDeleteSummary.blocked.length + bulkDeleteSummary.failed.length} gagal/dilewati
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteSummary(null)}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              {bulkDeleteSummary.deletedCount > 0 && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800">
+                  ✅ {bulkDeleteSummary.deletedCount} dosen berhasil dihapus.
+                </div>
+              )}
+
+              {bulkDeleteSummary.blocked.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Tidak Dapat Dihapus Karena Masih Aktif ({bulkDeleteSummary.blocked.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {bulkDeleteSummary.blocked.map((item, idx) => (
+                      <div key={`blocked-${idx}`} className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-800 truncate">{item.namaDosen}</div>
+                          <div className="text-xs font-mono text-slate-500">NIP: {item.nip}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkDeleteSummary(null);
+                            setDeleteBlockInfo(item);
+                          }}
+                          className="px-2.5 py-1 bg-white border border-amber-300 text-amber-800 hover:bg-amber-50 font-medium rounded-lg text-xs shrink-0 transition-colors cursor-pointer"
+                        >
+                          Lihat Alasan
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {bulkDeleteSummary.failed.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Gagal Dihapus ({bulkDeleteSummary.failed.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {bulkDeleteSummary.failed.map((item, idx) => (
+                      <div key={`failed-${idx}`} className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800">
+                        <div className="font-semibold">{item.nama} ({item.nip})</div>
+                        <div className="text-red-700 mt-0.5">{item.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setBulkDeleteSummary(null)}
+                className="px-5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl text-sm cursor-pointer"
+              >
+                Tutup
               </button>
             </div>
           </div>

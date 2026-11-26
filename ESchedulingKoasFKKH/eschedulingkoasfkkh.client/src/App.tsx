@@ -23,6 +23,7 @@ import BroadcastPage from './pages/BroadcastPage';
 import NotifikasiPage from './pages/NotifikasiPage';
 import ManajemenPenggunaPage from './pages/ManajemenPenggunaPage';
 import LogAktivitasPage from './pages/LogAktivitasPage';
+import PengaturanSistemPage from './pages/PengaturanSistemPage';
 
 function App() {
     return (
@@ -39,6 +40,9 @@ function App() {
                     } />
                     <Route path="/log-aktivitas" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator']}><LogAktivitasPage /></ProtectedRoute>
+                    } />
+                    <Route path="/pengaturan-sistem" element={
+                        <ProtectedRoute allowedRoles={['admin', 'administrator']}><PengaturanSistemPage /></ProtectedRoute>
                     } />
                     <Route path="/broadcast" element={
                         <ProtectedRoute allowedRoles={['admin', 'administrator', 'pengelola']}><BroadcastPage /></ProtectedRoute>

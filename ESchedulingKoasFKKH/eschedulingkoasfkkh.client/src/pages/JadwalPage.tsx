@@ -3,8 +3,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, kelompokApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran, type Kelompok } from '../services/api';
-import { formatDateDisplay, getHolidays } from '../utils/holidays';
+import { jadwalApi, staseApi, pembimbingApi, tahunAjaranApi, kelompokApi, pengaturanSistemApi, type GenerateJadwalResult, type Jadwal, type Stase, type Pembimbing, type TahunAjaran, type Kelompok, type HariLiburDto } from '../services/api';
+import { formatDateDisplay, getHolidays, setDynamicHolidays } from '../utils/holidays';
 import { isDosenSupervising, getDosenSubStase } from '../utils/jadwalHelper';
 import { useAuth } from '../contexts/AuthContext';
 import SearchableSelect from '../components/SearchableSelect';
@@ -185,6 +185,7 @@ export default function JadwalPage() {
   const [generateTahunAjaran, setGenerateTahunAjaran] = useState<number | ''>('');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
+  const [hariLiburList, setHariLiburList] = useState<HariLiburDto[]>([]);
   
   // View Toggle: 'table' or 'calendar'
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
@@ -195,10 +196,11 @@ export default function JadwalPage() {
     try {
       setLoading(true);
       setError(null);
-      const [result, taData, kData] = await Promise.all([
+      const [result, taData, kData, liburData] = await Promise.all([
         jadwalApi.getAll(undefined, undefined, filterTahunAjaran ? Number(filterTahunAjaran) : undefined),
         tahunAjaranApi.getAll(),
-        kelompokApi.getAll()
+        kelompokApi.getAll(),
+        pengaturanSistemApi.getHariLibur().catch(() => [])
       ]);
 
       setData(result);
@@ -207,6 +209,12 @@ export default function JadwalPage() {
         : taData;
       setTahunAjaranList(visibleTa.sort((a, b) => b.tahun - a.tahun));
       setKelompokList(kData);
+      if (Array.isArray(liburData)) {
+        setHariLiburList(liburData);
+        if (liburData.length > 0) {
+          setDynamicHolidays(liburData);
+        }
+      }
     } catch {
       setError('Gagal memuat data jadwal. Pastikan server backend sedang berjalan.');
     } finally {
@@ -345,21 +353,30 @@ export default function JadwalPage() {
     });
 
   // 2. Holidays
-  // Get holidays for the current year (can extend to previous/next year based on current view date)
   const currentYear = calendarDate.getFullYear();
   const holidaysCurrentYear = getHolidays(currentYear);
   const holidaysNextYear = getHolidays(currentYear + 1);
   const allHolidays = [...holidaysCurrentYear, ...holidaysNextYear];
-  
-  const holidayEvents: CalendarEvent[] = allHolidays.map((h, i) => ({
-    id: `holiday_${currentYear}_${i}`,
-    title: `Libur: ${h.name}`,
-    start: new Date(h.date + 'T00:00:00'),
-    end: new Date(h.date + 'T23:59:59'),
-    type: 'holiday',
-    idKelompok: 0, // No specific group
-    jadwalId: 0,
-  }));
+
+  const holidayEvents: CalendarEvent[] = hariLiburList.length > 0
+    ? hariLiburList.map(h => ({
+        id: `holiday_${h.id}`,
+        title: `Libur: ${h.nama}`,
+        start: new Date(h.tanggalMulai + 'T00:00:00'),
+        end: new Date(h.tanggalSelesai + 'T23:59:59'),
+        type: 'holiday',
+        idKelompok: 0,
+        jadwalId: 0,
+      }))
+    : allHolidays.map((h, i) => ({
+        id: `holiday_${currentYear}_${i}`,
+        title: `Libur: ${h.name}`,
+        start: new Date(h.date + 'T00:00:00'),
+        end: new Date(h.date + 'T23:59:59'),
+        type: 'holiday',
+        idKelompok: 0, // No specific group
+        jadwalId: 0,
+      }));
 
   const calendarEvents: CalendarEvent[] = [...jadwalEvents, ...holidayEvents];
 

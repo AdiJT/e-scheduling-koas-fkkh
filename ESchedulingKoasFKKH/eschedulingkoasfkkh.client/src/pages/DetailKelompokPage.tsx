@@ -1,12 +1,12 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { kelompokApi, mahasiswaApi, type Kelompok, type Mahasiswa } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateDisplay } from '../utils/holidays';
-import { KelompokIcon, MahasiswaIcon, DeleteIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
+import { KelompokIcon, MahasiswaIcon, DeleteIcon, JadwalIcon, InfoIcon, DosenIcon, SearchIcon } from '../components/Icons';
 
 export default function DetailKelompokPage() {
   const navigate = useNavigate();
@@ -26,6 +26,9 @@ export default function DetailKelompokPage() {
   // Add member modal
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedMahasiswaIds, setSelectedMahasiswaIds] = useState<number[]>([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberSortBy, setMemberSortBy] = useState<'nim' | 'nama'>('nim');
+  const [memberSortDir, setMemberSortDir] = useState<'asc' | 'desc'>('asc');
 
   // Remove member modal
   const [showRemoveMember, setShowRemoveMember] = useState(false);
@@ -64,9 +67,40 @@ export default function DetailKelompokPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Available mahasiswa (belum terdaftar di kelompok mana pun & sesuai tahun ajaran kelompok)
-  const availableMahasiswa = allMahasiswa
-    .filter(m => !m.idKelompok)
-    .filter(m => !kelompok?.idTahunAjaran || !m.idTahunAjaran || m.idTahunAjaran === kelompok.idTahunAjaran);
+  const availableMahasiswa = useMemo(() => {
+    return allMahasiswa
+      .filter(m => !m.idKelompok)
+      .filter(m => !kelompok?.idTahunAjaran || !m.idTahunAjaran || m.idTahunAjaran === kelompok.idTahunAjaran);
+  }, [allMahasiswa, kelompok]);
+
+  const filteredAvailableMahasiswa = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+    const filtered = query
+      ? availableMahasiswa.filter(m =>
+          m.nama.toLowerCase().includes(query) || m.nim.toLowerCase().includes(query)
+        )
+      : [...availableMahasiswa];
+
+    return filtered.sort((a, b) => {
+      const valA = memberSortBy === 'nim' ? a.nim : a.nama;
+      const valB = memberSortBy === 'nim' ? b.nim : b.nama;
+      const cmp = valA.localeCompare(valB, 'id', { numeric: true, sensitivity: 'base' });
+      return memberSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [availableMahasiswa, memberSearch, memberSortBy, memberSortDir]);
+
+  const allFilteredSelected =
+    filteredAvailableMahasiswa.length > 0 &&
+    filteredAvailableMahasiswa.every(m => selectedMahasiswaIds.includes(m.id));
+
+  const handleSortToggle = (field: 'nim' | 'nama') => {
+    if (memberSortBy === field) {
+      setMemberSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setMemberSortBy(field);
+      setMemberSortDir('asc');
+    }
+  };
 
   // === ADD MEMBER ===
   const handleCheckboxChange = (id: number) => {
@@ -76,10 +110,13 @@ export default function DetailKelompokPage() {
   };
 
   const selectAll = () => {
-    if (selectedMahasiswaIds.length === availableMahasiswa.length) {
-      setSelectedMahasiswaIds([]);
+    if (allFilteredSelected) {
+      const visibleIds = new Set(filteredAvailableMahasiswa.map(m => m.id));
+      setSelectedMahasiswaIds(prev => prev.filter(id => !visibleIds.has(id)));
     } else {
-      setSelectedMahasiswaIds(availableMahasiswa.map(m => m.id));
+      const merged = new Set(selectedMahasiswaIds);
+      filteredAvailableMahasiswa.forEach(m => merged.add(m.id));
+      setSelectedMahasiswaIds(Array.from(merged));
     }
   };
 
@@ -200,7 +237,7 @@ export default function DetailKelompokPage() {
           </h2>
           {!isAdmin && !isMahasiswa && !isDosen && (
             <button
-              onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); }}
+              onClick={() => { setShowAddMember(true); setSelectedMahasiswaIds([]); setMemberSearch(''); }}
               className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all text-center"
             >
               + Tambah Anggota
@@ -370,57 +407,139 @@ export default function DetailKelompokPage() {
 
       {/* Add Member Modal */}
       {showAddMember && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-lg mx-4 animate-scale-in">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-elevated p-5 sm:p-6 w-full max-w-2xl max-h-[90vh] flex flex-col animate-scale-in">
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <h3 className="text-lg font-bold text-primary-900 flex items-center gap-2">
                 <span className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" /> Tambah Anggota
               </h3>
-              {availableMahasiswa.length > 0 && (
-                <button type="button" onClick={selectAll} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-                  {selectedMahasiswaIds.length === availableMahasiswa.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+              {filteredAvailableMahasiswa.length > 0 && (
+                <button type="button" onClick={selectAll} className="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">
+                  {allFilteredSelected ? 'Batal' : 'Pilih Semua'}
                 </button>
               )}
             </div>
-            
+
             {availableMahasiswa.length === 0 ? (
               <p className="text-sm text-slate-500 mb-4 text-center py-6 bg-slate-50 rounded-xl border border-slate-100">
                 Tidak ada mahasiswa yang tersedia. Semua mahasiswa sudah terdaftar di kelompok.
               </p>
             ) : (
-              <div className="mb-5 border-2 border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col h-[280px]">
-                <div className="flex-1 overflow-y-auto p-2">
-                  {availableMahasiswa.map(mhs => (
-                    <label key={mhs.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-colors border border-transparent hover:border-blue-100">
-                      <div className="relative flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedMahasiswaIds.includes(mhs.id)}
-                          onChange={() => handleCheckboxChange(mhs.id)}
-                          className="peer w-5 h-5 appearance-none border-2 border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 checked:border-blue-500 checked:bg-blue-500 transition-all cursor-pointer"
-                        />
-                        <svg className="absolute w-3.5 h-3.5 text-white left-[3px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-700 peer-checked:text-blue-700">{mhs.nama}</p>
-                        <p className="text-xs text-slate-500 font-mono">{mhs.nim}</p>
-                      </div>
-                    </label>
-                  ))}
+              <>
+                {/* Search & Sort Controls */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-3 shrink-0">
+                  <div className="relative flex-1">
+                    <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                      placeholder="Cari nama atau NIM mahasiswa..."
+                      className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                    {memberSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setMemberSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold p-0.5 cursor-pointer"
+                        title="Hapus pencarian"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-xs text-slate-500 font-medium mr-0.5">Urutkan:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSortToggle('nim')}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1 cursor-pointer ${
+                        memberSortBy === 'nim'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>NIM</span>
+                      {memberSortBy === 'nim' && (
+                        <span className="text-[10px]">{memberSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSortToggle('nama')}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1 cursor-pointer ${
+                        memberSortBy === 'nama'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>Nama</span>
+                      {memberSortBy === 'nama' && (
+                        <span className="text-[10px]">{memberSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div className="p-3 border-t border-slate-200 bg-white text-xs font-semibold text-slate-600 text-center">
-                  <span className="text-blue-600">{selectedMahasiswaIds.length}</span> mahasiswa dipilih
+
+                {/* Member List */}
+                <div className="mb-5 border-2 border-slate-200 rounded-xl overflow-hidden bg-slate-50 flex flex-col h-[380px] sm:h-[420px]">
+                  <div className="flex-1 overflow-y-auto p-2">
+                    {filteredAvailableMahasiswa.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                        <p className="text-sm font-medium text-slate-600 mb-1">
+                          Tidak ada mahasiswa yang cocok dengan pencarian
+                        </p>
+                        <p className="text-xs text-slate-400 mb-3">
+                          Kata kunci &quot;{memberSearch}&quot; tidak ditemukan pada daftar nama maupun NIM.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setMemberSearch('')}
+                          className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-blue-600 transition-colors cursor-pointer"
+                        >
+                          Reset Pencarian
+                        </button>
+                      </div>
+                    ) : (
+                      filteredAvailableMahasiswa.map(mhs => (
+                        <label key={mhs.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-colors border border-transparent hover:border-blue-100">
+                          <div className="relative flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedMahasiswaIds.includes(mhs.id)}
+                              onChange={() => handleCheckboxChange(mhs.id)}
+                              className="peer w-5 h-5 appearance-none border-2 border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 checked:border-blue-500 checked:bg-blue-500 transition-all cursor-pointer"
+                            />
+                            <svg className="absolute w-3.5 h-3.5 text-white left-[3px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-700 peer-checked:text-blue-700">{mhs.nama}</p>
+                            <p className="text-xs text-slate-500 font-mono">{mhs.nim}</p>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  <div className="p-3 border-t border-slate-200 bg-white text-xs font-semibold text-slate-600 text-center">
+                    <span className="text-blue-600">{selectedMahasiswaIds.length}</span> mahasiswa dipilih
+                    {memberSearch.trim() && (
+                      <span className="text-slate-400 font-normal">
+                        {' '}• Menampilkan {filteredAvailableMahasiswa.length} dari {availableMahasiswa.length}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
-            <div className="flex gap-3">
-              <button onClick={() => setShowAddMember(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors">Batal</button>
+            <div className="flex gap-3 shrink-0">
+              <button onClick={() => setShowAddMember(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors cursor-pointer">Batal</button>
               <button
                 onClick={handleAddMember}
                 disabled={selectedMahasiswaIds.length === 0 || actionLoading}
-                className="flex-1 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                className="flex-1 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-xl shadow-md text-sm disabled:opacity-50 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 {actionLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '+'} Tambahkan ({selectedMahasiswaIds.length})
               </button>

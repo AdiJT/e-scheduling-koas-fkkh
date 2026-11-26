@@ -8,6 +8,7 @@ using ESchedulingKoasFKKH.Server.Models.JadwalModels;
 using ESchedulingKoasFKKH.Server.Models.KelompokModels;
 using ESchedulingKoasFKKH.Server.Models.MahasiswaModels;
 using ESchedulingKoasFKKH.Server.Models.PembimbingModels;
+using ESchedulingKoasFKKH.Server.Models.PengaturanSistemModels;
 using ESchedulingKoasFKKH.Server.Models.StaseModels;
 using ESchedulingKoasFKKH.Server.Models.UserModels;
 using ESchedulingKoasFKKH.Server.Services;
@@ -205,6 +206,7 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
             "Broadcast" => await BuildBroadcastMetadataAsync(action, args, sp),
             "Notifikasi" => await BuildNotifikasiMetadataAsync(action, args, sp),
             "User" => await BuildUserMetadataAsync(action, args, actor, sp),
+            "PengaturanSistem" => await BuildPengaturanSistemMetadataAsync(action, args, sp),
             _ => BuildFallbackMetadata(controller, action, method)
         };
     }
@@ -821,6 +823,86 @@ public sealed class ActivityLogActionFilter : IAsyncActionFilter
 
             default:
                 return BuildFallbackMetadata("User", action, "POST");
+        }
+    }
+
+    private static async Task<ActivityMetadata> BuildPengaturanSistemMetadataAsync(
+        string action,
+        IDictionary<string, object?> args,
+        IServiceProvider sp)
+    {
+        const string modul = "Pengaturan Sistem";
+        switch (action)
+        {
+            case "CreateFaq":
+                if (TryGetArg<FaqItemRequest>(args, out var faqCreate) && faqCreate is not null)
+                {
+                    return new ActivityMetadata(modul, "Tambah", $"Menambahkan FAQ: '{faqCreate.Pertanyaan}'", "Pengaturan FAQ");
+                }
+                return new ActivityMetadata(modul, "Tambah", "Menambahkan item FAQ baru", "Pengaturan FAQ");
+
+            case "UpdateFaq":
+                if (TryGetArg<FaqItemRequest>(args, out var faqUpdate) && faqUpdate is not null)
+                {
+                    return new ActivityMetadata(modul, "Ubah", $"Memperbarui FAQ: '{faqUpdate.Pertanyaan}'", "Pengaturan FAQ");
+                }
+                return new ActivityMetadata(modul, "Ubah", "Memperbarui item FAQ", "Pengaturan FAQ");
+
+            case "DeleteFaq":
+                if (TryGetIntArg(args, "id", out var delFaqId))
+                {
+                    var faqRepo = sp.GetRequiredService<IFaqRepository>();
+                    var existingFaq = await faqRepo.Get(delFaqId);
+                    if (existingFaq is not null)
+                    {
+                        return new ActivityMetadata(modul, "Hapus", $"Menghapus FAQ: '{existingFaq.Pertanyaan}'", "Pengaturan FAQ");
+                    }
+                }
+                return new ActivityMetadata(modul, "Hapus", "Menghapus item FAQ", "Pengaturan FAQ");
+
+            case "UpdateKontak":
+                if (TryGetArg<KontakSettingRequest>(args, out var kontakReq) && kontakReq is not null)
+                {
+                    return new ActivityMetadata(modul, "Ubah", $"Memperbarui pengaturan kontak ({kontakReq.Email})", "Pengaturan Kontak");
+                }
+                return new ActivityMetadata(modul, "Ubah", "Memperbarui pengaturan kontak administrator", "Pengaturan Kontak");
+
+            case "CreateHariLibur":
+                if (TryGetArg<HariLiburRequest>(args, out var liburCreate) && liburCreate is not null)
+                {
+                    var tglSelesai = liburCreate.TanggalSelesai ?? liburCreate.TanggalMulai;
+                    var rangeText = tglSelesai == liburCreate.TanggalMulai
+                        ? $"{liburCreate.TanggalMulai:dd/MM/yyyy}"
+                        : $"{liburCreate.TanggalMulai:dd/MM/yyyy} s.d. {tglSelesai:dd/MM/yyyy}";
+                    return new ActivityMetadata(modul, "Tambah", $"Menambahkan hari libur '{liburCreate.Nama}' ({rangeText})", liburCreate.Nama);
+                }
+                return new ActivityMetadata(modul, "Tambah", "Menambahkan hari libur kalender", "Pengaturan Kalender");
+
+            case "UpdateHariLibur":
+                if (TryGetArg<HariLiburRequest>(args, out var liburUpdate) && liburUpdate is not null)
+                {
+                    var tglSelesai = liburUpdate.TanggalSelesai ?? liburUpdate.TanggalMulai;
+                    var rangeText = tglSelesai == liburUpdate.TanggalMulai
+                        ? $"{liburUpdate.TanggalMulai:dd/MM/yyyy}"
+                        : $"{liburUpdate.TanggalMulai:dd/MM/yyyy} s.d. {tglSelesai:dd/MM/yyyy}";
+                    return new ActivityMetadata(modul, "Ubah", $"Memperbarui hari libur '{liburUpdate.Nama}' ({rangeText})", liburUpdate.Nama);
+                }
+                return new ActivityMetadata(modul, "Ubah", "Memperbarui hari libur kalender", "Pengaturan Kalender");
+
+            case "DeleteHariLibur":
+                if (TryGetIntArg(args, "id", out var delLiburId))
+                {
+                    var liburRepo = sp.GetRequiredService<IHariLiburRepository>();
+                    var existingLibur = await liburRepo.Get(delLiburId);
+                    if (existingLibur is not null)
+                    {
+                        return new ActivityMetadata(modul, "Hapus", $"Menghapus hari libur '{existingLibur.Nama}'", existingLibur.Nama);
+                    }
+                }
+                return new ActivityMetadata(modul, "Hapus", "Menghapus hari libur kalender", "Pengaturan Kalender");
+
+            default:
+                return BuildFallbackMetadata("PengaturanSistem", action, "POST");
         }
     }
 

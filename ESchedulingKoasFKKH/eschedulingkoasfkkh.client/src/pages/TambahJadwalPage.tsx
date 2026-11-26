@@ -2,8 +2,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { kelompokApi, staseApi, pembimbingApi, jadwalApi, tahunAjaranApi, type Kelompok, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
-import { calculateEndDate, formatDateDisplay } from '../utils/holidays';
+import { kelompokApi, staseApi, pembimbingApi, jadwalApi, tahunAjaranApi, pengaturanSistemApi, type Kelompok, type Stase, type Pembimbing, type TahunAjaran } from '../services/api';
+import { calculateEndDate, formatDateDisplay, setDynamicHolidays } from '../utils/holidays';
 import { SaveIcon, JadwalIcon, InfoIcon, DosenIcon } from '../components/Icons';
 import SearchableSelect from '../components/SearchableSelect';
 
@@ -14,6 +14,7 @@ export default function TambahJadwalPage() {
   const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
   const [tahunAjaranList, setTahunAjaranList] = useState<TahunAjaran[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [holidaysVersion, setHolidaysVersion] = useState(0);
   const [filterTahunAjaran, setFilterTahunAjaran] = useState<number | ''>('');
 
   const [form, setForm] = useState({
@@ -35,12 +36,17 @@ export default function TambahJadwalPage() {
     const fetchData = async () => {
       try {
         setLoadingData(true);
-        const [kelompokData, staseData, pembimbingData, taData] = await Promise.all([
+        const [kelompokData, staseData, pembimbingData, taData, liburData] = await Promise.all([
           kelompokApi.getAll(),
           staseApi.getAll(),
           pembimbingApi.getAll(),
           tahunAjaranApi.getAll(),
+          pengaturanSistemApi.getHariLibur().catch(() => null),
         ]);
+        if (liburData) {
+          setDynamicHolidays(liburData);
+          setHolidaysVersion(v => v + 1);
+        }
         setKelompokList(kelompokData);
         setStaseList(staseData);
         setPembimbingList(pembimbingData);
@@ -87,7 +93,7 @@ export default function TambahJadwalPage() {
       setSelectedStase(null);
       setSubStaseDosen({});
     }
-  }, [form.tanggalMulai, form.idStase, staseList]);
+  }, [form.tanggalMulai, form.idStase, staseList, holidaysVersion]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });

@@ -50,4 +50,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<Broadcast> Broadcast { get; set; }
     public DbSet<ActivityLog> ActivityLog { get; set; }
     public DbSet<NotifikasiDibaca> NotifikasiDibaca { get; set; }
+    public DbSet<FaqItem> FaqItem { get; set; }
+    public DbSet<KontakSetting> KontakSetting { get; set; }
+    public DbSet<HariLibur> HariLibur { get; set; }
 }

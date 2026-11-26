@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { mahasiswaApi, tahunAjaranApi, type Mahasiswa, type TahunAjaran, type SiadiknonaSyncResult } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,15 @@ export default function MahasiswaPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<{ current: number; total: number } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [bulkDeleteSummary, setBulkDeleteSummary] = useState<{
+    deletedCount: number;
+    failed: { nama: string; nim: string; reason: string }[];
+  } | null>(null);
 
   // Sync SIADIKNONA state
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -57,6 +66,7 @@ export default function MahasiswaPage() {
       ]);
       setData(mhsResult);
       setTahunAjarans(taResult);
+      setSelectedIds([]);
     } catch {
       setError('Gagal memuat data mahasiswa. Pastikan server backend sedang berjalan.');
     } finally {
@@ -106,6 +116,36 @@ export default function MahasiswaPage() {
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   const paginatedData = sortedData.slice(startIndex, endIndex);
 
+  // === SELECTION ===
+  const pageIds = useMemo(() => paginatedData.map(m => m.id), [paginatedData]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+  const somePageSelected = pageIds.some(id => selectedIds.includes(id)) && !allPageSelected;
+  const selectedMahasiswaList = useMemo(
+    () => data.filter(m => selectedIds.includes(m.id)),
+    [data, selectedIds]
+  );
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]));
+  };
+
+  const toggleSelectPage = () => {
+    if (allPageSelected) {
+      const pageIdSet = new Set(pageIds);
+      setSelectedIds(prev => prev.filter(id => !pageIdSet.has(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedIds(filteredData.map(m => m.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+  };
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -132,12 +172,60 @@ export default function MahasiswaPage() {
       setDeleting(true);
       await mahasiswaApi.delete(selectedId);
       setData(prev => prev.filter(m => m.id !== selectedId));
+      setSelectedIds(prev => prev.filter(id => id !== selectedId));
     } catch {
       setError('Gagal menghapus data mahasiswa.');
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
       setSelectedId(null);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    const targets = selectedMahasiswaList;
+    if (targets.length === 0) return;
+
+    setBulkDeleting(true);
+    setError(null);
+    setSuccessMessage(null);
+    setBulkDeleteProgress({ current: 0, total: targets.length });
+
+    const deletedIds: number[] = [];
+    const failed: { nama: string; nim: string; reason: string }[] = [];
+
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      setBulkDeleteProgress({ current: i + 1, total: targets.length });
+      try {
+        await mahasiswaApi.delete(target.id);
+        deletedIds.push(target.id);
+      } catch (err: unknown) {
+        const apiErr = err as { message?: string };
+        failed.push({
+          nama: target.nama,
+          nim: target.nim,
+          reason: apiErr?.message || 'Gagal menghapus data mahasiswa.',
+        });
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      const deletedSet = new Set(deletedIds);
+      setData(prev => prev.filter(m => !deletedSet.has(m.id)));
+    }
+    setSelectedIds([]);
+    setBulkDeleting(false);
+    setBulkDeleteProgress(null);
+    setShowBulkDeleteModal(false);
+
+    if (failed.length === 0) {
+      setSuccessMessage(`Berhasil menghapus ${deletedIds.length} data mahasiswa.`);
+    } else {
+      setBulkDeleteSummary({
+        deletedCount: deletedIds.length,
+        failed,
+      });
     }
   };
 
@@ -277,102 +365,116 @@ export default function MahasiswaPage() {
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error & Success Alert */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
           <span className="text-red-500 text-lg">⚠️</span>
           <p className="text-sm text-red-700 flex-1">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 text-lg cursor-pointer">✕</button>
+        </div>
+      )}
+      {successMessage && (
+        <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 animate-fade-in-down">
+          <span className="text-emerald-600 text-lg">✅</span>
+          <p className="text-sm text-emerald-800 font-medium flex-1">{successMessage}</p>
+          <button onClick={() => setSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-700 text-lg cursor-pointer">✕</button>
         </div>
       )}
 
       {/* Action Bar */}
       <div className="bg-white rounded-2xl shadow-card border border-slate-100/80 p-3.5 sm:p-4 mb-4 sm:mb-6 animate-fade-in-up">
         <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
-            <input
-              type="text"
-              placeholder="Cari mahasiswa berdasarkan nama, NIM, atau email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400
-                focus:outline-none focus:border-blue-400 focus:bg-white focus:shadow-sm transition-all duration-200"
-              id="search-mahasiswa"
-            />
-          </div>
-
-          {/* Filter & Actions */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <div className="flex-1 sm:w-64">
-              <SearchableSelect
-                value={filterTahunAjaran}
-                onChange={(val) => setFilterTahunAjaran(String(val))}
-                options={[
-                  { value: 'all', label: 'Semua Tahun Ajaran' },
-                  ...tahunAjarans.map(ta => ({
-                    value: ta.id.toString(),
-                    label: `${ta.tahun} - ${ta.semester}`,
-                    badge: ta.status || undefined
-                  }))
-                ]}
-                placeholder="Semua Tahun Ajaran"
+          {/* Search & Refresh */}
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
+              <input
+                type="text"
+                placeholder="Cari mahasiswa berdasarkan nama, NIM, atau email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 placeholder-slate-400
+                  focus:outline-none focus:border-blue-400 focus:bg-white focus:shadow-sm transition-all duration-200"
+                id="search-mahasiswa"
               />
             </div>
 
-            {/* Refresh Button */}
-            <Tooltip content="Muat ulang data" position="bottom">
+            {/* Mobile Refresh Button */}
+            <Tooltip content="Muat ulang data" position="bottom" className="sm:hidden">
               <button
                 onClick={fetchData}
-                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                className="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                title="Muat ulang data"
               >
-                <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <RefreshIcon className="w-4 h-4" />
               </button>
             </Tooltip>
-
-            {/* Sinkron SIADIKNONA Button (Admin Only) */}
-            {!isPengelola && (
-              <Tooltip content="Tarik & sinkronkan mahasiswa Profesi Dokter Hewan aktif dari SIADIKNONA" position="bottom">
-                <button
-                  onClick={openSyncModal}
-                  className="px-3.5 py-2 sm:py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
-                    font-medium rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
-                  id="btn-sync-siadiknona"
-                >
-                  <RefreshIcon className="w-4 h-4 text-indigo-600" />
-                  <span className="hidden sm:inline">Sinkron SIADIKNONA</span>
-                  <span className="sm:hidden">SIADIKNONA</span>
-                </button>
-              </Tooltip>
-            )}
-
-            {/* Desktop Add Button */}
-            {!isPengelola && (
-              <button
-                onClick={() => navigate('/mahasiswa/tambah')}
-                className="hidden sm:flex px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-                  text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
-                  transition-all duration-300 active:scale-95 text-xs sm:text-sm items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
-                id="btn-tambah-mahasiswa"
-              >
-                <span>+</span> Tambah Mahasiswa
-              </button>
-            )}
           </div>
 
-          {/* Mobile Add Button */}
-          {!isPengelola && (
-            <button
-              onClick={() => navigate('/mahasiswa/tambah')}
-              className="sm:hidden w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-                text-white font-semibold rounded-xl shadow-md active:scale-[0.99]
-                transition-all duration-200 text-xs flex items-center justify-center gap-2 cursor-pointer mt-1"
-              id="btn-tambah-mahasiswa-mobile"
-            >
-              <span className="text-sm font-bold leading-none">+</span> Tambah Mahasiswa
-            </button>
-          )}
+          {/* Filter & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 sm:w-56">
+                <SearchableSelect
+                  value={filterTahunAjaran}
+                  onChange={(val) => setFilterTahunAjaran(String(val))}
+                  options={[
+                    { value: 'all', label: 'Semua Tahun Ajaran' },
+                    ...tahunAjarans.map(ta => ({
+                      value: ta.id.toString(),
+                      label: `${ta.tahun} - ${ta.semester}`,
+                      badge: ta.status || undefined
+                    }))
+                  ]}
+                  placeholder="Semua Tahun Ajaran"
+                />
+              </div>
+
+              {/* Desktop Refresh Button */}
+              <Tooltip content="Muat ulang data" position="bottom" className="hidden sm:inline-flex">
+                <button
+                  onClick={fetchData}
+                  className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 text-slate-600 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
+                  title="Muat ulang data"
+                >
+                  <RefreshIcon className="w-5 h-5" />
+                </button>
+              </Tooltip>
+            </div>
+
+            {!isPengelola && (
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+                {/* Sinkron SIADIKNONA Button (Admin Only) */}
+                <Tooltip
+                  content="Tarik & sinkronkan mahasiswa Profesi Dokter Hewan aktif dari SIADIKNONA"
+                  position="bottom"
+                  className="w-full sm:w-auto"
+                >
+                  <button
+                    onClick={openSyncModal}
+                    className="w-full sm:w-auto justify-center px-3.5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 
+                      font-semibold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                    id="btn-sync-siadiknona"
+                  >
+                    <RefreshIcon className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="hidden sm:inline">Sinkron SIADIKNONA</span>
+                    <span className="sm:hidden">SIADIKNONA</span>
+                  </button>
+                </Tooltip>
+
+                {/* Add Mahasiswa Button (Admin Only) */}
+                <button
+                  onClick={() => navigate('/mahasiswa/tambah')}
+                  className="w-full sm:w-auto px-4 sm:px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+                    text-white font-semibold rounded-xl shadow-md hover:shadow-glow-blue 
+                    transition-all duration-300 active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  id="btn-tambah-mahasiswa"
+                >
+                  <span className="text-sm font-bold leading-none">+</span> Tambah Mahasiswa
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -397,9 +499,20 @@ export default function MahasiswaPage() {
           <>
             {/* Table Header Info */}
             <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <p className="text-slate-500 font-medium">                
-                Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Mahasiswa
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-slate-500 font-medium">
+                  Menampilkan <span className="text-primary-900 font-bold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="text-primary-900 font-bold">{endIndex}</span> dari <span className="text-primary-900 font-bold">{totalItems}</span> Mahasiswa
+                </p>
+                {!isPengelola && paginatedData.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleSelectPage}
+                    className="md:hidden text-xs font-semibold text-blue-700 hover:text-blue-800 cursor-pointer"
+                  >
+                    {allPageSelected ? 'Batal' : 'Pilih Semua'}
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <label className="text-slate-500 font-medium whitespace-nowrap">Tampilkan:</label>
                 <select
@@ -416,11 +529,62 @@ export default function MahasiswaPage() {
               </div>
             </div>
 
+            {/* Bulk Action Bar */}
+            {!isPengelola && selectedIds.length > 0 && (
+              <div className="px-3.5 sm:px-5 py-2.5 bg-blue-50 border-b border-blue-200 flex flex-wrap items-center justify-between gap-2.5 animate-fade-in">
+                <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm">
+                  <span className="font-bold text-blue-900">
+                    {selectedIds.length} mahasiswa dipilih
+                  </span>
+                  {selectedIds.length < filteredData.length && (
+                    <button
+                      type="button"
+                      onClick={selectAllFiltered}
+                      className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline cursor-pointer"
+                    >
+                      Pilih semua ({filteredData.length})
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-lg text-xs transition-colors cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkDeleteModal(true)}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    id="btn-bulk-delete-mahasiswa"
+                  >
+                    <DeleteIcon className="w-3.5 h-3.5" />
+                    <span>Hapus Terpilih ({selectedIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Mobile View: Card List (Screens < md) */}
             <div className="md:hidden divide-y divide-slate-100">
-              {paginatedData.map((mhs, index) => (
-                <div key={mhs.id} className="p-3.5 hover:bg-slate-50/70 transition-colors">
+              {paginatedData.map((mhs, index) => {
+                const isSelected = selectedIds.includes(mhs.id);
+                return (
+                <div key={mhs.id} className={`p-3.5 transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/70'}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
+                    {!isPengelola && (
+                      <div className="pt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(mhs.id)}
+                          aria-label={`Pilih ${mhs.nama}`}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <div
                       className="flex items-start gap-2.5 flex-1 cursor-pointer"
                       onClick={() => navigate(`/mahasiswa/${mhs.id}`)}
@@ -494,7 +658,8 @@ export default function MahasiswaPage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop View: Full Table (Screens >= md) */}
@@ -502,6 +667,20 @@ export default function MahasiswaPage() {
               <table className="w-full table-auto" id="table-mahasiswa">
                 <thead>
                   <tr className="bg-gradient-to-r from-primary-900 to-blue-800 text-white">
+                    {!isPengelola && (
+                      <th className="px-3.5 py-3.5 text-center whitespace-nowrap w-11">
+                        <input
+                          type="checkbox"
+                          checked={allPageSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = somePageSelected;
+                          }}
+                          onChange={toggleSelectPage}
+                          aria-label="Pilih semua mahasiswa di halaman ini"
+                          className="w-4 h-4 rounded border-white/60 bg-white/90 text-blue-600 focus:ring-white/40 cursor-pointer align-middle"
+                        />
+                      </th>
+                    )}
                     <th className="px-3.5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap w-12">No</th>
                     <th
                       onClick={() => handleSort('nim')}
@@ -531,8 +710,26 @@ export default function MahasiswaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedData.map((mhs, index) => (
-                    <tr key={mhs.id} className="hover:bg-blue-50/30 transition-colors duration-150 group">
+                  {paginatedData.map((mhs, index) => {
+                    const isSelected = selectedIds.includes(mhs.id);
+                    return (
+                    <tr
+                      key={mhs.id}
+                      className={`transition-colors duration-150 group ${
+                        isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-blue-50/30'
+                      }`}
+                    >
+                      {!isPengelola && (
+                        <td className="px-3.5 py-3.5 text-center whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(mhs.id)}
+                            aria-label={`Pilih ${mhs.nama}`}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer align-middle"
+                          />
+                        </td>
+                      )}
                       <td className="px-3.5 py-3.5 text-center text-sm text-slate-500 whitespace-nowrap">{startIndex + index + 1}</td>
 
                       {/* NIM */}
@@ -614,7 +811,8 @@ export default function MahasiswaPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -995,6 +1193,122 @@ export default function MahasiswaPage() {
                 {deleting ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menghapus...</>
                 ) : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-elevated p-6 w-full max-w-md animate-scale-in">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h3 className="text-lg font-bold text-primary-900 mb-1">
+                Hapus {selectedMahasiswaList.length} Mahasiswa Terpilih?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Data dan akun login mahasiswa yang dihapus tidak dapat dikembalikan.
+              </p>
+            </div>
+
+            <div className="max-h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-1.5 mb-5">
+              {selectedMahasiswaList.map((mhs, idx) => (
+                <div key={mhs.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-slate-100 text-xs">
+                  <span className="font-semibold text-slate-800 truncate">
+                    {idx + 1}. {mhs.nama}
+                  </span>
+                  <span className="font-mono text-slate-500 shrink-0">{mhs.nim}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-all duration-200 text-sm cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl shadow-md hover:shadow-glow-red transition-all duration-200 text-sm disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
+                id="btn-confirm-bulk-delete-mahasiswa"
+              >
+                {bulkDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>
+                      Menghapus{bulkDeleteProgress ? ` (${bulkDeleteProgress.current}/${bulkDeleteProgress.total})` : '...'}
+                    </span>
+                  </>
+                ) : (
+                  `Ya, Hapus (${selectedMahasiswaList.length})`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Summary Modal (Partial / Failed) */}
+      {bulkDeleteSummary && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevated border border-slate-100 w-full max-w-lg overflow-hidden animate-scale-in my-8">
+            <div className="p-5 bg-gradient-to-r from-amber-500 to-red-600 text-white flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-lg leading-tight">Ringkasan Hapus Massal Mahasiswa</h3>
+                <p className="text-xs text-amber-50 mt-0.5">
+                  {bulkDeleteSummary.deletedCount} berhasil dihapus • {bulkDeleteSummary.failed.length} gagal
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteSummary(null)}
+                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              {bulkDeleteSummary.deletedCount > 0 && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800">
+                  ✅ {bulkDeleteSummary.deletedCount} mahasiswa berhasil dihapus.
+                </div>
+              )}
+
+              {bulkDeleteSummary.failed.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Gagal Dihapus ({bulkDeleteSummary.failed.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {bulkDeleteSummary.failed.map((item, idx) => (
+                      <div key={`failed-${idx}`} className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800">
+                        <div className="font-semibold">{item.nama} ({item.nim})</div>
+                        <div className="text-red-700 mt-0.5">{item.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setBulkDeleteSummary(null)}
+                className="px-5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl text-sm cursor-pointer"
+              >
+                Tutup
               </button>
             </div>
           </div>
