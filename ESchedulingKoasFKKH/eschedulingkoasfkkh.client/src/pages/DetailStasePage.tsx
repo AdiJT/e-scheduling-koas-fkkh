@@ -528,19 +528,14 @@ export default function DetailStasePage() {
               {displayedJadwal.map((jadwal, index) => (
                 <div key={jadwal.id} className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors">
                   <div className="flex items-start justify-between gap-2.5 mb-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold shrink-0">
-                        {jadwal.namaKelompok?.charAt(0) || 'K'}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
-                            #{index + 1}
-                          </span>
-                          <h3 className="font-bold text-slate-900 text-sm truncate">
-                            {jadwal.namaKelompok}
-                          </h3>
-                        </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                          #{index + 1}
+                        </span>
+                        <h3 className="font-bold text-slate-900 text-sm truncate">
+                          {jadwal.namaKelompok}
+                        </h3>
                       </div>
                     </div>
 
@@ -609,12 +604,7 @@ export default function DetailStasePage() {
                     <tr key={jadwal.id} className="hover:bg-purple-50/20 transition-colors group">
                       <td className="px-5 py-4 text-sm text-slate-500">{index + 1}</td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
-                            {jadwal.namaKelompok?.charAt(0)}
-                          </div>
-                          <span className="text-sm font-semibold text-primary-900">{jadwal.namaKelompok}</span>
-                        </div>
+                        <span className="text-sm font-semibold text-primary-900">{jadwal.namaKelompok}</span>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600">
                         {formatDateDisplay(jadwal.tanggalMulai)}
